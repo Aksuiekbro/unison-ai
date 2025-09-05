@@ -31,7 +31,7 @@ export async function updateJobSeekerProfile(formData: FormData) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single()
 
     if (profileError || !profile || profile.role !== 'job_seeker') {
@@ -101,7 +101,7 @@ export async function addJobSeekerExperience(formData: FormData) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .eq('role', 'job_seeker')
       .single()
 
@@ -173,7 +173,7 @@ export async function addJobSeekerEducation(formData: FormData) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .eq('role', 'job_seeker')
       .single()
 
@@ -242,7 +242,7 @@ export async function updateEmployerProfile(formData: FormData) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single()
 
     if (profileError || !profile || profile.role !== 'employer') {

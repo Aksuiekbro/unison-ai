@@ -20,7 +20,7 @@ export default async function CompanyProfile() {
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('id', user.id)
     .single()
 
   if (profileError || !profile || profile.role !== 'employer') {

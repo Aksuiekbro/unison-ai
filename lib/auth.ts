@@ -43,7 +43,7 @@ export async function signUp(
     const { error: profileError } = await supabase
       .from('profiles')
       .insert({
-        user_id: data.user.id,
+        id: data.user.id,
         role: metadata.role,
         email: email,
       });
@@ -83,7 +83,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
-    .eq('user_id', userId)
+    .eq('id', userId)
     .single();
 
   if (error && error.code !== 'PGRST116') throw error;
