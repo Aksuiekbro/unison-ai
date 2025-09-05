@@ -92,16 +92,16 @@ export async function middleware(req: NextRequest) {
   if (isAuthRoute && session) {
     // Get user profile to determine role
     const { data: profile } = await supabase
-      .from('user_profiles')
+      .from('profiles')
       .select('role')
-      .eq('user_id', session.user.id)
+      .eq('id', session.user.id)
       .single()
 
-    const role = profile?.role || session.user.user_metadata?.role
+    const role = profile?.role || (session.user.user_metadata as any)?.role
 
     if (role === 'employer') {
       return NextResponse.redirect(new URL('/employer/dashboard', req.url))
-    } else if (role === 'job-seeker') {
+    } else if (role === 'job_seeker') {
       return NextResponse.redirect(new URL('/job-seeker/dashboard', req.url))
     } else {
       return NextResponse.redirect(new URL('/', req.url))
@@ -111,19 +111,19 @@ export async function middleware(req: NextRequest) {
   // Role-based route protection
   if (session && isProtectedRoute) {
     const { data: profile } = await supabase
-      .from('user_profiles')
+      .from('profiles')
       .select('role')
-      .eq('user_id', session.user.id)
+      .eq('id', session.user.id)
       .single()
 
-    const role = profile?.role || session.user.user_metadata?.role
+    const role = profile?.role || (session.user.user_metadata as any)?.role
 
     // Check if user is accessing the correct role-based route
     if (pathname.startsWith('/employer') && role !== 'employer') {
       return NextResponse.redirect(new URL('/job-seeker/dashboard', req.url))
     }
     
-    if (pathname.startsWith('/job-seeker') && role !== 'job-seeker') {
+    if (pathname.startsWith('/job-seeker') && role !== 'job_seeker') {
       return NextResponse.redirect(new URL('/employer/dashboard', req.url))
     }
   }
