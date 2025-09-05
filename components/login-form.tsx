@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useEffect } from "react"
+import { useActionState, useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,9 +10,12 @@ import { loginAction } from "@/app/auth/login/action"
 import { AlertCircle, CheckCircle2 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter, useSearchParams } from "next/navigation"
+import { supabase } from "@/lib/supabase"
 
 export function LoginForm() {
   const [state, formAction, isPending] = useActionState(loginAction, null)
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const { refreshAuth } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -20,6 +23,11 @@ export function LoginForm() {
 
   useEffect(() => {
     if (state?.success) {
+      // Ensure browser session is established (fallback in case server action cookies weren't applied)
+      if (email && password) {
+        await supabase.auth.signInWithPassword({ email, password }).catch(() => {})
+      }
+
       // Refresh auth state and redirect
       refreshAuth().then(() => {
         // If login was triggered by middleware with redirectTo, honor it
@@ -66,12 +74,12 @@ export function LoginForm() {
         <form action={formAction} className="space-y-4">
           <div>
             <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" placeholder="you@example.com" required />
+            <Input id="email" name="email" type="email" placeholder="you@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
             {state?.errors?.email && <p className="text-xs text-red-500 mt-1">{state.errors.email[0]}</p>}
           </div>
           <div>
             <Label htmlFor="password">Password</Label>
-            <Input id="password" name="password" type="password" required />
+            <Input id="password" name="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
             {state?.errors?.password && <p className="text-xs text-red-500 mt-1">{state.errors.password[0]}</p>}
           </div>
 

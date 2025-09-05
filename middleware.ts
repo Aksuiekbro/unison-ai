@@ -97,7 +97,7 @@ export async function middleware(req: NextRequest) {
       .eq('id', session.user.id)
       .single()
 
-    const role = profile?.role || (session.user.user_metadata as any)?.role
+    const role = (profile?.role || (session.user.user_metadata as any)?.role) as any
 
     if (role === 'employer') {
       return NextResponse.redirect(new URL('/employer/dashboard', req.url))
@@ -116,7 +116,12 @@ export async function middleware(req: NextRequest) {
       .eq('id', session.user.id)
       .single()
 
-    const role = profile?.role || (session.user.user_metadata as any)?.role
+    const role = (profile?.role || (session.user.user_metadata as any)?.role) as any
+
+    // If role is unknown, do not bounce between dashboards
+    if (role !== 'employer' && role !== 'job_seeker') {
+      return response
+    }
 
     // Check if user is accessing the correct role-based route
     if (pathname.startsWith('/employer') && role !== 'employer') {
