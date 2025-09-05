@@ -6,20 +6,28 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
-import { loginAction } from "@/actions/auth"
+import { loginAction } from "@/app/auth/login/action"
 import { AlertCircle, CheckCircle2 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 
 export function LoginForm() {
   const [state, formAction, isPending] = useActionState(loginAction, null)
   const { refreshAuth } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectTo = searchParams?.get('redirectTo') || null
 
   useEffect(() => {
     if (state?.success) {
       // Refresh auth state and redirect
       refreshAuth().then(() => {
+        // If login was triggered by middleware with redirectTo, honor it
+        if (redirectTo && redirectTo.startsWith('/')) {
+          router.push(redirectTo)
+          return
+        }
+
         if (state.role === "employer") {
           router.push("/employer/dashboard")
         } else if (state.role === "job_seeker" || state.role === "job-seeker") {
@@ -29,7 +37,7 @@ export function LoginForm() {
         }
       })
     }
-  }, [state, refreshAuth, router])
+  }, [state, refreshAuth, router, redirectTo])
 
   if (state?.success) {
     return (

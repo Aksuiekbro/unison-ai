@@ -1,8 +1,9 @@
 "use server"
 
 import { z } from "zod"
-import { signIn } from "@/lib/auth"
-import { redirect } from "next/navigation"
+import { createServerActionClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import type { Database } from '@/lib/database.types'
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -22,22 +23,32 @@ export async function loginAction(prevState: any, formData: FormData) {
   }
 
   try {
-    const { user } = await signIn(parsed.data.email, parsed.data.password)
-    
-    if (!user) {
+    const supabase = createServerActionClient<Database>({ cookies })
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: parsed.data.email,
+      password: parsed.data.password,
+    })
+
+    if (authError || !authData.user) {
       return {
         success: false,
         message: "Invalid email or password.",
       }
     }
 
-    // Get user role from metadata or profile
-    const role = user.user_metadata?.role
-    
+    // Resolve role from profiles or user metadata (cookie-bound client → RLS works)
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', authData.user.id)
+      .single()
+
+    const role = (profile?.role || (authData.user.user_metadata as any)?.role) as any
+
     return {
       success: true,
       message: "Login successful!",
-      role: role,
+      role,
     }
   } catch (error: any) {
     console.error('Login error:', error)
