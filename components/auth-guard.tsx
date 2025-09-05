@@ -28,7 +28,7 @@ export function AuthGuard({ children, requiredRole, fallback }: AuthGuardProps) 
           // Redirect to appropriate dashboard based on their role
           if (userRole === 'employer') {
             router.push('/employer/dashboard');
-          } else if (userRole === 'job-seeker') {
+          } else if (userRole === 'job_seeker') {
             router.push('/job-seeker/dashboard');
           } else {
             router.push('/');

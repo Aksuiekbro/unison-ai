@@ -1,7 +1,7 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { supabase } from '@/lib/supabase';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from 'react';
+import { supabase } from '@/lib/supabase-client';
 import { getCurrentUser, getUserProfile, AuthUser, UserProfile, AuthState } from '@/lib/auth';
 import { Session, User } from '@supabase/supabase-js';
 
@@ -21,7 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const refreshAuth = async () => {
+  const refreshAuth = useCallback(async () => {
     try {
       setIsLoading(true);
       const currentUser = await getCurrentUser();
@@ -40,9 +40,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     try {
       await supabase.auth.signOut();
       setUser(null);
@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error signing out:', error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     // Initial auth state
@@ -78,16 +78,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const contextValue = useMemo(() => ({
+    user,
+    profile,
+    isLoading,
+    signOut: handleSignOut,
+    refreshAuth,
+  }), [user, profile, isLoading, handleSignOut, refreshAuth]);
+
   return (
-    <AuthContext.Provider 
-      value={{
-        user,
-        profile,
-        isLoading,
-        signOut: handleSignOut,
-        refreshAuth,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

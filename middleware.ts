@@ -1,56 +1,12 @@
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import type { Database } from '@/lib/supabase'
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
+import type { Database } from '@/lib/database.types'
 
 export async function middleware(req: NextRequest) {
-  let response = NextResponse.next()
+  const response = NextResponse.next()
 
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return req.cookies.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          req.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: req.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-        },
-        remove(name: string, options: any) {
-          req.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: req.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-        },
-      },
-    }
-  )
+  const supabase = createMiddlewareClient<Database>({ req, res: response })
 
   // Refresh session if expired - required for Server Components
   const {
@@ -98,10 +54,11 @@ export async function middleware(req: NextRequest) {
       .single()
 
     const role = (profile?.role || (session.user.user_metadata as any)?.role) as any
+    const normalizedRole = role === 'job-seeker' ? 'job_seeker' : role
 
-    if (role === 'employer') {
+    if (normalizedRole === 'employer') {
       return NextResponse.redirect(new URL('/employer/dashboard', req.url))
-    } else if (role === 'job_seeker') {
+    } else if (normalizedRole === 'job_seeker') {
       return NextResponse.redirect(new URL('/job-seeker/dashboard', req.url))
     } else {
       return NextResponse.redirect(new URL('/', req.url))
@@ -117,18 +74,19 @@ export async function middleware(req: NextRequest) {
       .single()
 
     const role = (profile?.role || (session.user.user_metadata as any)?.role) as any
+    const normalizedRole = role === 'job-seeker' ? 'job_seeker' : role
 
     // If role is unknown, do not bounce between dashboards
-    if (role !== 'employer' && role !== 'job_seeker') {
+    if (normalizedRole !== 'employer' && normalizedRole !== 'job_seeker') {
       return response
     }
 
     // Check if user is accessing the correct role-based route
-    if (pathname.startsWith('/employer') && role !== 'employer') {
+    if (pathname.startsWith('/employer') && normalizedRole !== 'employer') {
       return NextResponse.redirect(new URL('/job-seeker/dashboard', req.url))
     }
     
-    if (pathname.startsWith('/job-seeker') && role !== 'job_seeker') {
+    if (pathname.startsWith('/job-seeker') && normalizedRole !== 'job_seeker') {
       return NextResponse.redirect(new URL('/employer/dashboard', req.url))
     }
   }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useEffect, useState } from "react"
+import { useActionState, useEffect, useRef, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,7 +10,6 @@ import { loginAction } from "@/app/auth/login/action"
 import { AlertCircle, CheckCircle2 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter, useSearchParams } from "next/navigation"
-import { supabase } from "@/lib/supabase"
 
 export function LoginForm() {
   const [state, formAction, isPending] = useActionState(loginAction, null)
@@ -20,33 +19,33 @@ export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams?.get('redirectTo') || null
+  const didRedirectRef = useRef(false)
 
   useEffect(() => {
-    if (!state?.success) return
+    if (!state?.success || didRedirectRef.current) return
     ;(async () => {
-      // Ensure browser session is established (fallback in case server action cookies weren't applied)
-      if (email && password) {
-        try { await supabase.auth.signInWithPassword({ email, password }) } catch {}
-      }
-
       // Refresh auth state and redirect
       await refreshAuth()
 
       // If login was triggered by middleware with redirectTo, honor it
       if (redirectTo && redirectTo.startsWith('/')) {
+        didRedirectRef.current = true
         router.push(redirectTo)
         return
       }
 
       if (state.role === "employer") {
+        didRedirectRef.current = true
         router.push("/employer/dashboard")
       } else if (state.role === "job_seeker" || state.role === "job-seeker") {
+        didRedirectRef.current = true
         router.push("/job-seeker/dashboard")
       } else {
+        didRedirectRef.current = true
         router.push("/")
       }
     })()
-  }, [state, refreshAuth, router, redirectTo, email, password])
+  }, [state, refreshAuth, router, redirectTo])
 
   if (state?.success) {
     return (

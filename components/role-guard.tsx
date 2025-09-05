@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,33 +20,45 @@ export function RoleGuard({ allowedRoles, children, redirectPath }: RoleGuardPro
   const [authorized, setAuthorized] = useState(false);
   const router = useRouter();
 
-  const supabase = createBrowserClient(
+  const supabase = useMemo(() => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  ), []);
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const { data: { user }, error } = await supabase.auth.getUser();
         
-        if (error || !user) {
-          router.push('/auth/login');
-          return;
+        if (error) {
+          console.error('Auth check error:', error);
         }
 
-        setUser(user);
-        const role = user.user_metadata?.role;
-        setUserRole(role);
+        setUser(user || null);
 
-        if (!role || !allowedRoles.includes(role)) {
+        // Prefer profile.role; fallback to metadata.role
+        let role: string | undefined = undefined;
+        if (user) {
+          const { data: profileRow } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .maybeSingle();
+          role = (profileRow?.role as string | undefined) || (user.user_metadata?.role as string | undefined);
+        }
+
+        const normalizedRole = role === 'job-seeker' || role === 'employee' ? 'job_seeker' : role;
+        const normalizedAllowed = allowedRoles.map(r => (r === 'job-seeker' || r === 'employee' ? 'job_seeker' : r));
+        setUserRole(normalizedRole || null);
+
+        if (!normalizedRole || !normalizedAllowed.includes(normalizedRole)) {
           setAuthorized(false);
         } else {
           setAuthorized(true);
         }
       } catch (error) {
         console.error('Auth check failed:', error);
-        router.push('/auth/login');
+        setAuthorized(false);
       } finally {
         setLoading(false);
       }
@@ -61,14 +73,14 @@ export function RoleGuard({ allowedRoles, children, redirectPath }: RoleGuardPro
     });
 
     return () => subscription.unsubscribe();
-  }, [allowedRoles, router, supabase.auth]);
+  }, [allowedRoles, router, supabase]);
 
   const handleRedirect = () => {
     if (redirectPath) {
       router.push(redirectPath);
     } else if (userRole === 'employer') {
       router.push('/employer/dashboard');
-    } else if (userRole === 'employee' || userRole === 'job-seeker') {
+    } else if (userRole === 'job_seeker') {
       router.push('/job-seeker/dashboard');
     } else {
       router.push('/');

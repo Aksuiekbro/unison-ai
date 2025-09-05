@@ -1,5 +1,5 @@
-import { supabase } from './supabase';
-import { supabaseAdmin } from './supabase';
+import { supabase } from './supabase-client';
+import { supabaseAdmin } from './supabase-admin';
 import { User } from '@supabase/supabase-js';
 
 export type UserRole = 'employer' | 'job_seeker';
