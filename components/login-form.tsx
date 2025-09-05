@@ -22,7 +22,7 @@ export function LoginForm() {
       refreshAuth().then(() => {
         if (state.role === "employer") {
           router.push("/employer/dashboard")
-        } else if (state.role === "job-seeker") {
+        } else if (state.role === "job_seeker" || state.role === "job-seeker") {
           router.push("/job-seeker/dashboard")
         } else {
           router.push("/")
