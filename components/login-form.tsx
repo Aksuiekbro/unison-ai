@@ -22,30 +22,31 @@ export function LoginForm() {
   const redirectTo = searchParams?.get('redirectTo') || null
 
   useEffect(() => {
-    if (state?.success) {
+    if (!state?.success) return
+    ;(async () => {
       // Ensure browser session is established (fallback in case server action cookies weren't applied)
       if (email && password) {
-        await supabase.auth.signInWithPassword({ email, password }).catch(() => {})
+        try { await supabase.auth.signInWithPassword({ email, password }) } catch {}
       }
 
       // Refresh auth state and redirect
-      refreshAuth().then(() => {
-        // If login was triggered by middleware with redirectTo, honor it
-        if (redirectTo && redirectTo.startsWith('/')) {
-          router.push(redirectTo)
-          return
-        }
+      await refreshAuth()
 
-        if (state.role === "employer") {
-          router.push("/employer/dashboard")
-        } else if (state.role === "job_seeker" || state.role === "job-seeker") {
-          router.push("/job-seeker/dashboard")
-        } else {
-          router.push("/")
-        }
-      })
-    }
-  }, [state, refreshAuth, router, redirectTo])
+      // If login was triggered by middleware with redirectTo, honor it
+      if (redirectTo && redirectTo.startsWith('/')) {
+        router.push(redirectTo)
+        return
+      }
+
+      if (state.role === "employer") {
+        router.push("/employer/dashboard")
+      } else if (state.role === "job_seeker" || state.role === "job-seeker") {
+        router.push("/job-seeker/dashboard")
+      } else {
+        router.push("/")
+      }
+    })()
+  }, [state, refreshAuth, router, redirectTo, email, password])
 
   if (state?.success) {
     return (
