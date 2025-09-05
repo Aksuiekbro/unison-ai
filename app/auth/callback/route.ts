@@ -47,7 +47,17 @@ export async function GET(request: Request) {
       if (!existing) {
         const role = (user.user_metadata as any)?.role ?? 'job_seeker'
         const email = user.email ?? ''
-        await supabaseAdmin.from('profiles').insert({ id: user.id, role, email })
+        const fullName = (user.user_metadata as any)?.full_name as string | undefined
+        const [first, ...rest] = (fullName || '').trim().split(/\s+/)
+        const firstName = first || (email ? email.split('@')[0] : '')
+        const lastName = rest.join(' ') || ''
+        await supabaseAdmin.from('profiles').insert({
+          id: user.id,
+          role,
+          email,
+          first_name: firstName,
+          last_name: lastName,
+        })
       }
 
       const role = (user.user_metadata as any)?.role
