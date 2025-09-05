@@ -1,22 +1,29 @@
-import { supabase, Database } from './supabase';
+import { supabase } from './supabase';
 import { supabaseAdmin } from './supabase';
 import { User } from '@supabase/supabase-js';
 
-export type UserProfile = Database['public']['Tables']['profiles']['Row'];
 export type UserRole = 'employer' | 'job_seeker';
 
-export interface AuthUser extends User {
+export type AuthUser = User & {
   user_metadata?: {
     role?: UserRole;
     full_name?: string;
     company_name?: string;
-  };
+  }
 }
 
 export interface AuthState {
   user: AuthUser | null;
-  profile: UserProfile | null;
+  profile: ProfileRow | null;
   isLoading: boolean;
+}
+
+export interface ProfileRow {
+  id: string
+  role: UserRole
+  email: string
+  first_name?: string | null
+  last_name?: string | null
 }
 
 // Client-side auth functions
@@ -42,6 +49,9 @@ export async function signUp(
 
   // Create user profile in the database
   if (data.user) {
+    const [first, ...rest] = (metadata.full_name || '').trim().split(/\s+/)
+    const firstName = first || email.split('@')[0]
+    const lastName = rest.join(' ') || ''
     // Use service role to bypass RLS during initial profile creation
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
@@ -49,6 +59,8 @@ export async function signUp(
         id: data.user.id,
         role: metadata.role,
         email: email,
+        first_name: firstName,
+        last_name: lastName,
       });
 
     if (profileError) throw profileError;
@@ -82,7 +94,7 @@ export async function getCurrentSession() {
   return session;
 }
 
-export async function getUserProfile(userId: string): Promise<UserProfile | null> {
+export async function getUserProfile(userId: string): Promise<ProfileRow | null> {
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -94,10 +106,10 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 }
 
 // Utility functions
-export function hasRole(user: AuthUser | null, profile: UserProfile | null, role: UserRole): boolean {
+export function hasRole(user: AuthUser | null, profile: ProfileRow | null, role: UserRole): boolean {
   return profile?.role === role || user?.user_metadata?.role === role;
 }
 
-export function getUserRole(user: AuthUser | null, profile: UserProfile | null): UserRole | null {
+export function getUserRole(user: AuthUser | null, profile: ProfileRow | null): UserRole | null {
   return profile?.role || user?.user_metadata?.role || null;
 }
