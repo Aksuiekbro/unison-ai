@@ -1,0 +1,7 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+when you want to start running a server, you should not do that and ask the user to run it.

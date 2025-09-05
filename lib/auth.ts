@@ -1,4 +1,5 @@
 import { supabase, Database } from './supabase';
+import { supabaseAdmin } from './supabase';
 import { User } from '@supabase/supabase-js';
 
 export type UserProfile = Database['public']['Tables']['profiles']['Row'];
@@ -32,7 +33,8 @@ export async function signUp(
     email,
     password,
     options: {
-      data: metadata
+      data: metadata,
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`
     }
   });
 
@@ -40,7 +42,8 @@ export async function signUp(
 
   // Create user profile in the database
   if (data.user) {
-    const { error: profileError } = await supabase
+    // Use service role to bypass RLS during initial profile creation
+    const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .insert({
         id: data.user.id,

@@ -4,7 +4,7 @@ import { z } from "zod"
 import { signUp } from "@/lib/auth"
 
 const signupSchema = z.object({
-  role: z.enum(["employer", "job-seeker"]),
+  role: z.enum(["employer", "job_seeker"]),
   companyName: z.string().optional(),
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
@@ -14,10 +14,9 @@ const signupSchema = z.object({
 export async function signupAction(prevState: any, formData: FormData) {
   const data = Object.fromEntries(formData)
   
-  // Transform 'employee' to 'job-seeker' for consistency
-  if (data.role === 'employee') {
-    data.role = 'job-seeker'
-  }
+  // Normalize UI value to DB enum
+  if (data.role === 'employee') data.role = 'job_seeker'
+  if (data.role === 'job-seeker') data.role = 'job_seeker'
   
   const parsed = signupSchema.safeParse(data)
 
