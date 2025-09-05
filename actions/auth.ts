@@ -5,12 +5,12 @@ import { supabase } from "@/lib/supabase-client"
 import { supabaseAdmin } from "@/lib/supabase-admin"
 
 // Types
-interface User {
+interface UserRow {
   id: string
-  role: "employer" | "employee"
-  company_name?: string
-  full_name: string
+  role: "employer" | "job_seeker"
   email: string
+  full_name?: string
+  company_name?: string
   created_at?: string
   updated_at?: string
 }
@@ -22,7 +22,7 @@ const loginSchema = z.object({
 })
 
 const signupSchema = z.object({
-  role: z.enum(["employer", "employee"]),
+  role: z.enum(["employer", "employee", "job-seeker", "job_seeker"]),
   companyName: z.string().optional(),
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
@@ -48,21 +48,21 @@ export async function loginAction(prevState: any, formData: FormData) {
       password: parsed.data.password,
     })
 
-    if (authError) {
+    if (authError || !authData.user) {
       return {
         success: false,
         message: "Invalid email or password.",
       }
     }
 
-    // Get user profile data
+    // Get user profile data (from profiles)
     const { data: profileData, error: profileError } = await supabase
-      .from('users')
+      .from('profiles')
       .select('role')
       .eq('id', authData.user.id)
       .single()
 
-    if (profileError) {
+    if (profileError || !profileData) {
       return {
         success: false,
         message: "Failed to retrieve user profile.",
@@ -94,30 +94,42 @@ export async function signupAction(prevState: any, formData: FormData) {
     }
   }
 
+  // Normalize role to db enum
+  const normalizedRole = ((): "employer" | "job_seeker" => {
+    if (parsed.data.role === 'employee') return 'job_seeker'
+    if (parsed.data.role === 'job-seeker') return 'job_seeker'
+    return parsed.data.role as "employer" | "job_seeker"
+  })()
+
   try {
-    // Create auth user
+    // Create auth user with email confirmed (server-side path)
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: parsed.data.email,
       password: parsed.data.password,
       email_confirm: true,
+      user_metadata: { role: normalizedRole, full_name: parsed.data.fullName, company_name: parsed.data.companyName },
     })
 
-    if (authError) {
+    if (authError || !authData.user) {
       return {
         success: false,
         message: "Failed to create account. Email may already be in use.",
       }
     }
 
-    // Create user profile
+    // Create profile in profiles table
+    const [first, ...rest] = parsed.data.fullName.trim().split(/\s+/)
+    const firstName = first || parsed.data.email.split('@')[0]
+    const lastName = rest.join(' ') || ''
+
     const { error: profileError } = await supabaseAdmin
-      .from('users')
+      .from('profiles')
       .insert({
         id: authData.user.id,
         email: parsed.data.email,
-        full_name: parsed.data.fullName,
-        role: parsed.data.role,
-        company_name: parsed.data.companyName,
+        role: normalizedRole,
+        first_name: firstName,
+        last_name: lastName,
       })
 
     if (profileError) {
@@ -132,7 +144,7 @@ export async function signupAction(prevState: any, formData: FormData) {
     return {
       success: true,
       message: "Account created successfully!",
-      role: parsed.data.role,
+      role: normalizedRole,
     }
   } catch (error) {
     return {
@@ -142,52 +154,42 @@ export async function signupAction(prevState: any, formData: FormData) {
   }
 }
 
-export async function findUserByEmail(email: string): Promise<User | null> {
+export async function findUserByEmail(email: string): Promise<UserRow | null> {
   try {
     const { data, error } = await supabase
-      .from('users')
+      .from('profiles')
       .select('*')
       .eq('email', email)
       .single()
 
-    if (error || !data) {
-      return null
-    }
-
-    return data as User
-  } catch (error) {
+    if (error || !data) return null
+    return data as unknown as UserRow
+  } catch {
     return null
   }
 }
 
-export async function getUserById(id: string): Promise<User | null> {
+export async function getUserById(id: string): Promise<UserRow | null> {
   try {
     const { data, error } = await supabase
-      .from('users')
+      .from('profiles')
       .select('*')
       .eq('id', id)
       .single()
 
-    if (error || !data) {
-      return null
-    }
-
-    return data as User
-  } catch (error) {
+    if (error || !data) return null
+    return data as unknown as UserRow
+  } catch {
     return null
   }
 }
 
-export async function getCurrentUser(): Promise<User | null> {
+export async function getCurrentUser(): Promise<UserRow | null> {
   try {
     const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      return null
-    }
-
+    if (!user) return null
     return await getUserById(user.id)
-  } catch (error) {
+  } catch {
     return null
   }
 }
