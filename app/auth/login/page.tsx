@@ -1,6 +1,7 @@
 import { LoginForm } from "@/components/login-form"
 import { Logotype } from "@/components/logotype"
 import Link from "next/link"
+import { Suspense } from "react"
 
 export default function LoginPage() {
   return (
@@ -12,7 +13,9 @@ export default function LoginPage() {
             <span>UnisonAI</span>
           </Link>
         </div>
-        <LoginForm />
+        <Suspense fallback={null}>
+          <LoginForm />
+        </Suspense>
       </div>
     </div>
   )
