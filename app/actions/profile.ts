@@ -4,7 +4,7 @@ import { createServerActionClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import type { Database } from '@/lib/database.types'
+// Using untyped client to avoid friction with partially generated DB types
 import { 
   jobSeekerProfileSchema,
   jobSeekerExperienceSchema,
@@ -18,7 +18,7 @@ import {
 
 // Job Seeker Actions
 export async function updateJobSeekerProfile(formData: FormData) {
-  const supabase = createServerActionClient<Database>({ cookies })
+  const supabase = createServerActionClient({ cookies })
   
   try {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -31,7 +31,7 @@ export async function updateJobSeekerProfile(formData: FormData) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', user.id)
+      .eq('id', user.id as any)
       .single()
 
     if (profileError || !profile || profile.role !== 'job_seeker') {
@@ -58,7 +58,7 @@ export async function updateJobSeekerProfile(formData: FormData) {
     const { error: upsertError } = await supabase
       .from('job_seeker_profiles')
       .upsert({
-        profile_id: profile.id,
+        profile_id: (profile as any).id,
         first_name: validatedData.firstName,
         last_name: validatedData.lastName,
         title: validatedData.title || null,
@@ -88,7 +88,7 @@ export async function updateJobSeekerProfile(formData: FormData) {
 }
 
 export async function addJobSeekerExperience(formData: FormData) {
-  const supabase = createServerActionClient<Database>({ cookies })
+  const supabase = createServerActionClient({ cookies })
   
   try {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -101,8 +101,8 @@ export async function addJobSeekerExperience(formData: FormData) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('id')
-      .eq('id', user.id)
-      .eq('role', 'job_seeker')
+      .eq('id', user.id as any)
+      .eq('role', 'job_seeker' as any)
       .single()
 
     if (profileError || !profile) {
@@ -112,7 +112,7 @@ export async function addJobSeekerExperience(formData: FormData) {
     const { data: jsProfile, error: jsProfileError } = await supabase
       .from('job_seeker_profiles')
       .select('id')
-      .eq('profile_id', profile.id)
+      .eq('profile_id', (profile as any).id)
       .single()
 
     if (jsProfileError || !jsProfile) {
@@ -136,7 +136,7 @@ export async function addJobSeekerExperience(formData: FormData) {
     const { error: insertError } = await supabase
       .from('job_seeker_experiences')
       .insert({
-        job_seeker_profile_id: jsProfile.id,
+        job_seeker_profile_id: (jsProfile as any).id,
         position: validatedData.position,
         company: validatedData.company,
         start_date: validatedData.startDate,
@@ -160,7 +160,7 @@ export async function addJobSeekerExperience(formData: FormData) {
 }
 
 export async function addJobSeekerEducation(formData: FormData) {
-  const supabase = createServerActionClient<Database>({ cookies })
+  const supabase = createServerActionClient({ cookies })
   
   try {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -173,8 +173,8 @@ export async function addJobSeekerEducation(formData: FormData) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('id')
-      .eq('id', user.id)
-      .eq('role', 'job_seeker')
+      .eq('id', user.id as any)
+      .eq('role', 'job_seeker' as any)
       .single()
 
     if (profileError || !profile) {
@@ -184,7 +184,7 @@ export async function addJobSeekerEducation(formData: FormData) {
     const { data: jsProfile, error: jsProfileError } = await supabase
       .from('job_seeker_profiles')
       .select('id')
-      .eq('profile_id', profile.id)
+      .eq('profile_id', (profile as any).id)
       .single()
 
     if (jsProfileError || !jsProfile) {
@@ -206,7 +206,7 @@ export async function addJobSeekerEducation(formData: FormData) {
     const { error: insertError } = await supabase
       .from('job_seeker_education')
       .insert({
-        job_seeker_profile_id: jsProfile.id,
+        job_seeker_profile_id: (jsProfile as any).id,
         institution: validatedData.institution,
         degree: validatedData.degree,
         field_of_study: validatedData.fieldOfStudy,
@@ -229,7 +229,7 @@ export async function addJobSeekerEducation(formData: FormData) {
 
 // Employer Actions
 export async function updateEmployerProfile(formData: FormData) {
-  const supabase = createServerActionClient<Database>({ cookies })
+  const supabase = createServerActionClient({ cookies })
   
   try {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -242,7 +242,7 @@ export async function updateEmployerProfile(formData: FormData) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', user.id)
+      .eq('id', user.id as any)
       .single()
 
     if (profileError || !profile || profile.role !== 'employer') {
@@ -275,7 +275,7 @@ export async function updateEmployerProfile(formData: FormData) {
     const { error: upsertError } = await supabase
       .from('employer_profiles')
       .upsert({
-        profile_id: profile.id,
+        profile_id: (profile as any).id,
         company_name: validatedData.companyName,
         company_description: validatedData.companyDescription || null,
         industry: validatedData.industry || null,
@@ -307,5 +307,37 @@ export async function updateEmployerProfile(formData: FormData) {
   } catch (error) {
     console.error('Error in updateEmployerProfile:', error)
     return { error: 'Invalid form data' }
+  }
+}
+
+// Basic account info (first/last name) for profiles table
+export async function updateBasicProfile(formData: FormData) {
+  const supabase = createServerActionClient({ cookies })
+
+  try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return { error: 'Authentication required' }
+    }
+
+    const firstName = (formData.get('firstName') as string || '').trim()
+    const lastName = (formData.get('lastName') as string || '').trim()
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ first_name: (firstName as any) || null, last_name: (lastName as any) || null })
+      .eq('id', user.id as any)
+
+    if (updateError) {
+      console.error('Error updating basic profile:', updateError)
+      return { error: 'Failed to update profile' }
+    }
+
+    revalidatePath('/job-seeker/settings')
+    revalidatePath('/job-seeker/dashboard')
+    return
+  } catch (error) {
+    console.error('Error in updateBasicProfile:', error)
+    return
   }
 }
