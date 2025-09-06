@@ -60,6 +60,7 @@ export async function updateJobSeekerProfile(formData: FormData) {
       .update({
         first_name: (validatedData.firstName as any) || null,
         last_name: (validatedData.lastName as any) || null,
+        title: (validatedData.title as any) || null,
         phone: validatedData.phone || null,
         location: validatedData.location || null,
         linkedin_url: validatedData.linkedinUrl || null,
