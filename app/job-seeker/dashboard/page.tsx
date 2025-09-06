@@ -5,16 +5,35 @@ import { Badge } from "@/components/ui/badge"
 import { LayoutDashboard, User, Search, Settings, Eye, Calendar, MapPin, Clock, Heart } from "lucide-react"
 import Link from "next/link"
 import { RoleGuard } from "@/components/role-guard"
+import { cookies } from "next/headers"
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
+import type { Database } from "@/lib/database.types"
 
-export default function JobSeekerDashboard() {
+export default async function JobSeekerDashboard() {
+  const supabase = createServerComponentClient<Database>({ cookies })
+  const { data: { user } } = await supabase.auth.getUser()
+
+  let displayName = ""
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('first_name,last_name,email')
+      .eq('id', user.id as any)
+      .maybeSingle()
+    const first = (profile as any)?.first_name as string | undefined
+    const last = (profile as any)?.last_name as string | undefined
+    const email = (profile as any)?.email as string | undefined
+    displayName = [first, last].filter(Boolean).join(' ').trim() || (email ? email.split('@')[0] : '')
+  }
+
   return (
     <RoleGuard allowedRoles={['employee', 'job-seeker']}>
-      <JobSeekerDashboardContent />
+      <JobSeekerDashboardContent displayName={displayName} />
     </RoleGuard>
   )
 }
 
-function JobSeekerDashboardContent() {
+function JobSeekerDashboardContent({ displayName }: { displayName: string }) {
   const applications = [
     { id: 1, company: "TechCorp", position: "Frontend Developer", status: "В просмотре", date: "2 дня назад" },
     {
@@ -85,7 +104,7 @@ function JobSeekerDashboardContent() {
         {/* Main Content */}
         <div className="flex-1 p-8">
           <div className="max-w-6xl mx-auto">
-            <h1 className="text-3xl font-bold text-[#0A2540] mb-8">Добро пожаловать, Иван!</h1>
+            <h1 className="text-3xl font-bold text-[#0A2540] mb-8">Добро пожаловать{displayName ? `, ${displayName}` : ''}!</h1>
 
             <div className="grid lg:grid-cols-3 gap-8">
               {/* Left Column */}
