@@ -28,38 +28,31 @@ export default async function JobSeekerProfile() {
     redirect('/')
   }
 
-  // Get job seeker profile data
-  const { data: jsProfile } = await supabase
-    .from('job_seeker_profiles')
-    .select('*')
-    .eq('profile_id', profile.id)
-    .single()
-
-  // Get experiences
+  // Get experiences (keyed by profiles.id)
   const { data: experiences } = await supabase
     .from('job_seeker_experiences')
     .select('*')
-    .eq('job_seeker_profile_id', jsProfile?.id || '')
+    .eq('job_seeker_profile_id', profile.id)
     .order('start_date', { ascending: false })
 
-  // Get education
+  // Get education (keyed by profiles.id)
   const { data: education } = await supabase
     .from('job_seeker_education')
     .select('*')
-    .eq('job_seeker_profile_id', jsProfile?.id || '')
+    .eq('job_seeker_profile_id', profile.id)
     .order('graduation_year', { ascending: false })
 
   // Transform data for the form
   const initialData = {
-    firstName: jsProfile?.first_name || (profile as any)?.first_name || '',
-    lastName: jsProfile?.last_name || (profile as any)?.last_name || '',
-    title: jsProfile?.title || '',
-    summary: jsProfile?.summary || '',
-    phone: jsProfile?.phone || '',
-    location: jsProfile?.location || '',
-    linkedinUrl: jsProfile?.linkedin_url || '',
-    githubUrl: jsProfile?.github_url || '',
-    skills: jsProfile?.skills || [],
+    firstName: (profile as any)?.first_name || '',
+    lastName: (profile as any)?.last_name || '',
+    title: (profile as any)?.title || '',
+    summary: (profile as any)?.bio || (profile as any)?.summary || '',
+    phone: (profile as any)?.phone || '',
+    location: (profile as any)?.location || '',
+    linkedinUrl: (profile as any)?.linkedin_url || '',
+    githubUrl: (profile as any)?.github_url || '',
+    skills: (profile as any)?.skills || [],
   }
 
   const transformedExperiences = experiences?.map(exp => ({

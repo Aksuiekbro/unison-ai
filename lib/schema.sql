@@ -1,3 +1,5 @@
+-- DEPRECATED: This file is not the canonical schema. Use `supabase/schema.sql` (unified profiles schema).
+-- Kept for historical reference only.
 -- Users table (for authentication and basic profile info)
 CREATE TABLE IF NOT EXISTS users (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

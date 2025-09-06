@@ -1,3 +1,6 @@
+-- DEPRECATED: Not canonical. The application now uses the unified schema in `supabase/schema.sql`.
+-- This file is retained for reference only and is not used by deployments.
+
 -- Database schema for job posting and application management system
 
 -- Users table (already exists, adding company_id column)

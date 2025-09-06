@@ -74,28 +74,7 @@ export async function updateJobSeekerProfile(formData: FormData) {
       return { error: `Failed to update profile: ${profilesUpdateError.message || 'Unknown error'}` }
     }
 
-    // Best-effort: also upsert into job_seeker_profiles when table exists
-    const { error: jsUpsertError } = await supabase
-      .from('job_seeker_profiles')
-      .upsert({
-        profile_id: (profile as any).id,
-        first_name: validatedData.firstName,
-        last_name: validatedData.lastName,
-        title: validatedData.title || null,
-        summary: validatedData.summary || null,
-        phone: validatedData.phone || null,
-        location: validatedData.location || null,
-        linkedin_url: validatedData.linkedinUrl || null,
-        github_url: validatedData.githubUrl || null,
-        skills: validatedData.skills || null,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'profile_id'
-      })
-
-    if (jsUpsertError && (jsUpsertError as any).code !== '42P01') { // ignore missing table
-      console.warn('job_seeker_profiles upsert failed (non-fatal):', jsUpsertError)
-    }
+    // Note: job_seeker_profiles is deprecated; unified updates are handled via public.profiles only.
 
     // Keep core profile (used in greetings) in sync for first/last name
     const { error: coreUpdateError } = await supabase
@@ -130,25 +109,14 @@ export async function addJobSeekerExperience(formData: FormData) {
       return { error: 'Authentication required' }
     }
 
-    // Get job seeker profile
+    // Verify job seeker profile exists in unified profiles table
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id, role')
       .eq('id', user.id as any)
-      .eq('role', 'job_seeker' as any)
       .single()
 
-    if (profileError || !profile) {
-      return { error: 'Job seeker profile not found' }
-    }
-
-    const { data: jsProfile, error: jsProfileError } = await supabase
-      .from('job_seeker_profiles')
-      .select('id')
-      .eq('profile_id', (profile as any).id)
-      .single()
-
-    if (jsProfileError || !jsProfile) {
+    if (profileError || !profile || (profile as any).role !== 'job_seeker') {
       return { error: 'Job seeker profile not found' }
     }
 
@@ -165,11 +133,11 @@ export async function addJobSeekerExperience(formData: FormData) {
     // Validate data
     const validatedData = jobSeekerExperienceSchema.parse(data)
 
-    // Add experience
+    // Add experience (foreign key references profiles.id)
     const { error: insertError } = await supabase
       .from('job_seeker_experiences')
       .insert({
-        job_seeker_profile_id: (jsProfile as any).id,
+        job_seeker_profile_id: (profile as any).id,
         position: validatedData.position,
         company: validatedData.company,
         start_date: validatedData.startDate,
@@ -202,25 +170,14 @@ export async function addJobSeekerEducation(formData: FormData) {
       return { error: 'Authentication required' }
     }
 
-    // Get job seeker profile
+    // Verify job seeker in unified profiles table
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id, role')
       .eq('id', user.id as any)
-      .eq('role', 'job_seeker' as any)
       .single()
 
-    if (profileError || !profile) {
-      return { error: 'Job seeker profile not found' }
-    }
-
-    const { data: jsProfile, error: jsProfileError } = await supabase
-      .from('job_seeker_profiles')
-      .select('id')
-      .eq('profile_id', (profile as any).id)
-      .single()
-
-    if (jsProfileError || !jsProfile) {
+    if (profileError || !profile || (profile as any).role !== 'job_seeker') {
       return { error: 'Job seeker profile not found' }
     }
 
@@ -235,11 +192,11 @@ export async function addJobSeekerEducation(formData: FormData) {
     // Validate data
     const validatedData = jobSeekerEducationSchema.parse(data)
 
-    // Add education
+    // Add education (foreign key references profiles.id)
     const { error: insertError } = await supabase
       .from('job_seeker_education')
       .insert({
-        job_seeker_profile_id: (jsProfile as any).id,
+        job_seeker_profile_id: (profile as any).id,
         institution: validatedData.institution,
         degree: validatedData.degree,
         field_of_study: validatedData.fieldOfStudy,
