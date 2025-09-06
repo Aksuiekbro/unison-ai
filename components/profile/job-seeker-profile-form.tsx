@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -46,6 +47,7 @@ export default function JobSeekerProfileForm({
   viewerEmail,
 }: JobSeekerProfileFormProps) {
   const { toast } = useToast();
+  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [skills, setSkills] = useState<string[]>(initialData?.skills || [])
   const [newSkill, setNewSkill] = useState('')
@@ -99,6 +101,8 @@ export default function JobSeekerProfileForm({
           title: "Success",
           description: "Profile updated successfully",
         })
+        // Refresh server data so preview reflects latest DB state
+        router.refresh()
         setIsEditing(false)
       }
     })
@@ -155,7 +159,7 @@ export default function JobSeekerProfileForm({
             >
               {isPending ? 'Saving...' : 'Save Changes'}
             </Button>
-            <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setIsEditing(false)}>Back to profile</Button>
           </div>
         )}
       </div>
@@ -164,7 +168,7 @@ export default function JobSeekerProfileForm({
       {!isEditing && (
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle className="text-[#0A2540]">Public Profile Preview</CardTitle>
+            <CardTitle className="text-[#0A2540]">Public Profile</CardTitle>
             {missing.length > 0 && (
               <CardDescription>
                 Missing: {missing.join(', ')}
@@ -172,20 +176,44 @@ export default function JobSeekerProfileForm({
             )}
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-6">
+              {/* Header */}
               <div>
-                <p className="text-xl font-semibold text-[#0A2540]">
+                <h2 className="text-2xl font-bold text-[#0A2540]">
                   {[firstName, lastName].filter(Boolean).join(' ') || viewerEmail || 'Unnamed User'}
-                </p>
+                </h2>
                 <p className="text-sm text-[#333333]">{title || '—'}</p>
                 <p className="text-sm text-gray-500">{location || '—'}</p>
               </div>
-              <div>
-                <p className="text-[#0A2540] font-medium mb-1">About</p>
+
+              {/* About */}
+              <section>
+                <h3 className="text-sm font-semibold text-[#0A2540] mb-2">About</h3>
                 <p className="text-sm text-[#333333] whitespace-pre-wrap">{summary || '—'}</p>
-              </div>
-              <div>
-                <p className="text-[#0A2540] font-medium mb-1">Links</p>
+              </section>
+
+              {/* Contact Info */}
+              <section>
+                <h3 className="text-sm font-semibold text-[#0A2540] mb-2">Contact Info</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-500">Email: </span>
+                    <span className="text-[#0A2540]">{viewerEmail || '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Phone: </span>
+                    <span className="text-[#0A2540]">{form.watch('phone') || '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Location: </span>
+                    <span className="text-[#0A2540]">{location || '—'}</span>
+                  </div>
+                </div>
+              </section>
+
+              {/* Portfolio Links */}
+              <section>
+                <h3 className="text-sm font-semibold text-[#0A2540] mb-2">Portfolio Links</h3>
                 <div className="flex flex-wrap gap-3 text-sm">
                   <a href={linkedinUrl || '#'} className="underline text-[#00C49A]" target="_blank" rel="noreferrer">
                     LinkedIn
@@ -194,15 +222,53 @@ export default function JobSeekerProfileForm({
                     GitHub
                   </a>
                 </div>
-              </div>
-              <div>
-                <p className="text-[#0A2540] font-medium mb-2">Skills</p>
+              </section>
+
+              {/* Education */}
+              <section>
+                <h3 className="text-sm font-semibold text-[#0A2540] mb-2">Education</h3>
+                {education && education.length > 0 ? (
+                  <div className="space-y-2">
+                    {education.map((edu) => (
+                      <div key={edu.id} className="text-sm">
+                        <p className="font-medium text-[#0A2540]">{edu.degree} • {edu.fieldOfStudy}</p>
+                        <p className="text-[#333333]">{edu.institution}</p>
+                        <p className="text-gray-500">{edu.graduationYear}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">—</p>
+                )}
+              </section>
+
+              {/* Experience */}
+              <section>
+                <h3 className="text-sm font-semibold text-[#0A2540] mb-2">Experience</h3>
+                {experiences && experiences.length > 0 ? (
+                  <div className="space-y-2">
+                    {experiences.map((exp) => (
+                      <div key={exp.id} className="text-sm">
+                        <p className="font-medium text-[#0A2540]">{exp.position} • {exp.company}</p>
+                        <p className="text-gray-500">{exp.startDate} - {exp.isCurrent ? 'Present' : exp.endDate || '—'}</p>
+                        {exp.description && <p className="text-[#333333]">{exp.description}</p>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">—</p>
+                )}
+              </section>
+
+              {/* Skills */}
+              <section>
+                <h3 className="text-sm font-semibold text-[#0A2540] mb-2">Skills</h3>
                 <div className="flex flex-wrap gap-2">
                   {skills.length > 0 ? skills.map((s) => (
                     <Badge key={s} variant="secondary" className="px-3 py-1">{s}</Badge>
                   )) : <span className="text-sm text-gray-500">—</span>}
                 </div>
-              </div>
+              </section>
             </div>
           </CardContent>
         </Card>
@@ -264,9 +330,10 @@ export default function JobSeekerProfileForm({
         </Card>
       )}
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <Tabs defaultValue="personal" className="space-y-6">
+      {isEditing && (
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <Tabs defaultValue="personal" className="space-y-6">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="personal">Personal Info</TabsTrigger>
               <TabsTrigger value="experience">Experience</TabsTrigger>
@@ -513,9 +580,10 @@ export default function JobSeekerProfileForm({
                 </CardContent>
               </Card>
             </TabsContent>
-          </Tabs>
-        </form>
-      </Form>
+            </Tabs>
+          </form>
+        </Form>
+      )}
     </div>
   )
 }

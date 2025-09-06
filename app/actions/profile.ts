@@ -75,7 +75,7 @@ export async function updateJobSeekerProfile(formData: FormData) {
 
     if (upsertError) {
       console.error('Error updating job seeker profile:', upsertError)
-      return { error: 'Failed to update profile' }
+      return { error: `Failed to update profile: ${upsertError.message || 'Unknown error'}` }
     }
 
     // Keep core profile (used in greetings) in sync for first/last name
@@ -95,9 +95,9 @@ export async function updateJobSeekerProfile(formData: FormData) {
     revalidatePath('/job-seeker/dashboard')
     return { success: true }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in updateJobSeekerProfile:', error)
-    return { error: 'Invalid form data' }
+    return { error: `Invalid form data: ${error?.message || 'Unknown error'}` }
   }
 }
 

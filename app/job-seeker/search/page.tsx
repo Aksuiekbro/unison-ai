@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,8 +13,9 @@ import { LayoutDashboard, User, Search, Settings, Heart, MapPin, Clock, Building
 import Link from "next/link"
 import { searchJobs, applyToJob } from "@/lib/jobs"
 import { Job, JobFilters } from "@/lib/types"
-import { supabase } from "@/lib/supabase-client"
 import { JobApplicationDialog } from "@/components/job-application-dialog"
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import type { Database } from '@/lib/database.types'
 
 export default function JobSearch() {
   const [jobs, setJobs] = useState<Job[]>([])
@@ -24,6 +25,8 @@ export default function JobSearch() {
   const [filters, setFilters] = useState<JobFilters>({})
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
   const [showApplicationDialog, setShowApplicationDialog] = useState(false)
+
+  const supabase = useMemo(() => createClientComponentClient<Database>(), [])
 
   useEffect(() => {
     // Get current user
@@ -207,12 +210,12 @@ export default function JobSearch() {
                     {/* Employment Type */}
                     <div className="space-y-2">
                       <Label>Тип занятости</Label>
-                      <Select value={filters.job_type || ''} onValueChange={(value) => handleFilterChange('job_type', value || undefined)}>
+                      <Select value={filters.job_type || 'all'} onValueChange={(value) => handleFilterChange('job_type', value === 'all' ? undefined : value)}>
                         <SelectTrigger>
                           <SelectValue placeholder="Выберите тип" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Все типы</SelectItem>
+                          <SelectItem value="all">Все типы</SelectItem>
                           <SelectItem value="full_time">Полная занятость</SelectItem>
                           <SelectItem value="part_time">Частичная занятость</SelectItem>
                           <SelectItem value="contract">Контракт</SelectItem>
@@ -238,12 +241,12 @@ export default function JobSearch() {
                     {/* Experience Level */}
                     <div className="space-y-2">
                       <Label>Уровень опыта</Label>
-                      <Select value={filters.experience_level || ''} onValueChange={(value) => handleFilterChange('experience_level', value || undefined)}>
+                      <Select value={filters.experience_level || 'all'} onValueChange={(value) => handleFilterChange('experience_level', value === 'all' ? undefined : value)}>
                         <SelectTrigger>
                           <SelectValue placeholder="Выберите уровень" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Все уровни</SelectItem>
+                          <SelectItem value="all">Все уровни</SelectItem>
                           <SelectItem value="junior">Junior</SelectItem>
                           <SelectItem value="middle">Middle</SelectItem>
                           <SelectItem value="senior">Senior</SelectItem>
