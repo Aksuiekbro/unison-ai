@@ -10,7 +10,8 @@ import type { Database } from "@/lib/database.types"
 import { updateBasicProfile } from "@/app/actions/profile"
 
 export default async function JobSeekerSettings() {
-  const supabase = createServerComponentClient<Database>({ cookies })
+  const cookieStore = await cookies()
+  const supabase = createServerComponentClient<Database>({ cookies: () => Promise.resolve(cookieStore) })
   const { data: { user } } = await supabase.auth.getUser()
   let firstName = ""
   let lastName = ""
