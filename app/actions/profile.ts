@@ -54,6 +54,25 @@ export async function updateJobSeekerProfile(formData: FormData) {
     // Validate data
     const validatedData = jobSeekerProfileSchema.parse(data)
 
+    // Optional: upload resume to storage if provided
+    let resumeUrl: string | null = null
+    const resumeFile = formData.get('resume') as File | null
+    if (resumeFile && typeof (resumeFile as any).arrayBuffer === 'function' && resumeFile.size > 0) {
+      const filePath = `${user.id}/resume-${Date.now()}-${resumeFile.name}`
+      const { error: uploadError } = await supabase.storage.from('resumes').upload(filePath, resumeFile, {
+        cacheControl: '3600',
+        upsert: true,
+        contentType: resumeFile.type || 'application/octet-stream',
+      })
+      if (uploadError) {
+        console.error('Resume upload failed:', uploadError)
+        // Non-fatal: continue saving profile fields
+      } else {
+        const { data: pub } = await supabase.storage.from('resumes').getPublicUrl(filePath)
+        resumeUrl = pub?.publicUrl || null
+      }
+    }
+
     // Update core public profiles table with main fields
     const { error: profilesUpdateError } = await supabase
       .from('profiles')
@@ -67,6 +86,7 @@ export async function updateJobSeekerProfile(formData: FormData) {
         github_url: validatedData.githubUrl || null,
         skills: (validatedData.skills as any) || null,
         bio: validatedData.summary || null,
+        resume_url: resumeUrl,
       })
       .eq('id', (profile as any).id)
 

@@ -78,38 +78,46 @@ export default function JobSeekerProfileForm({
 
   const onSubmit = (data: JobSeekerProfileData) => {
     startTransition(async () => {
-      const formData = new FormData()
-      
-      Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          if (key === 'skills') {
-            formData.append(key, JSON.stringify(skills))
-          } else {
-            formData.append(key, value.toString())
+      try {
+        const formData = new FormData()
+
+        Object.entries(data).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            if (key === 'skills') {
+              formData.append(key, JSON.stringify(skills))
+            } else if (key === 'linkedinUrl' || key === 'githubUrl') {
+              const v = value.toString().trim()
+              const normalized = v && !/^https?:\/\//i.test(v) ? `https://${v}` : v
+              formData.append(key, normalized)
+            } else {
+              formData.append(key, value.toString())
+            }
           }
-        }
-      })
-
-      if (selectedResume) {
-        formData.append('resume', selectedResume)
-      }
-
-      const result = await updateJobSeekerProfile(formData)
-      
-      if (result.error) {
-        toast({
-          title: "Error",
-          description: result.error,
-          variant: "destructive",
         })
-      } else {
+
+        if (selectedResume) {
+          formData.append('resume', selectedResume)
+        }
+
+        const result: any = await updateJobSeekerProfile(formData)
+
+        if (!result || result.error) {
+          toast({
+            title: "Error",
+            description: (result && result.error) || 'Failed to update profile',
+            variant: "destructive",
+          })
+          return
+        }
+
         toast({
           title: "Success",
           description: "Profile updated successfully",
         })
-        // Refresh server data so preview reflects latest DB state
         router.refresh()
         setIsEditing(false)
+      } catch (e: any) {
+        toast({ title: 'Error', description: e?.message || 'Unexpected error', variant: 'destructive' })
       }
     })
   }
