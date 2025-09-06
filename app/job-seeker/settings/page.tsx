@@ -81,34 +81,20 @@ export default async function JobSeekerSettings() {
               <h1 className="text-3xl font-bold text-[#0A2540]">Настройки</h1>
             </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-[#0A2540] flex items-center">
-                  <User className="w-5 h-5 mr-2" />
-                  Аккаунт
-                </CardTitle>
-                <CardDescription>Основная информация профиля</CardDescription>
-              </CardHeader>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-[#0A2540] flex items-center">
+                      <User className="w-5 h-5 mr-2" />
+                  Profile settings moved
+                    </CardTitle>
+                <CardDescription>
+                  Personal information is now managed on the <Link href="/job-seeker/profile" className="text-[#00C49A] underline">Profile</Link> page to avoid duplicates.
+                </CardDescription>
+                  </CardHeader>
               <CardContent>
-                <form action={async (formData) => { 'use server'; await updateBasicProfile(formData) }} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">Имя</Label>
-                      <Input id="firstName" name="firstName" defaultValue={firstName} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">Фамилия</Label>
-                      <Input id="lastName" name="lastName" defaultValue={lastName} />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" name="email" type="email" defaultValue={email} disabled />
-                  </div>
-                  <Button type="submit" className="bg-[#00C49A] hover:bg-[#00A085]">Сохранить</Button>
-                </form>
-              </CardContent>
-            </Card>
+                <p className="text-[#333333]">Use your profile to update name, title, summary, contacts and links.</p>
+                  </CardContent>
+                </Card>
           </div>
         </div>
       </div>

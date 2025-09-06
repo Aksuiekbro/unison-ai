@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -36,17 +36,22 @@ interface JobSeekerProfileFormProps {
     fieldOfStudy: string
     graduationYear: number
   }>
+  viewerEmail?: string
 }
 
 export default function JobSeekerProfileForm({ 
   initialData, 
   experiences = [], 
-  education = [] 
+  education = [],
+  viewerEmail,
 }: JobSeekerProfileFormProps) {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition()
   const [skills, setSkills] = useState<string[]>(initialData?.skills || [])
   const [newSkill, setNewSkill] = useState('')
+  const [isEditing, setIsEditing] = useState(false)
+  const [selectedResume, setSelectedResume] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const form = useForm<JobSeekerProfileData>({
     resolver: zodResolver(jobSeekerProfileSchema),
@@ -77,6 +82,10 @@ export default function JobSeekerProfileForm({
         }
       })
 
+      if (selectedResume) {
+        formData.append('resume', selectedResume)
+      }
+
       const result = await updateJobSeekerProfile(formData)
       
       if (result.error) {
@@ -90,6 +99,7 @@ export default function JobSeekerProfileForm({
           title: "Success",
           description: "Profile updated successfully",
         })
+        setIsEditing(false)
       }
     })
   }
@@ -112,35 +122,147 @@ export default function JobSeekerProfileForm({
     }
   }
 
+  const firstName = form.watch('firstName') || ''
+  const lastName = form.watch('lastName') || ''
+  const title = form.watch('title') || ''
+  const location = form.watch('location') || ''
+  const summary = form.watch('summary') || ''
+  const linkedinUrl = form.watch('linkedinUrl') || ''
+  const githubUrl = form.watch('githubUrl') || ''
+
+  const missing: string[] = []
+  if (!firstName) missing.push('First name')
+  if (!lastName) missing.push('Last name')
+  if (!title) missing.push('Desired position')
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold text-[#0A2540]">My Profile</h1>
-        <Button 
-          onClick={form.handleSubmit(onSubmit)}
-          disabled={isPending}
-          className="bg-[#00C49A] hover:bg-[#00A085]"
-        >
-          {isPending ? 'Saving...' : 'Save Changes'}
-        </Button>
+        {!isEditing ? (
+          <Button 
+            onClick={() => setIsEditing(true)}
+            className="bg-[#00C49A] hover:bg-[#00A085]"
+          >
+            {missing.length > 0 ? 'Fill in missing info' : 'Edit profile'}
+          </Button>
+        ) : (
+          <div className="flex gap-2">
+            <Button 
+              onClick={form.handleSubmit(onSubmit)}
+              disabled={isPending}
+              className="bg-[#00C49A] hover:bg-[#00A085]"
+            >
+              {isPending ? 'Saving...' : 'Save Changes'}
+            </Button>
+            <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+          </div>
+        )}
       </div>
 
-      {/* Resume Upload */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="text-[#0A2540]">Upload Your Resume</CardTitle>
-          <CardDescription>Supported formats: PDF, DOC, DOCX</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-[#00C49A] transition-colors">
-            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-[#333333] mb-2">Drag and drop your file here or click to browse</p>
-            <Button variant="outline" className="border-[#00C49A] text-[#00C49A] bg-transparent">
-              Choose File
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Profile Preview */}
+      {!isEditing && (
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="text-[#0A2540]">Public Profile Preview</CardTitle>
+            {missing.length > 0 && (
+              <CardDescription>
+                Missing: {missing.join(', ')}
+              </CardDescription>
+            )}
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <p className="text-xl font-semibold text-[#0A2540]">
+                  {[firstName, lastName].filter(Boolean).join(' ') || viewerEmail || 'Unnamed User'}
+                </p>
+                <p className="text-sm text-[#333333]">{title || '—'}</p>
+                <p className="text-sm text-gray-500">{location || '—'}</p>
+              </div>
+              <div>
+                <p className="text-[#0A2540] font-medium mb-1">About</p>
+                <p className="text-sm text-[#333333] whitespace-pre-wrap">{summary || '—'}</p>
+              </div>
+              <div>
+                <p className="text-[#0A2540] font-medium mb-1">Links</p>
+                <div className="flex flex-wrap gap-3 text-sm">
+                  <a href={linkedinUrl || '#'} className="underline text-[#00C49A]" target="_blank" rel="noreferrer">
+                    LinkedIn
+                  </a>
+                  <a href={githubUrl || '#'} className="underline text-[#00C49A]" target="_blank" rel="noreferrer">
+                    GitHub
+                  </a>
+                </div>
+              </div>
+              <div>
+                <p className="text-[#0A2540] font-medium mb-2">Skills</p>
+                <div className="flex flex-wrap gap-2">
+                  {skills.length > 0 ? skills.map((s) => (
+                    <Badge key={s} variant="secondary" className="px-3 py-1">{s}</Badge>
+                  )) : <span className="text-sm text-gray-500">—</span>}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isEditing && (
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="text-[#0A2540]">Upload Your Resume</CardTitle>
+            <CardDescription>Supported formats: PDF, DOC, DOCX</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div
+              className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-[#00C49A] transition-colors cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault()
+              }}
+              onDrop={(e) => {
+                e.preventDefault()
+                const file = e.dataTransfer.files?.[0]
+                if (file) setSelectedResume(file)
+              }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  fileInputRef.current?.click()
+                }
+              }}
+            >
+              <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-[#333333] mb-2">Drag and drop your file here or click to browse</p>
+              {selectedResume && (
+                <p className="text-sm text-gray-600 mb-2">Selected: {selectedResume.name}</p>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                name="resume"
+                accept=".pdf,.doc,.docx"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  setSelectedResume(file || null)
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="border-[#00C49A] text-[#00C49A] bg-transparent"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                Choose File
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>

@@ -50,17 +50,17 @@ export default async function JobSeekerProfile() {
     .order('graduation_year', { ascending: false })
 
   // Transform data for the form
-  const initialData = jsProfile ? {
-    firstName: jsProfile.first_name || '',
-    lastName: jsProfile.last_name || '',
-    title: jsProfile.title || '',
-    summary: jsProfile.summary || '',
-    phone: jsProfile.phone || '',
-    location: jsProfile.location || '',
-    linkedinUrl: jsProfile.linkedin_url || '',
-    githubUrl: jsProfile.github_url || '',
-    skills: jsProfile.skills || [],
-  } : undefined
+  const initialData = {
+    firstName: jsProfile?.first_name || (profile as any)?.first_name || '',
+    lastName: jsProfile?.last_name || (profile as any)?.last_name || '',
+    title: jsProfile?.title || '',
+    summary: jsProfile?.summary || '',
+    phone: jsProfile?.phone || '',
+    location: jsProfile?.location || '',
+    linkedinUrl: jsProfile?.linkedin_url || '',
+    githubUrl: jsProfile?.github_url || '',
+    skills: jsProfile?.skills || [],
+  }
 
   const transformedExperiences = experiences?.map(exp => ({
     id: exp.id,
@@ -135,6 +135,7 @@ export default async function JobSeekerProfile() {
             initialData={initialData}
             experiences={transformedExperiences}
             education={transformedEducation}
+            viewerEmail={(profile as any)?.email || user.email || ''}
           />
         </div>
       </div>

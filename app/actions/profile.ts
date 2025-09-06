@@ -54,7 +54,7 @@ export async function updateJobSeekerProfile(formData: FormData) {
     // Validate data
     const validatedData = jobSeekerProfileSchema.parse(data)
 
-    // Update or create job seeker profile
+    // Update or create job seeker profile (domain-specific fields)
     const { error: upsertError } = await supabase
       .from('job_seeker_profiles')
       .upsert({
@@ -78,7 +78,21 @@ export async function updateJobSeekerProfile(formData: FormData) {
       return { error: 'Failed to update profile' }
     }
 
+    // Keep core profile (used in greetings) in sync for first/last name
+    const { error: coreUpdateError } = await supabase
+      .from('profiles')
+      .update({
+        first_name: (validatedData.firstName as any) || null,
+        last_name: (validatedData.lastName as any) || null,
+      })
+      .eq('id', (profile as any).id)
+
+    if (coreUpdateError) {
+      console.error('Error syncing core profile names:', coreUpdateError)
+    }
+
     revalidatePath('/job-seeker/profile')
+    revalidatePath('/job-seeker/dashboard')
     return { success: true }
 
   } catch (error) {
