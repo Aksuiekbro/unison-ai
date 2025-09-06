@@ -6,11 +6,32 @@ import { LayoutDashboard, User, Search, Settings, Eye, Calendar, MapPin, Clock, 
 import Link from "next/link"
 import { RoleGuard } from "@/components/role-guard"
 import { cookies } from "next/headers"
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
+import { createServerClient } from "@supabase/ssr"
 import type { Database } from "@/lib/database.types"
 
 export default async function JobSeekerDashboard() {
-  const supabase = createServerComponentClient<Database>({ cookies })
+  const cookieStore = await cookies()
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+        set(name: string, value: string, options: any) {
+          try {
+            cookieStore.set({ name, value, ...options })
+          } catch {}
+        },
+        remove(name: string, options: any) {
+          try {
+            cookieStore.set({ name, value: '', ...options })
+          } catch {}
+        },
+      },
+    }
+  )
   const { data: { user } } = await supabase.auth.getUser()
 
   let displayName = ""
