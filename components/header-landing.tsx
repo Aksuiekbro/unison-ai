@@ -3,9 +3,17 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { UserMenu } from "@/components/user-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export function Header() {
   const [open, setOpen] = useState(false);
+  const { user, profile } = useAuth();
+
+  const displayName = profile?.full_name || (user?.user_metadata as any)?.full_name || user?.email || "";
+  const avatarUrl = (user?.user_metadata as any)?.avatar_url as string | undefined;
+  const initials = (displayName || "U").split(" ").map((n) => n[0]).join("").toUpperCase();
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white">
@@ -21,6 +29,15 @@ export function Header() {
               priority
             />
           </Link>
+          {user ? (
+            <div className="hidden md:flex items-center gap-2 pl-2 border-l border-gray-200 ml-2">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={avatarUrl} alt={displayName} />
+                <AvatarFallback>{initials}</AvatarFallback>
+              </Avatar>
+              <span className="text-sm font-medium text-gray-700">{displayName}</span>
+            </div>
+          ) : null}
         </div>
         {/* Hamburger Icon */}
         <button
@@ -42,12 +59,18 @@ export function Header() {
           <a href="#footer" className="text-gray-700 hover:text-black">Contacts</a>
         </nav>
         <div className="hidden md:flex items-center gap-4">
-          <Link href="/auth/login" className="text-base font-medium text-gray-700 hover:text-black px-2 py-1">
-            Login
-          </Link>
-          <Link href="/auth/signup" className="rounded-md bg-black px-4 py-2 text-base font-semibold text-white shadow-sm hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">
-            Sign up
-          </Link>
+          {user ? (
+            <UserMenu />
+          ) : (
+            <>
+              <Link href="/auth/login" className="text-base font-medium text-gray-700 hover:text-black px-2 py-1">
+                Login
+              </Link>
+              <Link href="/auth/signup" className="rounded-md bg-black px-4 py-2 text-base font-semibold text-white shadow-sm hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">
+                Sign up
+              </Link>
+            </>
+          )}
         </div>
       </div>
       {/* Mobile Nav */}
@@ -60,14 +83,16 @@ export function Header() {
             <Link href="#tools" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>Tools</Link>
             <Link href="#pricing" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>Pricing</Link>
             <a href="#footer" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>Contacts</a>
-            <div className="flex flex-col items-center gap-2 mt-2">
-              <Link href="/auth/login" className="text-base font-medium text-gray-700 hover:text-black px-2 py-1" onClick={() => setOpen(false)}>
-                Login
-              </Link>
-              <Link href="/auth/signup" className="rounded-md bg-black px-4 py-2 text-base font-semibold text-white shadow-sm hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black" onClick={() => setOpen(false)}>
-                Sign up
-              </Link>
-            </div>
+            {!user && (
+              <div className="flex flex-col items-center gap-2 mt-2">
+                <Link href="/auth/login" className="text-base font-medium text-gray-700 hover:text-black px-2 py-1" onClick={() => setOpen(false)}>
+                  Login
+                </Link>
+                <Link href="/auth/signup" className="rounded-md bg-black px-4 py-2 text-base font-semibold text-white shadow-sm hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black" onClick={() => setOpen(false)}>
+                  Sign up
+                </Link>
+              </div>
+            )}
           </nav>
         </div>
       )}

@@ -1,17 +1,7 @@
+"use client"
+
 import { useState, useEffect } from 'react'
-import { 
-  getJobs, 
-  createJob, 
-  updateJob, 
-  deleteJob, 
-  updateJobStatus,
-  getJobApplications,
-  updateApplicationStatus,
-  getApplicationStats,
-  Job, 
-  JobStatus,
-  Application 
-} from '@/lib/actions/jobs'
+import type { Job, JobStatus, Application } from '@/lib/actions/jobs'
 
 export function useJobs(employerId: string) {
   const [jobs, setJobs] = useState<Job[]>([])
@@ -20,60 +10,67 @@ export function useJobs(employerId: string) {
 
   const fetchJobs = async (filters?: {
     status?: JobStatus
-    department?: string
+    job_type?: string
     search?: string
   }) => {
     setLoading(true)
     setError(null)
-    
-    const result = await getJobs(employerId, filters)
-    
-    if (result.success) {
-      setJobs(result.data)
-    } else {
-      setError(result.error)
+    try {
+      const params = new URLSearchParams()
+      if (filters?.status) params.set('status', filters.status)
+      if (filters?.job_type) params.set('job_type', filters.job_type)
+      if (filters?.search) params.set('search', filters.search)
+
+      const res = await fetch(`/api/employer/jobs?${params.toString()}`, { cache: 'no-store' })
+      const result = await res.json()
+      if (result.success) {
+        setJobs(result.data)
+      } else {
+        setError(result.error || 'Failed to fetch jobs')
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Failed to fetch jobs')
     }
-    
     setLoading(false)
   }
 
   const createNewJob = async (jobData: Omit<Job, 'id' | 'created_at' | 'updated_at' | 'views'>) => {
-    const result = await createJob(jobData)
-    
-    if (result.success) {
-      await fetchJobs()
-    }
-    
+    const res = await fetch('/api/employer/jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(jobData),
+    })
+    const result = await res.json()
+    if (result.success) await fetchJobs()
     return result
   }
 
   const updateExistingJob = async (jobId: string, updates: Partial<Job>) => {
-    const result = await updateJob(jobId, updates)
-    
-    if (result.success) {
-      await fetchJobs()
-    }
-    
+    const res = await fetch(`/api/employer/jobs/${jobId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    })
+    const result = await res.json()
+    if (result.success) await fetchJobs()
     return result
   }
 
   const removeJob = async (jobId: string) => {
-    const result = await deleteJob(jobId, employerId)
-    
-    if (result.success) {
-      await fetchJobs()
-    }
-    
+    const res = await fetch(`/api/employer/jobs/${jobId}`, { method: 'DELETE' })
+    const result = await res.json()
+    if (result.success) await fetchJobs()
     return result
   }
 
   const changeJobStatus = async (jobId: string, status: JobStatus) => {
-    const result = await updateJobStatus(jobId, status, employerId)
-    
-    if (result.success) {
-      await fetchJobs()
-    }
-    
+    const res = await fetch(`/api/employer/jobs/${jobId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    })
+    const result = await res.json()
+    if (result.success) await fetchJobs()
     return result
   }
 
@@ -103,32 +100,30 @@ export function useJobApplications(jobId: string, employerId: string) {
   const fetchApplications = async () => {
     setLoading(true)
     setError(null)
-    
-    const [applicationsResult, statsResult] = await Promise.all([
-      getJobApplications(jobId, employerId),
-      getApplicationStats(jobId, employerId)
-    ])
-    
-    if (applicationsResult.success) {
-      setApplications(applicationsResult.data)
-    } else {
-      setError(applicationsResult.error)
+    try {
+      const [appsRes, statsRes] = await Promise.all([
+        fetch(`/api/employer/jobs/${jobId}/applications`, { cache: 'no-store' }),
+        fetch(`/api/employer/jobs/${jobId}/stats`, { cache: 'no-store' }),
+      ])
+      const applicationsResult = await appsRes.json()
+      const statsResult = await statsRes.json()
+      if (applicationsResult.success) setApplications(applicationsResult.data)
+      else setError(applicationsResult.error)
+      if (statsResult.success) setStats(statsResult.data)
+    } catch (e: any) {
+      setError(e?.message || 'Failed to fetch applications')
     }
-    
-    if (statsResult.success) {
-      setStats(statsResult.data)
-    }
-    
     setLoading(false)
   }
 
   const updateStatus = async (applicationId: string, status: Application['status']) => {
-    const result = await updateApplicationStatus(applicationId, status, employerId)
-    
-    if (result.success) {
-      await fetchApplications()
-    }
-    
+    const res = await fetch(`/api/employer/applications/${applicationId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    })
+    const result = await res.json()
+    if (result.success) await fetchApplications()
     return result
   }
 

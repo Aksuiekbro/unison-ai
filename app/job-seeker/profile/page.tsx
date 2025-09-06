@@ -7,7 +7,8 @@ import type { Database } from '@/lib/database.types'
 import JobSeekerProfileForm from '@/components/profile/job-seeker-profile-form'
 
 export default async function JobSeekerProfile() {
-  const supabase = createServerComponentClient<Database>({ cookies })
+  const cookieStore = await cookies()
+  const supabase = createServerComponentClient<Database>({ cookies: () => cookieStore })
   
   // Check authentication
   const { data: { user }, error: authError } = await supabase.auth.getUser()

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Toaster } from 'sonner'
 import { AuthProvider } from "@/hooks/use-auth"
+import { ToastProvider } from "@/hooks/use-toast"
 import { StagewiseToolbarClient } from "@/components/StagewiseToolbarClient"
 import './globals.css'
 
@@ -21,11 +22,13 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AuthProvider>
-          {children}
-          {process.env.NODE_ENV === 'development' ? (
-            <StagewiseToolbarClient config={stagewiseConfig} />
-          ) : null}
-          <Toaster position="top-right" />
+          <ToastProvider>
+            {children}
+            {process.env.NODE_ENV === 'development' ? (
+              <StagewiseToolbarClient config={stagewiseConfig} />
+            ) : null}
+            <Toaster position="top-right" />
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>
