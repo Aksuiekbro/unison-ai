@@ -4,6 +4,7 @@ import { z } from "zod"
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import type { Database } from '@/lib/database.types'
+import { redirect } from 'next/navigation'
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -45,13 +46,20 @@ export async function loginAction(prevState: any, formData: FormData) {
       .single()
 
     const role = (profile?.role || (authData.user.user_metadata as any)?.role) as any
+    const normalizedRole = role === 'job-seeker' || role === 'employee' ? 'job_seeker' : role
 
-    return {
-      success: true,
-      message: "Login successful!",
-      role,
-    }
+    // Handle optional redirect target from the login page
+    const redirectTo = (data as any).redirectTo as string | undefined
+    if (redirectTo && redirectTo.startsWith('/')) redirect(redirectTo)
+
+    if (normalizedRole === 'employer') redirect('/employer/dashboard')
+    if (normalizedRole === 'job_seeker') redirect('/job-seeker/dashboard')
+
+    // Fallback if role unknown
+    redirect('/')
   } catch (error: any) {
+    // Allow Next.js redirect() to bubble so navigation happens client-side
+    if (error?.digest === 'NEXT_REDIRECT') throw error
     console.error('Login error:', error)
     return {
       success: false,

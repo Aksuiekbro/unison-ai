@@ -16,9 +16,14 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   // Protected routes that require authentication
+  // Keep public pages like job search accessible without login
   const protectedRoutes = [
     '/employer',
-    '/job-seeker',
+    '/job-seeker/dashboard',
+    '/job-seeker/profile',
+    '/job-seeker/settings',
+    '/job-seeker/applications',
+    '/job-seeker/saved',
   ]
 
   // Auth routes that should redirect if already authenticated
@@ -54,14 +59,18 @@ export async function middleware(req: NextRequest) {
       .single()
 
     const role = (profile?.role || (session.user.user_metadata as any)?.role) as any
-    const normalizedRole = role === 'job-seeker' ? 'job_seeker' : role
+    const normalizedRole = (role === 'job-seeker' || role === 'employee') ? 'job_seeker' : role
+
+    // If role is unknown, allow access to auth pages instead of redirecting
+    if (normalizedRole !== 'employer' && normalizedRole !== 'job_seeker') {
+      return response
+    }
 
     if (normalizedRole === 'employer') {
       return NextResponse.redirect(new URL('/employer/dashboard', req.url))
-    } else if (normalizedRole === 'job_seeker') {
+    }
+    if (normalizedRole === 'job_seeker') {
       return NextResponse.redirect(new URL('/job-seeker/dashboard', req.url))
-    } else {
-      return NextResponse.redirect(new URL('/', req.url))
     }
   }
 
@@ -74,7 +83,7 @@ export async function middleware(req: NextRequest) {
       .single()
 
     const role = (profile?.role || (session.user.user_metadata as any)?.role) as any
-    const normalizedRole = role === 'job-seeker' ? 'job_seeker' : role
+    const normalizedRole = (role === 'job-seeker' || role === 'employee') ? 'job_seeker' : role
 
     // If role is unknown, do not bounce between dashboards
     if (normalizedRole !== 'employer' && normalizedRole !== 'job_seeker') {
