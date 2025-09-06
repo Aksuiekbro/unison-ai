@@ -1,3 +1,4 @@
+import 'server-only'
 import { supabase } from './supabase-client';
 import { supabaseAdmin } from './supabase-admin';
 import { User } from '@supabase/supabase-js';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
-import { getUserRole, UserRole } from '@/lib/auth';
+import { getUserRole, type UserRole } from '@/lib/auth-shared';
 import { useRouter } from 'next/navigation';
 import { useEffect, ReactNode } from 'react';
 

@@ -1,18 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('@/lib/supabase', async () => {
-  const actual = await vi.importActual<any>('@/lib/supabase')
-  // Spy on admin client insert
+vi.mock('@/lib/supabase-admin', async () => {
+  const actual = await vi.importActual<any>('@/lib/supabase-admin')
   const insertMock = vi.fn().mockResolvedValue({ data: null, error: null })
   return {
     ...actual,
-    supabase: { auth: { signUp: vi.fn().mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null }) } },
     supabaseAdmin: { from: vi.fn().mockReturnValue({ insert: insertMock }) },
   }
 })
 
 import { signupAction } from '@/app/auth/signup/action'
-import { supabaseAdmin } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 describe('signupAction', () => {
   beforeEach(() => {

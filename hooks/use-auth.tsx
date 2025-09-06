@@ -1,9 +1,9 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabase-client';
 import type { Database } from '@/lib/types/database';
-import { AuthUser, ProfileRow as UserProfile, AuthState } from '@/lib/auth';
+import type { AuthUser, ProfileRow as UserProfile, AuthState } from '@/lib/auth-shared';
 
 const AuthContext = createContext<AuthState & {
   signOut: () => Promise<void>;
@@ -20,16 +20,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const supabase = useMemo(() => createClientComponentClient<Database>(), []);
+  // Use shared singleton client to avoid multiple GoTrue instances
+  const client = supabase
 
   const refreshAuth = useCallback(async () => {
     try {
       setIsLoading(true);
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const { data: { user: currentUser } } = await client.auth.getUser();
       setUser(currentUser as AuthUser | null);
 
       if (currentUser) {
-        const { data: userProfile } = await supabase
+        const { data: userProfile } = await client
           .from('profiles')
           .select('*')
           .eq('id', currentUser.id)
@@ -45,29 +46,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [supabase]);
+  }, [client]);
 
   const handleSignOut = useCallback(async () => {
     try {
-      await supabase.auth.signOut();
+      await client.auth.signOut();
       setUser(null);
       setProfile(null);
     } catch (error) {
       console.error('Error signing out:', error);
     }
-  }, [supabase]);
+  }, [client]);
 
   useEffect(() => {
     // Initial auth state
     refreshAuth();
 
     // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: { subscription } } = client.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (session?.user) {
             setUser(session.user as AuthUser);
-            const { data: userProfile } = await supabase
+            const { data: userProfile } = await client
               .from('profiles')
               .select('*')
               .eq('id', session.user.id)
@@ -85,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [client]);
 
   const contextValue = useMemo(() => ({
     user,
