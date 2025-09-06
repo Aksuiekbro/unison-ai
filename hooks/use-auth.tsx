@@ -1,9 +1,9 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from 'react';
-import { supabase } from '@/lib/supabase-client';
-import { getCurrentUser, getUserProfile, AuthUser, UserProfile, AuthState } from '@/lib/auth';
-import { Session, User } from '@supabase/supabase-js';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import type { Database } from '@/lib/types/database';
+import { AuthUser, ProfileRow as UserProfile, AuthState } from '@/lib/auth';
 
 const AuthContext = createContext<AuthState & {
   signOut: () => Promise<void>;
@@ -20,16 +20,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const supabase = useMemo(() => createClientComponentClient<Database>(), []);
 
   const refreshAuth = useCallback(async () => {
     try {
       setIsLoading(true);
-      const currentUser = await getCurrentUser();
-      setUser(currentUser);
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      setUser(currentUser as AuthUser | null);
 
       if (currentUser) {
-        const userProfile = await getUserProfile(currentUser.id);
-        setProfile(userProfile);
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', currentUser.id)
+          .maybeSingle();
+        setProfile((userProfile as UserProfile) || null);
       } else {
         setProfile(null);
       }
@@ -40,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [supabase]);
 
   const handleSignOut = useCallback(async () => {
     try {
@@ -50,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error signing out:', error);
     }
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
     // Initial auth state
@@ -62,8 +67,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (session?.user) {
             setUser(session.user as AuthUser);
-            const userProfile = await getUserProfile(session.user.id);
-            setProfile(userProfile);
+            const { data: userProfile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .maybeSingle();
+            setProfile((userProfile as UserProfile) || null);
           }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
@@ -76,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [supabase]);
 
   const contextValue = useMemo(() => ({
     user,
