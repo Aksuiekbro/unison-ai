@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useState, useEffect } from "react"
+import { useActionState, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,26 +9,13 @@ import { Building2, User, CheckCircle2, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { signupAction } from "@/app/auth/signup/action"
-import { useAuth } from "@/hooks/use-auth"
-import { useRouter } from "next/navigation"
 
 type Role = "employer" | "employee"
 
 export function SignupForm() {
   const [state, formAction, isPending] = useActionState(signupAction, null)
   const [role, setRole] = useState<Role>("employer")
-  const { refreshAuth } = useAuth()
-  const router = useRouter()
-
-  useEffect(() => {
-    if (state?.success) {
-      // For signup, we might want to redirect to a verification page first
-      // or to the login page if email verification is required
-      setTimeout(() => {
-        router.push("/auth/login")
-      }, 2000)
-    }
-  }, [state, router])
+  const [email, setEmail] = useState("")
 
   const employerFields = (
     <>
@@ -57,13 +44,18 @@ export function SignupForm() {
       <Card>
         <CardHeader className="text-center">
           <CheckCircle2 className="mx-auto h-12 w-12 text-green-500" />
-          <CardTitle className="text-2xl">Success!</CardTitle>
-          <CardDescription>{state.message}</CardDescription>
+          <CardTitle className="text-2xl">Verify your email</CardTitle>
+          <CardDescription>
+            We sent a verification link to {email || "your email"}. Please check your inbox and confirm your account.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-center text-sm text-gray-600">
-            Redirecting you to the login page...
-          </p>
+          <div className="text-center text-sm text-gray-600 space-y-3">
+            <p>After verifying, you can sign in to continue.</p>
+            <Link href="/auth/login" className="inline-block">
+              <Button className="w-full">Go to Login</Button>
+            </Link>
+          </div>
         </CardContent>
       </Card>
     )
@@ -106,7 +98,7 @@ export function SignupForm() {
           {role === "employer" ? employerFields : employeeFields}
           <div>
             <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" placeholder="you@example.com" required />
+            <Input id="email" name="email" type="email" placeholder="you@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
             {state?.errors?.email && <p className="text-xs text-red-500 mt-1">{state.errors.email[0]}</p>}
           </div>
           <div>
