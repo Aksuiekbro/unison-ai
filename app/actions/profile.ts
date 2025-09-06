@@ -54,8 +54,28 @@ export async function updateJobSeekerProfile(formData: FormData) {
     // Validate data
     const validatedData = jobSeekerProfileSchema.parse(data)
 
-    // Update or create job seeker profile (domain-specific fields)
-    const { error: upsertError } = await supabase
+    // Update core public profiles table with main fields
+    const { error: profilesUpdateError } = await supabase
+      .from('profiles')
+      .update({
+        first_name: (validatedData.firstName as any) || null,
+        last_name: (validatedData.lastName as any) || null,
+        phone: validatedData.phone || null,
+        location: validatedData.location || null,
+        linkedin_url: validatedData.linkedinUrl || null,
+        github_url: validatedData.githubUrl || null,
+        skills: (validatedData.skills as any) || null,
+        bio: validatedData.summary || null,
+      })
+      .eq('id', (profile as any).id)
+
+    if (profilesUpdateError) {
+      console.error('Error updating public profiles:', profilesUpdateError)
+      return { error: `Failed to update profile: ${profilesUpdateError.message || 'Unknown error'}` }
+    }
+
+    // Best-effort: also upsert into job_seeker_profiles when table exists
+    const { error: jsUpsertError } = await supabase
       .from('job_seeker_profiles')
       .upsert({
         profile_id: (profile as any).id,
@@ -73,9 +93,8 @@ export async function updateJobSeekerProfile(formData: FormData) {
         onConflict: 'profile_id'
       })
 
-    if (upsertError) {
-      console.error('Error updating job seeker profile:', upsertError)
-      return { error: `Failed to update profile: ${upsertError.message || 'Unknown error'}` }
+    if (jsUpsertError && (jsUpsertError as any).code !== '42P01') { // ignore missing table
+      console.warn('job_seeker_profiles upsert failed (non-fatal):', jsUpsertError)
     }
 
     // Keep core profile (used in greetings) in sync for first/last name

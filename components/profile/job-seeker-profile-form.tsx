@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useRef } from 'react'
+import React, { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -15,7 +15,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast"
 import { Upload, Plus, X } from "lucide-react"
 import { jobSeekerProfileSchema, type JobSeekerProfileData } from '@/lib/validations'
-import { updateJobSeekerProfile } from '@/app/actions/profile'
+import { updateJobSeekerProfile, addJobSeekerExperience, addJobSeekerEducation } from '@/app/actions/profile'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface JobSeekerProfileFormProps {
   initialData?: Partial<JobSeekerProfileData> & {
@@ -54,6 +56,10 @@ export default function JobSeekerProfileForm({
   const [isEditing, setIsEditing] = useState(false)
   const [selectedResume, setSelectedResume] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [expOpen, setExpOpen] = useState(false)
+  const [eduOpen, setEduOpen] = useState(false)
+  const [expForm, setExpForm] = useState({ position: '', company: '', startDate: '', endDate: '', description: '', isCurrent: false })
+  const [eduForm, setEduForm] = useState({ institution: '', degree: '', fieldOfStudy: '', graduationYear: '' })
 
   const form = useForm<JobSeekerProfileData>({
     resolver: zodResolver(jobSeekerProfileSchema),
@@ -108,6 +114,22 @@ export default function JobSeekerProfileForm({
     })
   }
 
+  // Keep form in sync with server-provided initialData
+  React.useEffect(() => {
+    form.reset({
+      firstName: initialData?.firstName || '',
+      lastName: initialData?.lastName || '',
+      title: initialData?.title || '',
+      summary: initialData?.summary || '',
+      phone: initialData?.phone || '',
+      location: initialData?.location || '',
+      linkedinUrl: initialData?.linkedinUrl || '',
+      githubUrl: initialData?.githubUrl || '',
+      skills: initialData?.skills || [],
+    })
+    setSkills(initialData?.skills || [])
+  }, [initialData])
+
   const addSkill = () => {
     if (newSkill.trim() && !skills.includes(newSkill.trim())) {
       setSkills([...skills, newSkill.trim()])
@@ -126,13 +148,13 @@ export default function JobSeekerProfileForm({
     }
   }
 
-  const firstName = form.watch('firstName') || ''
-  const lastName = form.watch('lastName') || ''
-  const title = form.watch('title') || ''
-  const location = form.watch('location') || ''
-  const summary = form.watch('summary') || ''
-  const linkedinUrl = form.watch('linkedinUrl') || ''
-  const githubUrl = form.watch('githubUrl') || ''
+  const firstName = isEditing ? (form.watch('firstName') || '') : (initialData?.firstName || '')
+  const lastName = isEditing ? (form.watch('lastName') || '') : (initialData?.lastName || '')
+  const title = isEditing ? (form.watch('title') || '') : (initialData?.title || '')
+  const location = isEditing ? (form.watch('location') || '') : (initialData?.location || '')
+  const summary = isEditing ? (form.watch('summary') || '') : (initialData?.summary || '')
+  const linkedinUrl = isEditing ? (form.watch('linkedinUrl') || '') : (initialData?.linkedinUrl || '')
+  const githubUrl = isEditing ? (form.watch('githubUrl') || '') : (initialData?.githubUrl || '')
 
   const missing: string[] = []
   if (!firstName) missing.push('First name')
@@ -474,7 +496,7 @@ export default function JobSeekerProfileForm({
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-[#0A2540]">Work Experience</CardTitle>
-                    <Button size="sm" className="bg-[#00C49A] hover:bg-[#00A085]">
+                    <Button size="sm" className="bg-[#00C49A] hover:bg-[#00A085]" onClick={() => setExpOpen(true)} type="button">
                       <Plus className="w-4 h-4 mr-1" />
                       Add Experience
                     </Button>
@@ -508,7 +530,7 @@ export default function JobSeekerProfileForm({
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-[#0A2540]">Education</CardTitle>
-                    <Button size="sm" className="bg-[#00C49A] hover:bg-[#00A085]">
+                    <Button size="sm" className="bg-[#00C49A] hover:bg-[#00A085]" onClick={() => setEduOpen(true)} type="button">
                       <Plus className="w-4 h-4 mr-1" />
                       Add Education
                     </Button>
@@ -584,6 +606,132 @@ export default function JobSeekerProfileForm({
           </form>
         </Form>
       )}
+
+      {/* Add Experience Dialog */}
+      <Dialog open={expOpen} onOpenChange={setExpOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Experience</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Position</Label>
+                <Input value={expForm.position} onChange={(e) => setExpForm({ ...expForm, position: e.target.value })} />
+              </div>
+              <div>
+                <Label>Company</Label>
+                <Input value={expForm.company} onChange={(e) => setExpForm({ ...expForm, company: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Start Date</Label>
+                <Input type="date" value={expForm.startDate} onChange={(e) => setExpForm({ ...expForm, startDate: e.target.value })} />
+              </div>
+              <div>
+                <Label>End Date</Label>
+                <Input type="date" value={expForm.endDate} onChange={(e) => setExpForm({ ...expForm, endDate: e.target.value })} disabled={expForm.isCurrent} />
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="isCurrent" checked={expForm.isCurrent} onCheckedChange={(checked) => setExpForm({ ...expForm, isCurrent: Boolean(checked) })} />
+              <Label htmlFor="isCurrent">I currently work here</Label>
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Textarea value={expForm.description} onChange={(e) => setExpForm({ ...expForm, description: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExpOpen(false)} type="button">Cancel</Button>
+            <Button
+              onClick={() => {
+                startTransition(async () => {
+                  const fd = new FormData()
+                  fd.append('position', expForm.position)
+                  fd.append('company', expForm.company)
+                  fd.append('startDate', expForm.startDate)
+                  if (expForm.endDate) fd.append('endDate', expForm.endDate)
+                  fd.append('description', expForm.description)
+                  fd.append('isCurrent', String(expForm.isCurrent))
+                  const res = await addJobSeekerExperience(fd)
+                  if ((res as any)?.error) {
+                    toast({ title: 'Error', description: (res as any).error, variant: 'destructive' })
+                  } else {
+                    toast({ title: 'Success', description: 'Experience added' })
+                    setExpOpen(false)
+                    setExpForm({ position: '', company: '', startDate: '', endDate: '', description: '', isCurrent: false })
+                    router.refresh()
+                  }
+                })
+              }}
+              disabled={isPending}
+              className="bg-[#00C49A] hover:bg-[#00A085]"
+              type="button"
+            >
+              {isPending ? 'Saving...' : 'Add'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Education Dialog */}
+      <Dialog open={eduOpen} onOpenChange={setEduOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Education</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Institution</Label>
+                <Input value={eduForm.institution} onChange={(e) => setEduForm({ ...eduForm, institution: e.target.value })} />
+              </div>
+              <div>
+                <Label>Degree</Label>
+                <Input value={eduForm.degree} onChange={(e) => setEduForm({ ...eduForm, degree: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <Label>Field of Study</Label>
+              <Input value={eduForm.fieldOfStudy} onChange={(e) => setEduForm({ ...eduForm, fieldOfStudy: e.target.value })} />
+            </div>
+            <div>
+              <Label>Graduation Year</Label>
+              <Input type="number" value={eduForm.graduationYear} onChange={(e) => setEduForm({ ...eduForm, graduationYear: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEduOpen(false)} type="button">Cancel</Button>
+            <Button
+              onClick={() => {
+                startTransition(async () => {
+                  const fd = new FormData()
+                  fd.append('institution', eduForm.institution)
+                  fd.append('degree', eduForm.degree)
+                  fd.append('fieldOfStudy', eduForm.fieldOfStudy)
+                  fd.append('graduationYear', eduForm.graduationYear)
+                  const res = await addJobSeekerEducation(fd)
+                  if ((res as any)?.error) {
+                    toast({ title: 'Error', description: (res as any).error, variant: 'destructive' })
+                  } else {
+                    toast({ title: 'Success', description: 'Education added' })
+                    setEduOpen(false)
+                    setEduForm({ institution: '', degree: '', fieldOfStudy: '', graduationYear: '' })
+                    router.refresh()
+                  }
+                })
+              }}
+              disabled={isPending}
+              className="bg-[#00C49A] hover:bg-[#00A085]"
+              type="button"
+            >
+              {isPending ? 'Saving...' : 'Add'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
