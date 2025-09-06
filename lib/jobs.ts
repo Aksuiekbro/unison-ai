@@ -4,7 +4,17 @@ import { Job, JobFilters, JobApplication, JobApplicationWithJob } from './types'
 export async function searchJobs(filters: JobFilters = {}): Promise<Job[]> {
   let query = supabase
     .from('jobs')
-    .select('*')
+    .select(`
+      *,
+      companies:companies!jobs_company_id_fkey (
+        id,
+        name,
+        logo_url,
+        industry,
+        size,
+        location
+      )
+    `)
     .order('created_at', { ascending: false })
 
   // Apply filters
@@ -20,8 +30,8 @@ export async function searchJobs(filters: JobFilters = {}): Promise<Job[]> {
     query = query.eq('experience_level', filters.experience_level)
   }
 
-  if (filters.remote !== undefined) {
-    query = query.eq('remote', filters.remote)
+  if (filters.remote_allowed !== undefined) {
+    query = query.eq('remote_allowed', filters.remote_allowed)
   }
 
   if (filters.salary_min) {

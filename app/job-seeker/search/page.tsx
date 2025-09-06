@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,8 +14,7 @@ import Link from "next/link"
 import { searchJobs, applyToJob } from "@/lib/jobs"
 import { Job, JobFilters } from "@/lib/types"
 import { JobApplicationDialog } from "@/components/job-application-dialog"
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import type { Database } from '@/lib/database.types'
+import { supabase } from '@/lib/supabase-client'
 
 export default function JobSearch() {
   const [jobs, setJobs] = useState<Job[]>([])
@@ -26,12 +25,12 @@ export default function JobSearch() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
   const [showApplicationDialog, setShowApplicationDialog] = useState(false)
 
-  const supabase = useMemo(() => createClientComponentClient<Database>(), [])
+  const client = supabase
 
   useEffect(() => {
     // Get current user
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user } } = await client.auth.getUser()
       setUser(user)
     }
     getUser()
@@ -55,7 +54,7 @@ export default function JobSearch() {
 
   const handleApply = async (job: Job) => {
     if (!user) {
-      toast.error('Please login to apply for jobs')
+      toast.error('Пожалуйста, войдите, чтобы откликаться на вакансии')
       return
     }
 
@@ -77,8 +76,10 @@ export default function JobSearch() {
     loadJobs(filters)
   }
 
-  const formatSalary = (min: number, max: number) => {
-    return `${min.toLocaleString()}-${max.toLocaleString()}`
+  const formatSalary = (min: number | null, max: number | null) => {
+    const minVal = (min ?? 0)
+    const maxVal = (max ?? 0)
+    return `${minVal.toLocaleString()}-${maxVal.toLocaleString()}`
   }
 
   const getJobTypeLabel = (type: string) => {
@@ -229,8 +230,8 @@ export default function JobSearch() {
                       <div className="flex items-center space-x-2">
                         <Checkbox 
                           id="remote" 
-                          checked={filters.remote || false}
-                          onCheckedChange={(checked) => handleFilterChange('remote', checked || undefined)}
+                          checked={filters.remote_allowed || false}
+                          onCheckedChange={(checked) => handleFilterChange('remote_allowed', (checked as boolean) || undefined)}
                         />
                         <Label htmlFor="remote" className="text-sm">
                           Удаленная работа
@@ -296,7 +297,7 @@ export default function JobSearch() {
                                   <div className="flex items-center space-x-4 text-sm text-[#333333]">
                                     <div className="flex items-center">
                                       <Building2 className="w-4 h-4 mr-1" />
-                                      {job.company}
+                                      {job.companies?.name ?? '—'}
                                     </div>
                                     <div className="flex items-center">
                                       <MapPin className="w-4 h-4 mr-1" />
@@ -317,12 +318,9 @@ export default function JobSearch() {
 
                               <div className="flex items-center justify-between">
                                 <div className="flex flex-wrap gap-2">
-                                  {job.skills.map((skill) => (
-                                    <Badge key={skill} variant="secondary" className="text-xs">
-                                      {skill}
-                                    </Badge>
-                                  ))}
-                                  {job.remote && <Badge className="bg-[#00C49A] text-white text-xs">Удаленно</Badge>}
+                                  {job.remote_allowed && (
+                                    <Badge className="bg-[#00C49A] text-white text-xs">Удаленно</Badge>
+                                  )}
                                 </div>
                                 <div className="text-right">
                                   <p className="font-semibold text-[#0A2540]">
@@ -341,7 +339,6 @@ export default function JobSearch() {
                               </div>
                               <Button 
                                 onClick={() => handleApply(job)}
-                                disabled={!user}
                                 className="bg-[#FF7A00] hover:bg-[#E66A00] text-white"
                               >
                                 Откликнуться

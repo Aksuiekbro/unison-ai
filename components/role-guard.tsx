@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import type { Database } from '@/lib/types/database';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase-client';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,12 +20,12 @@ export function RoleGuard({ allowedRoles, children, redirectPath }: RoleGuardPro
   const [authorized, setAuthorized] = useState(false);
   const router = useRouter();
 
-  const supabase = useMemo(() => createClientComponentClient<Database>(), []);
+  const client = supabase
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data: { user }, error } = await supabase.auth.getUser();
+        const { data: { user }, error } = await client.auth.getUser();
         
         if (error) {
           console.error('Auth check error:', error);
@@ -37,7 +36,7 @@ export function RoleGuard({ allowedRoles, children, redirectPath }: RoleGuardPro
         // Prefer profile.role; fallback to metadata.role
         let role: string | undefined = undefined;
         if (user) {
-          const { data: profileRow } = await supabase
+          const { data: profileRow } = await client
             .from('profiles')
             .select('role')
             .eq('id', user.id)
@@ -64,14 +63,28 @@ export function RoleGuard({ allowedRoles, children, redirectPath }: RoleGuardPro
 
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
-        router.push('/auth/login');
+    const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
+      switch (event) {
+        case 'SIGNED_OUT': {
+          setAuthorized(false);
+          router.push('/auth/login');
+          break;
+        }
+        case 'SIGNED_IN':
+        case 'TOKEN_REFRESHED':
+        case 'USER_UPDATED':
+        case 'INITIAL_SESSION': {
+          checkAuth();
+          break;
+        }
+        default: {
+          // no-op
+        }
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [allowedRoles, router, supabase]);
+  }, [allowedRoles, router, client]);
 
   const handleRedirect = () => {
     if (redirectPath) {
