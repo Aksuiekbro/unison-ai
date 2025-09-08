@@ -7,12 +7,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Loader2 } from "lucide-react"
-import { Job } from "@/lib/types"
+import { JobWithMatchScore } from "@/lib/services/match-service"
 import { applyToJob } from "@/lib/jobs"
 import { toast } from "sonner"
 
 interface JobApplicationDialogProps {
-  job: Job | null
+  job: JobWithMatchScore | null
   isOpen: boolean
   onClose: () => void
   userId: string | null
@@ -53,8 +53,9 @@ export function JobApplicationDialog({
     }
   }
 
-  const formatSalary = (min: number, max: number) => {
-    return `${min.toLocaleString()}-${max.toLocaleString()} ₽`
+  const formatSalary = (min: number | null, max: number | null) => {
+    if (!min || !max) return 'По договоренности'
+    return `${min.toLocaleString()}-${max.toLocaleString()} ₸`
   }
 
   if (!job) return null
@@ -70,7 +71,7 @@ export function JobApplicationDialog({
           {/* Job Summary */}
           <div className="p-4 bg-gray-50 rounded-lg">
             <h3 className="font-semibold text-[#0A2540] mb-2">{job.title}</h3>
-            <p className="text-sm text-gray-600">{job.company} • {job.location}</p>
+            <p className="text-sm text-gray-600">{job.companies?.name || 'Company'} • {job.location}</p>
             <p className="text-sm text-gray-600">{formatSalary(job.salary_min, job.salary_max)}</p>
           </div>
 

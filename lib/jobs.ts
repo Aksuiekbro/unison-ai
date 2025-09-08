@@ -4,7 +4,30 @@ import { Job, JobFilters, JobApplication, JobApplicationWithJob } from './types'
 export async function searchJobs(filters: JobFilters = {}): Promise<Job[]> {
   let query = supabase
     .from('jobs')
-    .select('*')
+    .select(`
+      *,
+      companies!inner (
+        id,
+        name,
+        logo_url,
+        industry,
+        size,
+        location,
+        description,
+        website
+      ),
+      job_skills (
+        id,
+        skill_id,
+        required,
+        skills (
+          id,
+          name,
+          category
+        )
+      )
+    `)
+    .eq('status', 'published')
     .order('created_at', { ascending: false })
 
   // Apply filters
@@ -20,8 +43,8 @@ export async function searchJobs(filters: JobFilters = {}): Promise<Job[]> {
     query = query.eq('experience_level', filters.experience_level)
   }
 
-  if (filters.remote !== undefined) {
-    query = query.eq('remote', filters.remote)
+  if (filters.remote_allowed !== undefined) {
+    query = query.eq('remote_allowed', filters.remote_allowed)
   }
 
   if (filters.salary_min) {
@@ -49,7 +72,29 @@ export async function searchJobs(filters: JobFilters = {}): Promise<Job[]> {
 export async function getJobById(jobId: string): Promise<Job | null> {
   const { data, error } = await supabase
     .from('jobs')
-    .select('*')
+    .select(`
+      *,
+      companies (
+        id,
+        name,
+        logo_url,
+        industry,
+        size,
+        location,
+        description,
+        website
+      ),
+      job_skills (
+        id,
+        skill_id,
+        required,
+        skills (
+          id,
+          name,
+          category
+        )
+      )
+    `)
     .eq('id', jobId)
     .single()
 

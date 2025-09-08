@@ -11,19 +11,19 @@ import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { LayoutDashboard, User, Search, Settings, Heart, MapPin, Clock, Building2, Filter, Loader2 } from "lucide-react"
 import Link from "next/link"
-import { searchJobs, applyToJob } from "@/lib/jobs"
-import { Job, JobFilters } from "@/lib/types"
+import { searchJobsWithMatchScores, JobWithMatchScore } from "@/lib/services/match-service"
+import { JobFilters } from "@/lib/types"
 import { JobApplicationDialog } from "@/components/job-application-dialog"
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import type { Database } from '@/lib/database.types'
 
 export default function JobSearch() {
-  const [jobs, setJobs] = useState<Job[]>([])
+  const [jobs, setJobs] = useState<JobWithMatchScore[]>([])
   const [loading, setLoading] = useState(true)
   const [applying, setApplying] = useState<string | null>(null)
   const [user, setUser] = useState<any>(null)
   const [filters, setFilters] = useState<JobFilters>({})
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null)
+  const [selectedJob, setSelectedJob] = useState<JobWithMatchScore | null>(null)
   const [showApplicationDialog, setShowApplicationDialog] = useState(false)
 
   const supabase = useMemo(() => createClientComponentClient<Database>(), [])
@@ -33,17 +33,23 @@ export default function JobSearch() {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
+      // Reload jobs when user changes to recalculate match scores
+      loadJobs()
     }
     getUser()
-
-    // Load jobs
-    loadJobs()
   }, [])
+
+  // Reload jobs when user changes (login/logout) 
+  useEffect(() => {
+    if (user !== null) { // Only reload if user state has been initialized
+      loadJobs(filters)
+    }
+  }, [user?.id])
 
   const loadJobs = async (searchFilters: JobFilters = {}) => {
     try {
       setLoading(true)
-      const jobData = await searchJobs(searchFilters)
+      const jobData = await searchJobsWithMatchScores(user?.id || null, searchFilters)
       setJobs(jobData)
     } catch (error) {
       console.error('Error loading jobs:', error)
@@ -53,7 +59,7 @@ export default function JobSearch() {
     }
   }
 
-  const handleApply = async (job: Job) => {
+  const handleApply = async (job: JobWithMatchScore) => {
     if (!user) {
       toast.error('Please login to apply for jobs')
       return
@@ -77,7 +83,8 @@ export default function JobSearch() {
     loadJobs(filters)
   }
 
-  const formatSalary = (min: number, max: number) => {
+  const formatSalary = (min: number | null, max: number | null) => {
+    if (!min || !max) return 'По договоренности'
     return `${min.toLocaleString()}-${max.toLocaleString()}`
   }
 
@@ -86,17 +93,18 @@ export default function JobSearch() {
       full_time: 'Полная занятость',
       part_time: 'Частичная занятость',
       contract: 'Контракт',
-      freelance: 'Фриланс'
+      internship: 'Стажировка'
     }
     return labels[type as keyof typeof labels] || type
   }
 
   const getExperienceLabel = (level: string) => {
     const labels = {
+      entry: 'Entry',
       junior: 'Junior',
-      middle: 'Middle',
+      mid: 'Middle',
       senior: 'Senior',
-      lead: 'Lead'
+      executive: 'Executive'
     }
     return labels[level as keyof typeof labels] || level
   }
@@ -171,7 +179,7 @@ export default function JobSearch() {
                       <Label htmlFor="search">Поиск по ключевым словам</Label>
                       <Input 
                         id="search" 
-                        placeholder="React, JavaScript..." 
+                        placeholder="React, JavaScript, Python, Java..." 
                         value={filters.keywords || ''}
                         onChange={(e) => handleFilterChange('keywords', e.target.value)}
                       />
@@ -182,7 +190,7 @@ export default function JobSearch() {
                       <Label htmlFor="location">Местоположение</Label>
                       <Input 
                         id="location" 
-                        placeholder="Москва, Санкт-Петербург..."
+                        placeholder="Алматы, Астана, Шымкент..."
                         value={filters.location || ''}
                         onChange={(e) => handleFilterChange('location', e.target.value)}
                       />
@@ -190,7 +198,7 @@ export default function JobSearch() {
 
                     {/* Salary Range */}
                     <div className="space-y-2">
-                      <Label>Зарплата (₽)</Label>
+                      <Label>Зарплата (₸)</Label>
                       <div className="grid grid-cols-2 gap-2">
                         <Input 
                           placeholder="От" 
@@ -219,7 +227,7 @@ export default function JobSearch() {
                           <SelectItem value="full_time">Полная занятость</SelectItem>
                           <SelectItem value="part_time">Частичная занятость</SelectItem>
                           <SelectItem value="contract">Контракт</SelectItem>
-                          <SelectItem value="freelance">Фриланс</SelectItem>
+                          <SelectItem value="internship">Стажировка</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -229,8 +237,8 @@ export default function JobSearch() {
                       <div className="flex items-center space-x-2">
                         <Checkbox 
                           id="remote" 
-                          checked={filters.remote || false}
-                          onCheckedChange={(checked) => handleFilterChange('remote', checked || undefined)}
+                          checked={filters.remote_allowed || false}
+                          onCheckedChange={(checked) => handleFilterChange('remote_allowed', checked || undefined)}
                         />
                         <Label htmlFor="remote" className="text-sm">
                           Удаленная работа
@@ -247,10 +255,11 @@ export default function JobSearch() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Все уровни</SelectItem>
+                          <SelectItem value="entry">Entry</SelectItem>
                           <SelectItem value="junior">Junior</SelectItem>
-                          <SelectItem value="middle">Middle</SelectItem>
+                          <SelectItem value="mid">Middle</SelectItem>
                           <SelectItem value="senior">Senior</SelectItem>
-                          <SelectItem value="lead">Lead</SelectItem>
+                          <SelectItem value="executive">Executive</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -268,11 +277,12 @@ export default function JobSearch() {
                   <p className="text-[#333333]">
                     {loading ? 'Загрузка...' : `Найдено ${jobs.length} вакансий`}
                   </p>
-                  <Select defaultValue="date">
+                  <Select defaultValue="match_score">
                     <SelectTrigger className="w-48">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="match_score">По совместимости</SelectItem>
                       <SelectItem value="date">По дате</SelectItem>
                       <SelectItem value="salary">По зарплате</SelectItem>
                     </SelectContent>
@@ -296,7 +306,7 @@ export default function JobSearch() {
                                   <div className="flex items-center space-x-4 text-sm text-[#333333]">
                                     <div className="flex items-center">
                                       <Building2 className="w-4 h-4 mr-1" />
-                                      {job.company}
+                                      {job.companies?.name || 'Unknown Company'}
                                     </div>
                                     <div className="flex items-center">
                                       <MapPin className="w-4 h-4 mr-1" />
@@ -317,16 +327,22 @@ export default function JobSearch() {
 
                               <div className="flex items-center justify-between">
                                 <div className="flex flex-wrap gap-2">
-                                  {job.skills.map((skill) => (
-                                    <Badge key={skill} variant="secondary" className="text-xs">
-                                      {skill}
+                                  {/* Display job skills */}
+                                  {job.job_skills?.slice(0, 3).map((jobSkill) => (
+                                    <Badge key={jobSkill.id} variant={jobSkill.required ? "default" : "secondary"} className="text-xs">
+                                      {jobSkill.skills.name}
                                     </Badge>
                                   ))}
-                                  {job.remote && <Badge className="bg-[#00C49A] text-white text-xs">Удаленно</Badge>}
+                                  {job.job_skills && job.job_skills.length > 3 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      +{job.job_skills.length - 3} more
+                                    </Badge>
+                                  )}
+                                  {job.remote_allowed && <Badge className="bg-[#00C49A] text-white text-xs">Удаленно</Badge>}
                                 </div>
                                 <div className="text-right">
                                   <p className="font-semibold text-[#0A2540]">
-                                    {formatSalary(job.salary_min, job.salary_max)} ₽
+                                    {formatSalary(job.salary_min, job.salary_max)} ₸
                                   </p>
                                   <p className="text-sm text-[#333333]">{getJobTypeLabel(job.job_type)}</p>
                                 </div>
@@ -334,7 +350,14 @@ export default function JobSearch() {
                             </div>
 
                             <div className="ml-6 text-center">
+                              {/* AI Match Score */}
                               <div className="mb-3">
+                                <div className="bg-gradient-to-r from-[#00C49A] to-[#00A085] text-white px-3 py-2 rounded-lg mb-2">
+                                  <div className="text-sm font-medium">Совместимость</div>
+                                  <div className="text-2xl font-bold">
+                                    {job.matchScore ? `${job.matchScore}%` : 'N/A'}
+                                  </div>
+                                </div>
                                 <Badge variant="outline" className="text-xs">
                                   {getExperienceLabel(job.experience_level)}
                                 </Badge>
@@ -342,7 +365,7 @@ export default function JobSearch() {
                               <Button 
                                 onClick={() => handleApply(job)}
                                 disabled={!user}
-                                className="bg-[#FF7A00] hover:bg-[#E66A00] text-white"
+                                className="bg-[#FF7A00] hover:bg-[#E66A00] text-white w-full"
                               >
                                 Откликнуться
                               </Button>

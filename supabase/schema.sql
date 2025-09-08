@@ -109,6 +109,180 @@ CREATE TABLE public.job_skills (
     UNIQUE(job_id, skill_id)
 );
 
+-- Profiles table (unified extended profile data for both job seekers and employers)
+CREATE TABLE public.profiles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    
+    -- Job seeker specific fields
+    experience_years INTEGER,
+    current_job_title TEXT,
+    desired_salary_min INTEGER,
+    desired_salary_max INTEGER,
+    preferred_location TEXT,
+    remote_preference BOOLEAN,
+    resume_url TEXT,
+    linkedin_url TEXT,
+    github_url TEXT,
+    portfolio_url TEXT,
+    
+    -- Employer specific fields  
+    company_culture TEXT,
+    hiring_preferences TEXT,
+    
+    -- AI analysis flags
+    personality_test_completed BOOLEAN DEFAULT FALSE,
+    resume_parsed BOOLEAN DEFAULT FALSE,
+    ai_analysis_completed BOOLEAN DEFAULT FALSE,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    UNIQUE(user_id)
+);
+
+-- Experience entries (for job seekers)
+CREATE TABLE public.experiences (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    profile_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    job_title TEXT NOT NULL,
+    company_name TEXT NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE,
+    is_current BOOLEAN DEFAULT FALSE,
+    description TEXT,
+    achievements TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Education entries (for job seekers)
+CREATE TABLE public.educations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    profile_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    institution_name TEXT NOT NULL,
+    degree TEXT NOT NULL,
+    field_of_study TEXT,
+    start_date DATE NOT NULL,
+    end_date DATE,
+    is_current BOOLEAN DEFAULT FALSE,
+    gpa TEXT,
+    achievements TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Questionnaires table (personality test questions)
+CREATE TABLE public.questionnaires (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    question_text TEXT NOT NULL,
+    question_type TEXT NOT NULL DEFAULT 'open_ended' CHECK (question_type IN ('open_ended', 'multiple_choice', 'rating')),
+    category TEXT, -- e.g., 'problem_solving', 'teamwork', 'leadership'
+    is_active BOOLEAN DEFAULT TRUE,
+    order_index INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Test responses (user answers to personality questions)
+CREATE TABLE public.test_responses (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    question_id UUID NOT NULL REFERENCES public.questionnaires(id) ON DELETE CASCADE,
+    response_text TEXT,
+    response_rating INTEGER CHECK (response_rating >= 1 AND response_rating <= 5),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    UNIQUE(user_id, question_id)
+);
+
+-- Personality analysis (AI-generated personality assessment)
+CREATE TABLE public.personality_analysis (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    
+    -- AI analysis results
+    problem_solving_style TEXT,
+    initiative_level TEXT,
+    work_preference TEXT,
+    motivational_factors TEXT,
+    growth_areas TEXT,
+    communication_style TEXT,
+    leadership_potential TEXT,
+    
+    -- Overall scores (0-100)
+    analytical_score INTEGER CHECK (analytical_score >= 0 AND analytical_score <= 100),
+    creative_score INTEGER CHECK (creative_score >= 0 AND creative_score <= 100),
+    leadership_score INTEGER CHECK (leadership_score >= 0 AND leadership_score <= 100),
+    teamwork_score INTEGER CHECK (teamwork_score >= 0 AND teamwork_score <= 100),
+    
+    -- AI metadata
+    ai_confidence_score FLOAT CHECK (ai_confidence_score >= 0 AND ai_confidence_score <= 1),
+    analysis_version TEXT DEFAULT '1.0',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    UNIQUE(user_id)
+);
+
+-- Match scores (AI-generated candidate-job compatibility)
+CREATE TABLE public.match_scores (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    job_id UUID NOT NULL REFERENCES public.jobs(id) ON DELETE CASCADE,
+    candidate_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    
+    -- Overall match score (0-100)
+    overall_score INTEGER NOT NULL CHECK (overall_score >= 0 AND overall_score <= 100),
+    
+    -- Component scores
+    skills_match_score INTEGER CHECK (skills_match_score >= 0 AND skills_match_score <= 100),
+    experience_match_score INTEGER CHECK (experience_match_score >= 0 AND experience_match_score <= 100),
+    culture_fit_score INTEGER CHECK (culture_fit_score >= 0 AND culture_fit_score <= 100),
+    personality_match_score INTEGER CHECK (personality_match_score >= 0 AND personality_match_score <= 100),
+    
+    -- AI explanation
+    match_explanation TEXT,
+    strengths TEXT,
+    potential_concerns TEXT,
+    
+    -- AI metadata
+    ai_confidence_score FLOAT CHECK (ai_confidence_score >= 0 AND ai_confidence_score <= 1),
+    analysis_version TEXT DEFAULT '1.0',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    UNIQUE(job_id, candidate_id),
+    
+    CONSTRAINT match_scores_candidate_is_job_seeker CHECK (
+        EXISTS (
+            SELECT 1 FROM public.users 
+            WHERE users.id = match_scores.candidate_id 
+            AND users.role = 'job_seeker'
+        )
+    )
+);
+
+-- Resume parsing results (AI-extracted data from resumes)
+CREATE TABLE public.resume_parsing_results (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    
+    -- Original file info
+    original_filename TEXT,
+    file_url TEXT,
+    file_type TEXT,
+    
+    -- AI extracted data (JSON format)
+    extracted_data JSONB,
+    
+    -- Extraction metadata
+    parsing_success BOOLEAN DEFAULT FALSE,
+    parsing_errors TEXT,
+    ai_confidence_score FLOAT CHECK (ai_confidence_score >= 0 AND ai_confidence_score <= 1),
+    processing_time_seconds INTEGER,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    UNIQUE(user_id)
+);
+
 -- Applications table
 CREATE TABLE public.applications (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -118,6 +292,10 @@ CREATE TABLE public.applications (
     cover_letter TEXT,
     resume_url TEXT,
     notes TEXT,
+    
+    -- AI-enhanced fields
+    match_score_id UUID REFERENCES public.match_scores(id),
+    
     applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     
@@ -189,6 +367,52 @@ CREATE INDEX idx_job_skills_required ON public.job_skills(required);
 CREATE INDEX idx_skills_name ON public.skills(name);
 CREATE INDEX idx_skills_category ON public.skills(category);
 
+-- Profiles table indexes
+CREATE INDEX idx_profiles_user_id ON public.profiles(user_id);
+CREATE INDEX idx_profiles_personality_test_completed ON public.profiles(personality_test_completed);
+CREATE INDEX idx_profiles_resume_parsed ON public.profiles(resume_parsed);
+CREATE INDEX idx_profiles_ai_analysis_completed ON public.profiles(ai_analysis_completed);
+CREATE INDEX idx_profiles_experience_years ON public.profiles(experience_years);
+CREATE INDEX idx_profiles_preferred_location ON public.profiles(preferred_location);
+
+-- Experiences table indexes
+CREATE INDEX idx_experiences_profile_id ON public.experiences(profile_id);
+CREATE INDEX idx_experiences_is_current ON public.experiences(is_current);
+CREATE INDEX idx_experiences_start_date ON public.experiences(start_date);
+
+-- Educations table indexes
+CREATE INDEX idx_educations_profile_id ON public.educations(profile_id);
+CREATE INDEX idx_educations_is_current ON public.educations(is_current);
+CREATE INDEX idx_educations_start_date ON public.educations(start_date);
+
+-- Questionnaires table indexes
+CREATE INDEX idx_questionnaires_is_active ON public.questionnaires(is_active);
+CREATE INDEX idx_questionnaires_category ON public.questionnaires(category);
+CREATE INDEX idx_questionnaires_order_index ON public.questionnaires(order_index);
+
+-- Test responses table indexes
+CREATE INDEX idx_test_responses_user_id ON public.test_responses(user_id);
+CREATE INDEX idx_test_responses_question_id ON public.test_responses(question_id);
+CREATE INDEX idx_test_responses_created_at ON public.test_responses(created_at);
+
+-- Personality analysis table indexes
+CREATE INDEX idx_personality_analysis_user_id ON public.personality_analysis(user_id);
+CREATE INDEX idx_personality_analysis_created_at ON public.personality_analysis(created_at);
+
+-- Match scores table indexes
+CREATE INDEX idx_match_scores_job_id ON public.match_scores(job_id);
+CREATE INDEX idx_match_scores_candidate_id ON public.match_scores(candidate_id);
+CREATE INDEX idx_match_scores_overall_score ON public.match_scores(overall_score DESC);
+CREATE INDEX idx_match_scores_created_at ON public.match_scores(created_at);
+-- Composite indexes for common query patterns
+CREATE INDEX idx_match_scores_job_score ON public.match_scores(job_id, overall_score DESC);
+CREATE INDEX idx_match_scores_candidate_score ON public.match_scores(candidate_id, overall_score DESC);
+
+-- Resume parsing results table indexes
+CREATE INDEX idx_resume_parsing_user_id ON public.resume_parsing_results(user_id);
+CREATE INDEX idx_resume_parsing_success ON public.resume_parsing_results(parsing_success);
+CREATE INDEX idx_resume_parsing_created_at ON public.resume_parsing_results(created_at);
+
 -- Database Triggers for Automatic Timestamp Updates
 
 -- Create updated_at trigger function
@@ -215,6 +439,18 @@ CREATE TRIGGER update_jobs_updated_at
 
 CREATE TRIGGER update_applications_updated_at 
     BEFORE UPDATE ON public.applications 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_profiles_updated_at 
+    BEFORE UPDATE ON public.profiles 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_personality_analysis_updated_at 
+    BEFORE UPDATE ON public.personality_analysis 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_match_scores_updated_at 
+    BEFORE UPDATE ON public.match_scores 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Create role validation trigger functions
@@ -265,6 +501,16 @@ ALTER TABLE public.user_skills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.job_skills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.applications ENABLE ROW LEVEL SECURITY;
+
+-- Enable RLS on AI-related tables
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.experiences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.educations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.questionnaires ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.test_responses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.personality_analysis ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.match_scores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.resume_parsing_results ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for users table
 CREATE POLICY "Users can view their own profile" ON public.users
@@ -382,3 +628,109 @@ CREATE POLICY "Company owners can update applications to their jobs" ON public.a
             AND companies.owner_id = auth.uid()
         )
     );
+
+-- RLS Policies for profiles table
+CREATE POLICY "Users can manage their own profile" ON public.profiles
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM public.users 
+            WHERE users.id = profiles.user_id 
+            AND users.id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Employers can view job seeker profiles for their applications" ON public.profiles
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM public.users 
+            WHERE users.id = profiles.user_id 
+            AND users.role = 'job_seeker'
+        ) AND EXISTS (
+            SELECT 1 FROM public.applications
+            JOIN public.jobs ON jobs.id = applications.job_id
+            JOIN public.companies ON companies.id = jobs.company_id
+            WHERE applications.applicant_id = profiles.user_id
+            AND companies.owner_id = auth.uid()
+        )
+    );
+
+-- RLS Policies for experiences table
+CREATE POLICY "Users can manage their own experiences" ON public.experiences
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles 
+            JOIN public.users ON users.id = profiles.user_id
+            WHERE profiles.id = experiences.profile_id 
+            AND users.id = auth.uid()
+        )
+    );
+
+-- RLS Policies for educations table  
+CREATE POLICY "Users can manage their own education" ON public.educations
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles 
+            JOIN public.users ON users.id = profiles.user_id
+            WHERE profiles.id = educations.profile_id 
+            AND users.id = auth.uid()
+        )
+    );
+
+-- RLS Policies for questionnaires table (global read access)
+CREATE POLICY "Anyone can view active questionnaires" ON public.questionnaires
+    FOR SELECT USING (is_active = TRUE);
+
+CREATE POLICY "Authenticated users can create questionnaires" ON public.questionnaires
+    FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+-- RLS Policies for test_responses table
+CREATE POLICY "Users can manage their own test responses" ON public.test_responses
+    FOR ALL USING (auth.uid() = user_id);
+
+-- RLS Policies for personality_analysis table
+CREATE POLICY "Users can view their own personality analysis" ON public.personality_analysis
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "System can create personality analysis" ON public.personality_analysis
+    FOR INSERT WITH CHECK (auth.role() = 'service_role' OR auth.uid() = user_id);
+
+CREATE POLICY "System can update personality analysis" ON public.personality_analysis
+    FOR UPDATE USING (auth.role() = 'service_role' OR auth.uid() = user_id);
+
+CREATE POLICY "Employers can view personality analysis for their applications" ON public.personality_analysis
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM public.applications
+            JOIN public.jobs ON jobs.id = applications.job_id
+            JOIN public.companies ON companies.id = jobs.company_id
+            WHERE applications.applicant_id = personality_analysis.user_id
+            AND companies.owner_id = auth.uid()
+        )
+    );
+
+-- RLS Policies for match_scores table
+CREATE POLICY "Candidates can view their own match scores" ON public.match_scores
+    FOR SELECT USING (auth.uid() = candidate_id);
+
+CREATE POLICY "Company owners can view match scores for their jobs" ON public.match_scores
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM public.jobs
+            JOIN public.companies ON companies.id = jobs.company_id
+            WHERE jobs.id = match_scores.job_id 
+            AND companies.owner_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "System can manage match scores" ON public.match_scores
+    FOR ALL USING (auth.role() = 'service_role');
+
+-- RLS Policies for resume_parsing_results table  
+CREATE POLICY "Users can manage their own resume parsing results" ON public.resume_parsing_results
+    FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "System can create resume parsing results" ON public.resume_parsing_results
+    FOR INSERT WITH CHECK (auth.role() = 'service_role' OR auth.uid() = user_id);
+
+CREATE POLICY "System can update resume parsing results" ON public.resume_parsing_results
+    FOR UPDATE USING (auth.role() = 'service_role' OR auth.uid() = user_id);

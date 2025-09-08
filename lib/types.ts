@@ -5,6 +5,7 @@ export interface Job {
   requirements: string | null
   responsibilities: string | null
   company_id: string
+  employer_id: string
   job_type: 'full_time' | 'part_time' | 'contract' | 'internship'
   experience_level: 'entry' | 'junior' | 'mid' | 'senior' | 'executive'
   salary_min: number | null
@@ -27,6 +28,16 @@ export interface Job {
     description: string | null
     website: string | null
   }
+  job_skills?: Array<{
+    id: string
+    skill_id: string
+    required: boolean
+    skills: {
+      id: string
+      name: string
+      category: string | null
+    }
+  }>
 }
 
 export interface JobApplication {
