@@ -18,54 +18,44 @@ export default async function JobSeekerProfile() {
       redirect('/auth/login')
     }
 
-    // Get user data from users table  
+    // Get user data (now includes all profile fields in single table)
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role, full_name, email, phone, location, bio')
+      .select('role, full_name, email, phone, location, bio, current_job_title, linkedin_url, github_url, resume_url')
       .eq('id', user.id)
       .single()
 
     if (userError || !userData || userData.role !== 'job_seeker') {
-      console.error('User role check failed:', userError)
+      console.error('User data fetch failed:', userError)
       redirect('/')
     }
 
-    // Get user profile - this might not exist, so provide fallback
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-
-    // Create empty profile if none exists
-    const safeProfile = profile || {}
-
-    // Get experiences - use safe fallback
+    // Get experiences - simplified without profile dependency
     const { data: experiences } = await supabase
       .from('experiences')
       .select('*')
-      .eq('profile_id', safeProfile.id || 'nonexistent')
+      .eq('user_id', user.id)
       .order('start_date', { ascending: false })
 
-    // Get education - use safe fallback
+    // Get education - simplified without profile dependency
     const { data: education } = await supabase
       .from('educations')
       .select('*')
-      .eq('profile_id', safeProfile.id || 'nonexistent')
+      .eq('user_id', user.id)
       .order('start_date', { ascending: false })
 
-    // Transform data for the form
+    // Transform data for the form (all from users table now)
     const nameParts = userData.full_name?.split(' ') || []
     const initialData = {
       firstName: nameParts[0] || '',
       lastName: nameParts.slice(1).join(' ') || '',
-      title: (safeProfile as any)?.current_job_title || '',
+      title: userData.current_job_title || '',
       summary: userData.bio || '',
       phone: userData.phone || '',
-      location: userData.location || (safeProfile as any)?.preferred_location || '',
-      linkedinUrl: (safeProfile as any)?.linkedin_url || '',
-      githubUrl: (safeProfile as any)?.github_url || '',
-      skills: (safeProfile as any)?.skills || [],
+      location: userData.location || '',
+      linkedinUrl: userData.linkedin_url || '',
+      githubUrl: userData.github_url || '',
+      skills: [], // TODO: Add skills handling if needed
     }
 
     const transformedExperiences = experiences?.map(exp => ({

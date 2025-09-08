@@ -48,12 +48,18 @@ This is a **Next.js 15 App Router** AI-powered recruitment platform with role-ba
 - **AI-Driven Workflows**: Core platform features depend on AI analysis and scoring
 
 ### Database Architecture
-- **Unified Profiles Schema**: Recent migration from separate tables to unified `profiles` table
-- **Role-Based Data**: Job seekers and employers share base profile with role-specific extensions
+- **Simplified Single-Table Profile Storage**: All user profile data (name, phone, location, bio, LinkedIn/GitHub URLs, job title, resume) stored directly in the `users` table
+- **Role-Based Access**: Single `users` table serves both job seekers and employers with role-specific UI/permissions
 - **Application Tracking**: Complete job application workflow with status management including Match Score
 - **Skills Taxonomy**: Junction tables for user skills and job requirements
 - **AI Analysis Storage**: Tables for storing personality analysis results and match scores
 - **File Storage**: Supabase Storage integration for resume uploads (PDF/DOCX support)
+
+#### Database Schema Note
+**IMPORTANT**: The codebase uses a simplified single-table approach where ALL profile information is stored in the `users` table. The `users` table includes:
+- Basic info: `full_name`, `email`, `phone`, `location`, `bio`, `role`
+- Profile extensions: `linkedin_url`, `github_url`, `current_job_title`, `portfolio_url`, `resume_url`
+- This eliminates the need for a separate `profiles` table and reduces data redundancy
 
 ### Key Directories
 - `app/` - Next.js App Router pages and layouts
@@ -151,7 +157,9 @@ This is a **Next.js 15 App Router** AI-powered recruitment platform with role-ba
 - **Error Handling**: User-friendly error messages with actionable guidance
 
 ### Database Migration Context
-The codebase recently migrated from separate `job_seeker_profiles` and `employer_profiles` tables to a unified `profiles` schema. When working with profile-related code, prefer the new unified structure.
+**Latest Change**: The codebase has been simplified from a dual-table approach (`users` + `profiles`) to a **single-table approach** where all profile data is stored directly in the `users` table. This eliminates redundancy and confusion between overlapping fields.
+
+**Migration Required**: Run `/supabase/migrations/create_profiles_table.sql` (now renamed to add missing columns to `users` table) to add `linkedin_url`, `github_url`, `current_job_title`, `portfolio_url`, `resume_url` columns to your existing `users` table.
 
 ### Important Cursor Rules
 - **Server Startup**: Never start servers - ask user to run development commands
@@ -212,3 +220,37 @@ The codebase recently migrated from separate `job_seeker_profiles` and `employer
 - Environment variables: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `GEMINI_API_KEY`
 - Database schema from `supabase/schema.sql` and `lib/database-schema.sql`
 - Google Gemini API access with sufficient quota for resume parsing and personality analysis
+- Database Schema - Single Table Architecture
+
+  CRITICAL: The application uses a single-table approach for user
+  profiles. ALL profile data is stored in the users table only.
+
+  users table contains:
+
+  - Basic info: id, email, full_name, phone, location, bio, role
+  - Profile fields: linkedin_url, github_url, current_job_title,
+  portfolio_url, resume_url
+  - Timestamps: created_at, updated_at
+
+  NO separate profiles table:
+
+  - Do NOT create or reference a profiles table
+  - Do NOT use dual-table queries or joins
+  - ALL profile operations (read/write) use the users table
+  exclusively
+
+  Code patterns:
+
+  // ✅ CORRECT - Single table approach
+  const userData = await supabase.from('users').select('*').eq('id',
+  userId)
+  await supabase.from('users').update({linkedin_url: url}).eq('id',
+  userId)
+
+  // ❌ WRONG - Dual table approach
+  const profile = await
+  supabase.from('profiles').select('*').eq('user_id', userId)
+
+  This eliminates confusion between overlapping users and profiles
+  tables and ensures all profile data is stored consistently in one
+  place.

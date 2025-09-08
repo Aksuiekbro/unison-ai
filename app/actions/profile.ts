@@ -39,17 +39,6 @@ export async function updateJobSeekerProfile(formData: FormData) {
       return { error: 'Job seeker not found' }
     }
 
-    // Get or create profile
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-
-    if (profileError && profileError.code !== 'PGRST116') {
-      return { error: 'Failed to fetch profile' }
-    }
-
     // Parse form data
     const data = {
       firstName: formData.get('firstName') as string,
@@ -85,7 +74,7 @@ export async function updateJobSeekerProfile(formData: FormData) {
       }
     }
 
-    // Update users table with basic info
+    // Update users table with all profile info (simplified single-table approach)
     const { error: usersUpdateError } = await supabase
       .from('users')
       .update({
@@ -93,52 +82,19 @@ export async function updateJobSeekerProfile(formData: FormData) {
         phone: validatedData.phone || null,
         location: validatedData.location || null,
         bio: validatedData.summary || null,
+        current_job_title: validatedData.title || null,
+        linkedin_url: validatedData.linkedinUrl || null,
+        github_url: validatedData.githubUrl || null,
+        resume_url: resumeUrl,
       })
       .eq('id', user.id)
 
     if (usersUpdateError) {
-      console.error('Error updating users:', usersUpdateError)
-      return { error: `Failed to update user info: ${usersUpdateError.message}` }
+      console.error('Error updating user profile:', usersUpdateError)
+      return { error: `Failed to update profile: ${usersUpdateError.message}` }
     }
 
-    // Update or create profiles table with extended info
-    if (profile) {
-      // Update existing profile
-      const { error: profilesUpdateError } = await supabase
-        .from('profiles')
-        .update({
-          current_job_title: validatedData.title || null,
-          linkedin_url: validatedData.linkedinUrl || null,
-          github_url: validatedData.githubUrl || null,
-          resume_url: resumeUrl,
-        })
-        .eq('user_id', user.id)
-
-      if (profilesUpdateError) {
-        console.error('Error updating profiles:', profilesUpdateError)
-        return { error: `Failed to update profile: ${profilesUpdateError.message}` }
-      }
-    } else {
-      // Create new profile
-      const { error: profilesInsertError } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: user.id,
-          current_job_title: validatedData.title || null,
-          linkedin_url: validatedData.linkedinUrl || null,
-          github_url: validatedData.githubUrl || null,
-          resume_url: resumeUrl,
-        })
-
-      if (profilesInsertError) {
-        console.error('Error creating profile:', profilesInsertError)
-        return { error: `Failed to create profile: ${profilesInsertError.message}` }
-      }
-    }
-
-    // Note: job_seeker_profiles is deprecated; unified updates are handled via public.profiles only.
-
-    // Note: Names are now stored in users.full_name, no need for separate sync
+    // All profile data now stored in users table - simplified single-table approach
 
     revalidatePath('/job-seeker/profile')
     revalidatePath('/job-seeker/dashboard')
@@ -161,15 +117,15 @@ export async function addJobSeekerExperience(formData: FormData) {
       return { error: 'Authentication required' }
     }
 
-    // Verify job seeker profile exists in unified profiles table
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, role')
-      .eq('id', user.id as any)
+    // Verify job seeker role using users table
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
       .single()
 
-    if (profileError || !profile || (profile as any).role !== 'job_seeker') {
-      return { error: 'Job seeker profile not found' }
+    if (userError || !userData || userData.role !== 'job_seeker') {
+      return { error: 'Job seeker not found' }
     }
 
     // Parse form data
@@ -185,13 +141,13 @@ export async function addJobSeekerExperience(formData: FormData) {
     // Validate data
     const validatedData = jobSeekerExperienceSchema.parse(data)
 
-    // Add experience (foreign key references profiles.id)
+    // Add experience (foreign key references users.id)
     const { error: insertError } = await supabase
-      .from('job_seeker_experiences')
+      .from('experiences')
       .insert({
-        job_seeker_profile_id: (profile as any).id,
-        position: validatedData.position,
-        company: validatedData.company,
+        user_id: user.id,
+        job_title: validatedData.position,
+        company_name: validatedData.company,
         start_date: validatedData.startDate,
         end_date: validatedData.endDate || null,
         description: validatedData.description || null,
@@ -223,15 +179,15 @@ export async function addJobSeekerEducation(formData: FormData) {
       return { error: 'Authentication required' }
     }
 
-    // Verify job seeker in unified profiles table
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, role')
-      .eq('id', user.id as any)
+    // Verify job seeker role using users table
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
       .single()
 
-    if (profileError || !profile || (profile as any).role !== 'job_seeker') {
-      return { error: 'Job seeker profile not found' }
+    if (userError || !userData || userData.role !== 'job_seeker') {
+      return { error: 'Job seeker not found' }
     }
 
     // Parse form data
@@ -245,15 +201,15 @@ export async function addJobSeekerEducation(formData: FormData) {
     // Validate data
     const validatedData = jobSeekerEducationSchema.parse(data)
 
-    // Add education (foreign key references profiles.id)
+    // Add education (foreign key references users.id)
     const { error: insertError } = await supabase
-      .from('job_seeker_education')
+      .from('educations')
       .insert({
-        job_seeker_profile_id: (profile as any).id,
-        institution: validatedData.institution,
+        user_id: user.id,
+        institution_name: validatedData.institution,
         degree: validatedData.degree,
         field_of_study: validatedData.fieldOfStudy,
-        graduation_year: validatedData.graduationYear,
+        end_date: `${validatedData.graduationYear}-12-31`,
       })
 
     if (insertError) {
@@ -282,15 +238,15 @@ export async function updateEmployerProfile(formData: FormData) {
       return { error: 'Authentication required' }
     }
 
-    // Get profile
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id as any)
+    // Verify employer role using users table
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
       .single()
 
-    if (profileError || !profile || profile.role !== 'employer') {
-      return { error: 'Employer profile not found' }
+    if (userError || !userData || userData.role !== 'employer') {
+      return { error: 'Employer not found' }
     }
 
     // Parse form data
@@ -369,9 +325,9 @@ export async function updateBasicProfile(formData: FormData) {
     const lastName = (formData.get('lastName') as string || '').trim()
 
     const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ first_name: (firstName as any) || null, last_name: (lastName as any) || null })
-      .eq('id', user.id as any)
+      .from('users')
+      .update({ full_name: `${firstName} ${lastName}`.trim() })
+      .eq('id', user.id)
 
     if (updateError) {
       console.error('Error updating basic profile:', updateError)

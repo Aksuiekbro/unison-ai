@@ -163,43 +163,44 @@ export async function POST(request: NextRequest) {
       // Update user profile with parsed data if needed
       const parsedData = parseResult.data!
       if (parsedData.personal_info) {
-        const profileUpdate: any = {
-          resume_parsed: true
-        }
-
-        // Only update fields that aren't already set
-        const { data: existingProfile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', user.id)
+        // Update user with parsed data (single table approach)
+        const userUpdate: any = {}
+        
+        // Get existing user data to avoid overwriting
+        const { data: existingUser } = await supabase
+          .from('users')
+          .select('full_name, phone, location, linkedin_url, github_url, portfolio_url')
+          .eq('id', user.id)
           .single()
 
-        if (!existingProfile) {
-          // Create profile if it doesn't exist
-          const { error: profileCreateError } = await supabase
-            .from('profiles')
-            .insert({
-              user_id: user.id,
-              resume_parsed: true,
-              resume_url: null, // Could store file URL if needed
-              linkedin_url: parsedData.personal_info.linkedin_url,
-              github_url: parsedData.personal_info.github_url,
-              portfolio_url: parsedData.personal_info.portfolio_url,
-              experience_years: parsedData.experience?.length || null
-            })
+        // Only update fields that aren't already set
+        if (parsedData.personal_info.full_name && !existingUser?.full_name) {
+          userUpdate.full_name = parsedData.personal_info.full_name
+        }
+        if (parsedData.personal_info.phone && !existingUser?.phone) {
+          userUpdate.phone = parsedData.personal_info.phone
+        }
+        if (parsedData.personal_info.location && !existingUser?.location) {
+          userUpdate.location = parsedData.personal_info.location
+        }
+        if (parsedData.personal_info.linkedin_url && !existingUser?.linkedin_url) {
+          userUpdate.linkedin_url = parsedData.personal_info.linkedin_url
+        }
+        if (parsedData.personal_info.github_url && !existingUser?.github_url) {
+          userUpdate.github_url = parsedData.personal_info.github_url
+        }
+        if (parsedData.personal_info.portfolio_url && !existingUser?.portfolio_url) {
+          userUpdate.portfolio_url = parsedData.personal_info.portfolio_url
+        }
 
-          if (profileCreateError) {
-            console.error('Profile creation error:', profileCreateError)
-          }
-        } else {
-          // Update existing profile
-          const { error: profileUpdateError } = await supabase
-            .from('profiles')
-            .update(profileUpdate)
-            .eq('user_id', user.id)
+        if (Object.keys(userUpdate).length > 0) {
+          const { error: userUpdateError } = await supabase
+            .from('users')
+            .update(userUpdate)
+            .eq('id', user.id)
 
-          if (profileUpdateError) {
-            console.error('Profile update error:', profileUpdateError)
+          if (userUpdateError) {
+            console.error('User update error:', userUpdateError)
           }
         }
       }
