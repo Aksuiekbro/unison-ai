@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import type { Database } from '@/lib/types/database';
-import { AuthUser, ProfileRow as UserProfile, AuthState } from '@/lib/auth';
+import { AuthUser, ProfileRow as UserProfile, UserRow, AuthState } from '@/lib/auth';
 
 const AuthContext = createContext<AuthState & {
   signOut: () => Promise<void>;
@@ -11,6 +11,7 @@ const AuthContext = createContext<AuthState & {
 }>({
   user: null,
   profile: null,
+  userData: null,
   isLoading: true,
   signOut: async () => {},
   refreshAuth: async () => {},
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthState & {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [userData, setUserData] = useState<UserRow | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const supabase = useMemo(() => createClientComponentClient<Database>(), []);
 
@@ -29,18 +31,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(currentUser as AuthUser | null);
 
       if (currentUser) {
-        const { data: userProfile } = await supabase
-          .from('profiles')
+        // Get user data (role, email, full_name, etc.)
+        const { data: currentUserData } = await supabase
+          .from('users')
           .select('*')
           .eq('id', currentUser.id)
           .maybeSingle();
+        setUserData((currentUserData as UserRow) || null);
+
+        // Get profile data (extended profile info)
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .maybeSingle();
         setProfile((userProfile as UserProfile) || null);
       } else {
+        setUserData(null);
         setProfile(null);
       }
     } catch (error) {
       console.error('Error refreshing auth:', error);
       setUser(null);
+      setUserData(null);
       setProfile(null);
     } finally {
       setIsLoading(false);
@@ -51,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await supabase.auth.signOut();
       setUser(null);
+      setUserData(null);
       setProfile(null);
     } catch (error) {
       console.error('Error signing out:', error);
@@ -67,15 +81,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (session?.user) {
             setUser(session.user as AuthUser);
+            
+            // Get user data
+            const { data: currentUserData } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', session.user.id)
+              .maybeSingle();
+            setUserData((currentUserData as UserRow) || null);
+            
+            // Get profile data
             const { data: userProfile } = await supabase
               .from('profiles')
               .select('*')
-              .eq('id', session.user.id)
+              .eq('user_id', session.user.id)
               .maybeSingle();
             setProfile((userProfile as UserProfile) || null);
           }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
+          setUserData(null);
           setProfile(null);
         }
         setIsLoading(false);
@@ -90,10 +115,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const contextValue = useMemo(() => ({
     user,
     profile,
+    userData,
     isLoading,
     signOut: handleSignOut,
     refreshAuth,
-  }), [user, profile, isLoading, handleSignOut, refreshAuth]);
+  }), [user, profile, userData, isLoading, handleSignOut, refreshAuth]);
 
   return (
     <AuthContext.Provider value={contextValue}>

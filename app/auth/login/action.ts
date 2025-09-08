@@ -37,14 +37,14 @@ export async function loginAction(prevState: any, formData: FormData) {
       }
     }
 
-    // Resolve role from profiles or user metadata (cookie-bound client → RLS works)
-    const { data: profile } = await supabase
-      .from('profiles')
+    // Resolve role from users table or user metadata (cookie-bound client → RLS works)
+    const { data: userData } = await supabase
+      .from('users')
       .select('role')
       .eq('id', authData.user.id)
       .single()
 
-    const role = (profile?.role || (authData.user.user_metadata as any)?.role) as any
+    const role = (userData?.role || (authData.user.user_metadata as any)?.role) as any
 
     return {
       success: true,

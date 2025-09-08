@@ -46,48 +46,81 @@ export async function middleware(req: NextRequest) {
 
   // If accessing auth routes while logged in, redirect to appropriate dashboard
   if (isAuthRoute && session) {
-    // Get user profile to determine role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', session.user.id)
-      .single()
+    try {
+      // Get user data to determine role
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', session.user.id)
+        .single()
 
-    const role = (profile?.role || (session.user.user_metadata as any)?.role) as any
-    const normalizedRole = role === 'job-seeker' ? 'job_seeker' : role
+      const role = (userData?.role || (session.user.user_metadata as any)?.role) as any
+      const normalizedRole = role === 'job-seeker' ? 'job_seeker' : role
 
-    if (normalizedRole === 'employer') {
-      return NextResponse.redirect(new URL('/employer/dashboard', req.url))
-    } else if (normalizedRole === 'job_seeker') {
-      return NextResponse.redirect(new URL('/job-seeker/dashboard', req.url))
-    } else {
-      return NextResponse.redirect(new URL('/', req.url))
+      if (normalizedRole === 'employer') {
+        return NextResponse.redirect(new URL('/employer/dashboard', req.url))
+      } else if (normalizedRole === 'job_seeker') {
+        return NextResponse.redirect(new URL('/job-seeker/dashboard', req.url))
+      } else {
+        return NextResponse.redirect(new URL('/', req.url))
+      }
+    } catch (error) {
+      // If database query fails, fall back to user metadata or allow auth page
+      console.warn('Middleware database query failed:', error)
+      const role = (session.user.user_metadata as any)?.role
+      const normalizedRole = role === 'job-seeker' ? 'job_seeker' : role
+      
+      if (normalizedRole === 'employer') {
+        return NextResponse.redirect(new URL('/employer/dashboard', req.url))
+      } else if (normalizedRole === 'job_seeker') {
+        return NextResponse.redirect(new URL('/job-seeker/dashboard', req.url))
+      }
+      // If no role found, allow access to auth page
     }
   }
 
   // Role-based route protection
   if (session && isProtectedRoute) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', session.user.id)
-      .single()
+    try {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', session.user.id)
+        .single()
 
-    const role = (profile?.role || (session.user.user_metadata as any)?.role) as any
-    const normalizedRole = role === 'job-seeker' ? 'job_seeker' : role
+      const role = (userData?.role || (session.user.user_metadata as any)?.role) as any
+      const normalizedRole = role === 'job-seeker' ? 'job_seeker' : role
 
-    // If role is unknown, do not bounce between dashboards
-    if (normalizedRole !== 'employer' && normalizedRole !== 'job_seeker') {
-      return response
-    }
+      // If role is unknown, do not bounce between dashboards
+      if (normalizedRole !== 'employer' && normalizedRole !== 'job_seeker') {
+        return response
+      }
 
-    // Check if user is accessing the correct role-based route
-    if (pathname.startsWith('/employer') && normalizedRole !== 'employer') {
-      return NextResponse.redirect(new URL('/job-seeker/dashboard', req.url))
-    }
-    
-    if (pathname.startsWith('/job-seeker') && normalizedRole !== 'job_seeker') {
-      return NextResponse.redirect(new URL('/employer/dashboard', req.url))
+      // Check if user is accessing the correct role-based route
+      if (pathname.startsWith('/employer') && normalizedRole !== 'employer') {
+        return NextResponse.redirect(new URL('/job-seeker/dashboard', req.url))
+      }
+      
+      if (pathname.startsWith('/job-seeker') && normalizedRole !== 'job_seeker') {
+        return NextResponse.redirect(new URL('/employer/dashboard', req.url))
+      }
+    } catch (error) {
+      // If database query fails, fall back to user metadata
+      console.warn('Middleware role protection query failed:', error)
+      const role = (session.user.user_metadata as any)?.role
+      const normalizedRole = role === 'job-seeker' ? 'job_seeker' : role
+
+      if (normalizedRole !== 'employer' && normalizedRole !== 'job_seeker') {
+        return response
+      }
+
+      if (pathname.startsWith('/employer') && normalizedRole !== 'employer') {
+        return NextResponse.redirect(new URL('/job-seeker/dashboard', req.url))
+      }
+      
+      if (pathname.startsWith('/job-seeker') && normalizedRole !== 'job_seeker') {
+        return NextResponse.redirect(new URL('/employer/dashboard', req.url))
+      }
     }
   }
 

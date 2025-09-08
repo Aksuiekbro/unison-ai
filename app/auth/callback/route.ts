@@ -37,26 +37,29 @@ export async function GET(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (user) {
-      // Ensure profile exists after email confirmation
-      const { data: existing } = await supabase
-        .from('profiles')
+      // Ensure user record exists in users table
+      const { data: existingUser } = await supabase
+        .from('users')
         .select('id')
         .eq('id', user.id)
         .maybeSingle()
 
-      if (!existing) {
+      if (!existingUser) {
         const role = (user.user_metadata as any)?.role ?? 'job_seeker'
         const email = user.email ?? ''
-        const fullName = (user.user_metadata as any)?.full_name as string | undefined
-        const [first, ...rest] = (fullName || '').trim().split(/\s+/)
-        const firstName = first || (email ? email.split('@')[0] : '')
-        const lastName = rest.join(' ') || ''
-        await supabaseAdmin.from('profiles').insert({
+        const fullName = (user.user_metadata as any)?.full_name || ''
+        
+        // Create user record with role
+        await supabaseAdmin.from('users').insert({
           id: user.id,
-          role,
           email,
-          first_name: firstName,
-          last_name: lastName,
+          full_name: fullName,
+          role,
+        })
+
+        // Create empty profile record
+        await supabaseAdmin.from('profiles').insert({
+          user_id: user.id,
         })
       }
 

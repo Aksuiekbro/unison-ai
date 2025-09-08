@@ -12,18 +12,46 @@ export type AuthUser = User & {
   }
 }
 
+export interface UserRow {
+  id: string
+  email: string
+  full_name: string
+  role: UserRole
+  avatar_url?: string | null
+  phone?: string | null
+  location?: string | null
+  bio?: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface AuthState {
   user: AuthUser | null;
   profile: ProfileRow | null;
+  userData: UserRow | null;
   isLoading: boolean;
 }
 
 export interface ProfileRow {
   id: string
-  role: UserRole
-  email: string
-  first_name?: string | null
-  last_name?: string | null
+  user_id: string
+  experience_years?: number | null
+  current_job_title?: string | null
+  desired_salary_min?: number | null
+  desired_salary_max?: number | null
+  preferred_location?: string | null
+  remote_preference?: boolean | null
+  resume_url?: string | null
+  linkedin_url?: string | null
+  github_url?: string | null
+  portfolio_url?: string | null
+  company_culture?: string | null
+  hiring_preferences?: string | null
+  personality_test_completed?: boolean
+  resume_parsed?: boolean
+  ai_analysis_completed?: boolean
+  created_at: string
+  updated_at: string
 }
 
 // Client-side auth functions
@@ -47,20 +75,25 @@ export async function signUp(
 
   if (error) throw error;
 
-  // Create user profile in the database
+  // Create user record in the database
   if (data.user) {
-    const [first, ...rest] = (metadata.full_name || '').trim().split(/\s+/)
-    const firstName = first || email.split('@')[0]
-    const lastName = rest.join(' ') || ''
-    // Use service role to bypass RLS during initial profile creation
+    // Use service role to bypass RLS during initial user creation
+    const { error: userError } = await supabaseAdmin
+      .from('users')
+      .insert({
+        id: data.user.id,
+        email: email,
+        full_name: metadata.full_name,
+        role: metadata.role,
+      });
+
+    if (userError) throw userError;
+
+    // Create empty profile record
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .insert({
-        id: data.user.id,
-        role: metadata.role,
-        email: email,
-        first_name: firstName,
-        last_name: lastName,
+        user_id: data.user.id,
       });
 
     if (profileError) throw profileError;
@@ -98,6 +131,17 @@ export async function getUserProfile(userId: string): Promise<ProfileRow | null>
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
+    .eq('user_id', userId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data;
+}
+
+export async function getUserData(userId: string): Promise<UserRow | null> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
     .eq('id', userId)
     .single();
 
@@ -106,10 +150,10 @@ export async function getUserProfile(userId: string): Promise<ProfileRow | null>
 }
 
 // Utility functions
-export function hasRole(user: AuthUser | null, profile: ProfileRow | null, role: UserRole): boolean {
-  return profile?.role === role || user?.user_metadata?.role === role;
+export function hasRole(user: AuthUser | null, userData: UserRow | null, role: UserRole): boolean {
+  return userData?.role === role || user?.user_metadata?.role === role;
 }
 
-export function getUserRole(user: AuthUser | null, profile: ProfileRow | null): UserRole | null {
-  return profile?.role || user?.user_metadata?.role || null;
+export function getUserRole(user: AuthUser | null, userData: UserRow | null): UserRole | null {
+  return userData?.role || user?.user_metadata?.role || null;
 }
