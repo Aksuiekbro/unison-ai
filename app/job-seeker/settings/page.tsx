@@ -4,28 +4,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { LayoutDashboard, User, Search, Settings, Heart } from "lucide-react"
 import Link from "next/link"
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
-import { cookies } from "next/headers"
-import type { Database } from "@/lib/database.types"
-import { updateBasicProfile } from "@/app/actions/profile"
 
 export default async function JobSeekerSettings() {
-  const cookieStore = await cookies()
-  const supabase = createServerComponentClient<Database>({ cookies: () => cookieStore })
-  const { data: { user } } = await supabase.auth.getUser()
-  let firstName = ""
-  let lastName = ""
-  let email = ""
-  if (user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('first_name,last_name,email')
-      .eq('id', user.id as any)
-      .maybeSingle()
-    firstName = (profile as any)?.first_name || ""
-    lastName = (profile as any)?.last_name || ""
-    email = (profile as any)?.email || user.email || ""
-  }
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="flex">

@@ -4,7 +4,6 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { LayoutDashboard, User, Search, Settings, Eye, Calendar, MapPin, Clock, Heart } from "lucide-react"
 import Link from "next/link"
-import { RoleGuard } from "@/components/role-guard"
 import { cookies } from "next/headers"
 import { createServerClient } from "@supabase/ssr"
 import type { Database } from "@/lib/database.types"
@@ -36,22 +35,15 @@ export default async function JobSeekerDashboard() {
 
   let displayName = ""
   if (user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('first_name,last_name,email')
-      .eq('id', user.id as any)
-      .maybeSingle()
-    const first = (profile as any)?.first_name as string | undefined
-    const last = (profile as any)?.last_name as string | undefined
-    const email = (profile as any)?.email as string | undefined
-    displayName = [first, last].filter(Boolean).join(' ').trim() || (email ? email.split('@')[0] : '')
+    const { data: userData } = await supabase
+      .from('users')
+      .select('full_name,email')
+      .eq('id', user.id)
+      .single()
+    displayName = userData?.full_name || (userData?.email ? userData.email.split('@')[0] : '')
   }
 
-  return (
-    <RoleGuard allowedRoles={['employee', 'job-seeker']}>
-      <JobSeekerDashboardContent displayName={displayName} />
-    </RoleGuard>
-  )
+  return <JobSeekerDashboardContent displayName={displayName} />
 }
 
 function JobSeekerDashboardContent({ displayName }: { displayName: string }) {

@@ -103,21 +103,21 @@ export default function JobSeekerProfileForm({
 
         if (!result || result.error) {
           toast({
-            title: "Error",
-            description: (result && result.error) || 'Failed to update profile',
+            title: "Ошибка",
+            description: (result && result.error) || 'Не удалось обновить профиль',
             variant: "destructive",
           })
           return
         }
 
         toast({
-          title: "Success",
-          description: "Profile updated successfully",
+          title: "Успех",
+          description: "Профиль успешно обновлён",
         })
         router.refresh()
         setIsEditing(false)
       } catch (e: any) {
-        toast({ title: 'Error', description: e?.message || 'Unexpected error', variant: 'destructive' })
+        toast({ title: 'Ошибка', description: e?.message || 'Неожиданная ошибка', variant: 'destructive' })
       }
     })
   }
@@ -165,20 +165,20 @@ export default function JobSeekerProfileForm({
   const githubUrl = isEditing ? (form.watch('githubUrl') || '') : (initialData?.githubUrl || '')
 
   const missing: string[] = []
-  if (!firstName) missing.push('First name')
-  if (!lastName) missing.push('Last name')
-  if (!title) missing.push('Desired position')
+  if (!firstName) missing.push('Имя')
+  if (!lastName) missing.push('Фамилия')
+  if (!title) missing.push('Желаемая должность')
 
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-[#0A2540]">My Profile</h1>
+        <h1 className="text-3xl font-bold text-[#0A2540]">Мой профиль</h1>
         {!isEditing ? (
           <Button 
             onClick={() => setIsEditing(true)}
             className="bg-[#00C49A] hover:bg-[#00A085]"
           >
-            {missing.length > 0 ? 'Fill in missing info' : 'Edit profile'}
+            {missing.length > 0 ? 'Заполните недостающую информацию' : 'Изменить профиль'}
           </Button>
         ) : (
           <div className="flex gap-2">
@@ -187,9 +187,9 @@ export default function JobSeekerProfileForm({
               disabled={isPending}
               className="bg-[#00C49A] hover:bg-[#00A085]"
             >
-              {isPending ? 'Saving...' : 'Save Changes'}
+              {isPending ? 'Сохранение...' : 'Сохранить изменения'}
             </Button>
-            <Button variant="outline" onClick={() => setIsEditing(false)}>Back to profile</Button>
+            <Button variant="outline" onClick={() => setIsEditing(false)}>Назад к профилю</Button>
           </div>
         )}
       </div>
@@ -198,10 +198,10 @@ export default function JobSeekerProfileForm({
       {!isEditing && (
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle className="text-[#0A2540]">Public Profile</CardTitle>
+            <CardTitle className="text-[#0A2540]">Публичный профиль</CardTitle>
             {missing.length > 0 && (
               <CardDescription>
-                Missing: {missing.join(', ')}
+                Отсутствует: {missing.join(', ')}
               </CardDescription>
             )}
           </CardHeader>
@@ -218,24 +218,24 @@ export default function JobSeekerProfileForm({
 
               {/* About */}
               <section>
-                <h3 className="text-sm font-semibold text-[#0A2540] mb-2">About</h3>
+                <h3 className="text-sm font-semibold text-[#0A2540] mb-2">О себе</h3>
                 <p className="text-sm text-[#333333] whitespace-pre-wrap">{summary || '—'}</p>
               </section>
 
               {/* Contact Info */}
               <section>
-                <h3 className="text-sm font-semibold text-[#0A2540] mb-2">Contact Info</h3>
+                <h3 className="text-sm font-semibold text-[#0A2540] mb-2">Контактная информация</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   <div>
-                    <span className="text-gray-500">Email: </span>
+                    <span className="text-gray-500">Эл. почта: </span>
                     <span className="text-[#0A2540]">{viewerEmail || '—'}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Phone: </span>
+                    <span className="text-gray-500">Телефон: </span>
                     <span className="text-[#0A2540]">{form.watch('phone') || '—'}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Location: </span>
+                    <span className="text-gray-500">Местоположение: </span>
                     <span className="text-[#0A2540]">{location || '—'}</span>
                   </div>
                 </div>
@@ -243,7 +243,7 @@ export default function JobSeekerProfileForm({
 
               {/* Portfolio Links */}
               <section>
-                <h3 className="text-sm font-semibold text-[#0A2540] mb-2">Portfolio Links</h3>
+                <h3 className="text-sm font-semibold text-[#0A2540] mb-2">Портфолио</h3>
                 <div className="flex flex-wrap gap-3 text-sm">
                   <a href={linkedinUrl || '#'} className="underline text-[#00C49A]" target="_blank" rel="noreferrer">
                     LinkedIn
@@ -256,7 +256,7 @@ export default function JobSeekerProfileForm({
 
               {/* Education */}
               <section>
-                <h3 className="text-sm font-semibold text-[#0A2540] mb-2">Education</h3>
+                <h3 className="text-sm font-semibold text-[#0A2540] mb-2">Образование</h3>
                 {education && education.length > 0 ? (
                   <div className="space-y-2">
                     {education.map((edu) => (
@@ -274,13 +274,13 @@ export default function JobSeekerProfileForm({
 
               {/* Experience */}
               <section>
-                <h3 className="text-sm font-semibold text-[#0A2540] mb-2">Experience</h3>
+                <h3 className="text-sm font-semibold text-[#0A2540] mb-2">Опыт работы</h3>
                 {experiences && experiences.length > 0 ? (
                   <div className="space-y-2">
                     {experiences.map((exp) => (
                       <div key={exp.id} className="text-sm">
                         <p className="font-medium text-[#0A2540]">{exp.position} • {exp.company}</p>
-                        <p className="text-gray-500">{exp.startDate} - {exp.isCurrent ? 'Present' : exp.endDate || '—'}</p>
+                        <p className="text-gray-500">{exp.startDate} - {exp.isCurrent ? 'Настоящее время' : exp.endDate || '—'}</p>
                         {exp.description && <p className="text-[#333333]">{exp.description}</p>}
                       </div>
                     ))}
@@ -292,7 +292,7 @@ export default function JobSeekerProfileForm({
 
               {/* Skills */}
               <section>
-                <h3 className="text-sm font-semibold text-[#0A2540] mb-2">Skills</h3>
+                <h3 className="text-sm font-semibold text-[#0A2540] mb-2">Навыки</h3>
                 <div className="flex flex-wrap gap-2">
                   {skills.length > 0 ? skills.map((s) => (
                     <Badge key={s} variant="secondary" className="px-3 py-1">{s}</Badge>
@@ -307,8 +307,8 @@ export default function JobSeekerProfileForm({
       {isEditing && (
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle className="text-[#0A2540]">Upload Your Resume</CardTitle>
-            <CardDescription>Supported formats: PDF, DOC, DOCX</CardDescription>
+            <CardTitle className="text-[#0A2540]">Загрузить резюме</CardTitle>
+            <CardDescription>Поддерживаемые форматы: PDF, DOC, DOCX</CardDescription>
           </CardHeader>
           <CardContent>
             <div
@@ -353,7 +353,7 @@ export default function JobSeekerProfileForm({
                 className="border-[#00C49A] text-[#00C49A] bg-transparent"
                 onClick={() => fileInputRef.current?.click()}
               >
-                Choose File
+                Выбрать файл
               </Button>
             </div>
           </CardContent>
@@ -365,16 +365,16 @@ export default function JobSeekerProfileForm({
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <Tabs defaultValue="personal" className="space-y-6">
             <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="personal">Personal Info</TabsTrigger>
-              <TabsTrigger value="experience">Experience</TabsTrigger>
-              <TabsTrigger value="education">Education</TabsTrigger>
-              <TabsTrigger value="skills">Skills</TabsTrigger>
+              <TabsTrigger value="personal">Личная информация</TabsTrigger>
+              <TabsTrigger value="experience">Опыт</TabsTrigger>
+              <TabsTrigger value="education">Образование</TabsTrigger>
+              <TabsTrigger value="skills">Навыки</TabsTrigger>
             </TabsList>
 
             <TabsContent value="personal">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-[#0A2540]">Personal Information</CardTitle>
+                  <CardTitle className="text-[#0A2540]">Личная информация</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
@@ -383,9 +383,9 @@ export default function JobSeekerProfileForm({
                       name="firstName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>First Name</FormLabel>
+                          <FormLabel>Имя</FormLabel>
                           <FormControl>
-                            <Input placeholder="John" {...field} />
+                            <Input placeholder="Иван" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -396,9 +396,9 @@ export default function JobSeekerProfileForm({
                       name="lastName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Last Name</FormLabel>
+                          <FormLabel>Фамилия</FormLabel>
                           <FormControl>
-                            <Input placeholder="Doe" {...field} />
+                            <Input placeholder="Иванов" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -411,9 +411,9 @@ export default function JobSeekerProfileForm({
                     name="title"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Desired Position</FormLabel>
+                        <FormLabel>Желаемая должность</FormLabel>
                         <FormControl>
-                          <Input placeholder="Frontend Developer" {...field} />
+                          <Input placeholder="Frontend-разработчик" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -425,10 +425,10 @@ export default function JobSeekerProfileForm({
                     name="summary"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>About Me</FormLabel>
+                        <FormLabel>О себе</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="Tell us about yourself, your goals and motivation..."
+                            placeholder="Расскажите о себе, о своих целях и мотивации..."
                             className="min-h-[120px]"
                             {...field}
                           />
@@ -444,9 +444,9 @@ export default function JobSeekerProfileForm({
                       name="phone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Phone</FormLabel>
+                          <FormLabel>Телефон</FormLabel>
                           <FormControl>
-                            <Input placeholder="+1 (555) 123-4567" {...field} />
+                            <Input placeholder="+7 (777) 123-45-67" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -457,9 +457,9 @@ export default function JobSeekerProfileForm({
                       name="location"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Location</FormLabel>
+                          <FormLabel>Местоположение</FormLabel>
                           <FormControl>
-                            <Input placeholder="New York, NY" {...field} />
+                            <Input placeholder="Алматы, Казахстан" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -503,10 +503,10 @@ export default function JobSeekerProfileForm({
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-[#0A2540]">Work Experience</CardTitle>
+                    <CardTitle className="text-[#0A2540]">Опыт работы</CardTitle>
                     <Button size="sm" className="bg-[#00C49A] hover:bg-[#00A085]" onClick={() => setExpOpen(true)} type="button">
                       <Plus className="w-4 h-4 mr-1" />
-                      Add Experience
+                      Добавить опыт
                     </Button>
                   </div>
                 </CardHeader>
@@ -516,7 +516,7 @@ export default function JobSeekerProfileForm({
                       <h4 className="font-semibold text-[#0A2540]">{exp.position}</h4>
                       <p className="text-[#333333]">{exp.company}</p>
                       <p className="text-sm text-gray-500">
-                        {exp.startDate} - {exp.isCurrent ? 'Present' : exp.endDate}
+                        {exp.startDate} - {exp.isCurrent ? 'Настоящее время' : exp.endDate}
                       </p>
                       {exp.description && (
                         <p className="mt-2 text-sm text-[#333333]">{exp.description}</p>
@@ -526,7 +526,7 @@ export default function JobSeekerProfileForm({
                   
                   {experiences.length === 0 && (
                     <p className="text-center text-gray-500 py-8">
-                      No work experience added yet. Click "Add Experience" to get started.
+                      Опыт работы пока не добавлен. Нажмите "Добавить опыт" для начала.
                     </p>
                   )}
                 </CardContent>
@@ -537,10 +537,10 @@ export default function JobSeekerProfileForm({
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-[#0A2540]">Education</CardTitle>
+                    <CardTitle className="text-[#0A2540]">Образование</CardTitle>
                     <Button size="sm" className="bg-[#00C49A] hover:bg-[#00A085]" onClick={() => setEduOpen(true)} type="button">
                       <Plus className="w-4 h-4 mr-1" />
-                      Add Education
+                      Добавить образование
                     </Button>
                   </div>
                 </CardHeader>
@@ -557,7 +557,7 @@ export default function JobSeekerProfileForm({
                   
                   {education.length === 0 && (
                     <p className="text-center text-gray-500 py-8">
-                      No education added yet. Click "Add Education" to get started.
+                      Образование пока не добавлено. Нажмите "Добавить образование" для начала.
                     </p>
                   )}
                 </CardContent>
@@ -567,15 +567,15 @@ export default function JobSeekerProfileForm({
             <TabsContent value="skills">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-[#0A2540]">Skills and Technologies</CardTitle>
-                  <CardDescription>Add your key skills</CardDescription>
+                  <CardTitle className="text-[#0A2540]">Навыки и технологии</CardTitle>
+                  <CardDescription>Добавьте ключевые навыки</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
-                    <Label>Add Skill</Label>
+                    <Label>Добавить навык</Label>
                     <div className="flex space-x-2">
                       <Input
-                        placeholder="e.g. React, JavaScript, Python..."
+                        placeholder="напр. React, JavaScript, Python..."
                         value={newSkill}
                         onChange={(e) => setNewSkill(e.target.value)}
                         onKeyPress={handleKeyPress}
@@ -591,7 +591,7 @@ export default function JobSeekerProfileForm({
                   </div>
 
                   <div className="space-y-4">
-                    <h4 className="font-semibold text-[#0A2540]">Your Skills:</h4>
+                    <h4 className="font-semibold text-[#0A2540]">Ваши навыки:</h4>
                     <div className="flex flex-wrap gap-2">
                       {skills.map((skill) => (
                         <Badge key={skill} variant="secondary" className="px-3 py-1">
@@ -604,7 +604,7 @@ export default function JobSeekerProfileForm({
                       ))}
                     </div>
                     {skills.length === 0 && (
-                      <p className="text-gray-500">No skills added yet.</p>
+                      <p className="text-gray-500">Навыки пока не добавлены.</p>
                     )}
                   </div>
                 </CardContent>
@@ -619,40 +619,40 @@ export default function JobSeekerProfileForm({
       <Dialog open={expOpen} onOpenChange={setExpOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Experience</DialogTitle>
+            <DialogTitle>Добавить опыт</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Position</Label>
+                <Label>Должность</Label>
                 <Input value={expForm.position} onChange={(e) => setExpForm({ ...expForm, position: e.target.value })} />
               </div>
               <div>
-                <Label>Company</Label>
+                <Label>Компания</Label>
                 <Input value={expForm.company} onChange={(e) => setExpForm({ ...expForm, company: e.target.value })} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Start Date</Label>
+                <Label>Дата начала</Label>
                 <Input type="date" value={expForm.startDate} onChange={(e) => setExpForm({ ...expForm, startDate: e.target.value })} />
               </div>
               <div>
-                <Label>End Date</Label>
+                <Label>Дата окончания</Label>
                 <Input type="date" value={expForm.endDate} onChange={(e) => setExpForm({ ...expForm, endDate: e.target.value })} disabled={expForm.isCurrent} />
               </div>
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox id="isCurrent" checked={expForm.isCurrent} onCheckedChange={(checked) => setExpForm({ ...expForm, isCurrent: Boolean(checked) })} />
-              <Label htmlFor="isCurrent">I currently work here</Label>
+              <Label htmlFor="isCurrent">Я работаю здесь сейчас</Label>
             </div>
             <div>
-              <Label>Description</Label>
+              <Label>Описание</Label>
               <Textarea value={expForm.description} onChange={(e) => setExpForm({ ...expForm, description: e.target.value })} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setExpOpen(false)} type="button">Cancel</Button>
+            <Button variant="outline" onClick={() => setExpOpen(false)} type="button">Отмена</Button>
             <Button
               onClick={() => {
                 startTransition(async () => {
@@ -665,9 +665,9 @@ export default function JobSeekerProfileForm({
                   fd.append('isCurrent', String(expForm.isCurrent))
                   const res = await addJobSeekerExperience(fd)
                   if ((res as any)?.error) {
-                    toast({ title: 'Error', description: (res as any).error, variant: 'destructive' })
+                    toast({ title: 'Ошибка', description: (res as any).error, variant: 'destructive' })
                   } else {
-                    toast({ title: 'Success', description: 'Experience added' })
+                    toast({ title: 'Успех', description: 'Опыт добавлен' })
                     setExpOpen(false)
                     setExpForm({ position: '', company: '', startDate: '', endDate: '', description: '', isCurrent: false })
                     router.refresh()
@@ -678,7 +678,7 @@ export default function JobSeekerProfileForm({
               className="bg-[#00C49A] hover:bg-[#00A085]"
               type="button"
             >
-              {isPending ? 'Saving...' : 'Add'}
+              {isPending ? 'Сохранение...' : 'Добавить'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -688,30 +688,30 @@ export default function JobSeekerProfileForm({
       <Dialog open={eduOpen} onOpenChange={setEduOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Education</DialogTitle>
+            <DialogTitle>Добавить образование</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Institution</Label>
+                <Label>Учебное заведение</Label>
                 <Input value={eduForm.institution} onChange={(e) => setEduForm({ ...eduForm, institution: e.target.value })} />
               </div>
               <div>
-                <Label>Degree</Label>
+                <Label>Степень</Label>
                 <Input value={eduForm.degree} onChange={(e) => setEduForm({ ...eduForm, degree: e.target.value })} />
               </div>
             </div>
             <div>
-              <Label>Field of Study</Label>
+              <Label>Область изучения</Label>
               <Input value={eduForm.fieldOfStudy} onChange={(e) => setEduForm({ ...eduForm, fieldOfStudy: e.target.value })} />
             </div>
             <div>
-              <Label>Graduation Year</Label>
+              <Label>Год окончания</Label>
               <Input type="number" value={eduForm.graduationYear} onChange={(e) => setEduForm({ ...eduForm, graduationYear: e.target.value })} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEduOpen(false)} type="button">Cancel</Button>
+            <Button variant="outline" onClick={() => setEduOpen(false)} type="button">Отмена</Button>
             <Button
               onClick={() => {
                 startTransition(async () => {
@@ -722,9 +722,9 @@ export default function JobSeekerProfileForm({
                   fd.append('graduationYear', eduForm.graduationYear)
                   const res = await addJobSeekerEducation(fd)
                   if ((res as any)?.error) {
-                    toast({ title: 'Error', description: (res as any).error, variant: 'destructive' })
+                    toast({ title: 'Ошибка', description: (res as any).error, variant: 'destructive' })
                   } else {
-                    toast({ title: 'Success', description: 'Education added' })
+                    toast({ title: 'Успех', description: 'Образование добавлено' })
                     setEduOpen(false)
                     setEduForm({ institution: '', degree: '', fieldOfStudy: '', graduationYear: '' })
                     router.refresh()
@@ -735,7 +735,7 @@ export default function JobSeekerProfileForm({
               className="bg-[#00C49A] hover:bg-[#00A085]"
               type="button"
             >
-              {isPending ? 'Saving...' : 'Add'}
+              {isPending ? 'Сохранение...' : 'Добавить'}
             </Button>
           </DialogFooter>
         </DialogContent>
