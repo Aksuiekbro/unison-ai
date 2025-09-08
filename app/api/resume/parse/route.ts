@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { parseAndValidateResume } from '@/lib/ai/resume-parser'
-import { supabase } from '@/lib/supabase-client'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import type { Database } from '@/lib/types/database'
 
 // Helper function to extract text from different file types
 async function extractTextFromFile(file: File): Promise<string> {
@@ -55,20 +57,23 @@ function simpleTextExtraction(buffer: ArrayBuffer): string {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createRouteHandlerClient<Database>({ cookies })
+    
+    // Verify user authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const formData = await request.formData()
     const file = formData.get('resume') as File
-    const userId = formData.get('userId') as string
 
     if (!file) {
       return NextResponse.json(
         { success: false, error: 'No file provided' },
-        { status: 400 }
-      )
-    }
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'User ID required' },
         { status: 400 }
       )
     }
@@ -135,13 +140,13 @@ export async function POST(request: NextRequest) {
       await supabase
         .from('resume_parsing_results')
         .delete()
-        .eq('user_id', userId)
+        .eq('user_id', user.id)
 
       // Insert new parsing result
       const { error: insertError } = await supabase
         .from('resume_parsing_results')
         .insert({
-          user_id: userId,
+          user_id: user.id,
           original_filename: file.name,
           file_type: file.type,
           extracted_data: parseResult.data,
@@ -166,7 +171,7 @@ export async function POST(request: NextRequest) {
         const { data: existingProfile } = await supabase
           .from('profiles')
           .select('*')
-          .eq('user_id', userId)
+          .eq('user_id', user.id)
           .single()
 
         if (!existingProfile) {
@@ -174,7 +179,7 @@ export async function POST(request: NextRequest) {
           const { error: profileCreateError } = await supabase
             .from('profiles')
             .insert({
-              user_id: userId,
+              user_id: user.id,
               resume_parsed: true,
               resume_url: null, // Could store file URL if needed
               linkedin_url: parsedData.personal_info.linkedin_url,
@@ -191,7 +196,7 @@ export async function POST(request: NextRequest) {
           const { error: profileUpdateError } = await supabase
             .from('profiles')
             .update(profileUpdate)
-            .eq('user_id', userId)
+            .eq('user_id', user.id)
 
           if (profileUpdateError) {
             console.error('Profile update error:', profileUpdateError)

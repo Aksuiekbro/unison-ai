@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase-client'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import type { Database } from '@/lib/database.types'
 
 // Sample data for seeding the database
 const SAMPLE_COMPANIES = [
@@ -195,6 +197,17 @@ const DEFAULT_QUESTIONS = [
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createRouteHandlerClient<Database>({ cookies })
+    
+    // Verify authentication
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized' }, 
+        { status: 401 }
+      )
+    }
+    
     const { tables } = await request.json()
     const results: any = {}
 

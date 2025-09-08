@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase-client'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import type { Database } from '@/lib/types/database'
 
 const DEFAULT_QUESTIONS = [
   {
@@ -55,6 +57,17 @@ const DEFAULT_QUESTIONS = [
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = createRouteHandlerClient<Database>({ cookies })
+    
+    // Verify user authentication for questions access
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     // Try to get questions from database first
     const { data: questions, error } = await supabase
       .from('questionnaires')
@@ -99,6 +112,17 @@ export async function GET(request: NextRequest) {
 // POST endpoint to seed default questions into database
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createRouteHandlerClient<Database>({ cookies })
+    
+    // Verify user authentication - only authenticated users can seed
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     // Check if questions already exist
     const { data: existingQuestions } = await supabase
       .from('questionnaires')

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { analyzePersonality, validatePersonalityAnalysis } from '@/lib/ai/personality-analyzer'
-import { supabase } from '@/lib/supabase-client'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import type { Database } from '@/lib/types/database'
 
 interface TestResponse {
   questionId: string
@@ -11,14 +13,18 @@ interface TestResponse {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, responses } = await request.json()
-
-    if (!userId) {
+    const supabase = createRouteHandlerClient<Database>({ cookies })
+    
+    // Verify user authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
       return NextResponse.json(
-        { success: false, error: 'User ID is required' },
-        { status: 400 }
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
       )
     }
+
+    const { responses } = await request.json()
 
     if (!responses || Object.keys(responses).length === 0) {
       return NextResponse.json(
@@ -27,7 +33,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('Processing personality analysis for user:', userId)
+    console.log('Processing personality analysis for user:', user.id)
 
     // Get question details from database or default questions
     const questionMap = {
@@ -57,11 +63,11 @@ export async function POST(request: NextRequest) {
       await supabase
         .from('test_responses')
         .delete()
-        .eq('user_id', userId)
+        .eq('user_id', user.id)
 
       // Insert new responses
       const responseInserts = questionResponses.map(qr => ({
-        user_id: userId,
+        user_id: user.id,
         question_id: qr.question_id, // This will be a string ID, not UUID reference
         response_text: qr.response_text
       }))
@@ -107,13 +113,13 @@ export async function POST(request: NextRequest) {
       await supabase
         .from('personality_analysis')
         .delete()
-        .eq('user_id', userId)
+        .eq('user_id', user.id)
 
       // Insert new analysis
       const { error: analysisError } = await supabase
         .from('personality_analysis')
         .insert({
-          user_id: userId,
+          user_id: user.id,
           problem_solving_style: analysis.problem_solving_style,
           initiative_level: analysis.initiative_level,
           work_preference: analysis.work_preference,
@@ -138,7 +144,7 @@ export async function POST(request: NextRequest) {
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
-          user_id: userId,
+          user_id: user.id,
           personality_test_completed: true,
           ai_analysis_completed: true
         }, {
