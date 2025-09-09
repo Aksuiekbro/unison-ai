@@ -128,12 +128,11 @@ async function calculateMatchScoreForJobUser(
 
     if (!job) return null;
 
-    // Get candidate data
+    // Get candidate data (single-table approach)
     const { data: user } = await supabase
       .from('users')
       .select(`
         *,
-        profiles (*),
         user_skills (
           proficiency_level,
           skills (name, category)
@@ -162,14 +161,14 @@ async function calculateMatchScoreForJobUser(
 
     const candidateData: CandidateData = {
       full_name: user.full_name,
-      experience_years: user.profiles?.experience_years || undefined,
-      current_job_title: user.profiles?.current_job_title || undefined,
+      experience_years: undefined, // Could be calculated from experiences JSON
+      current_job_title: user.current_job_title || undefined,
       skills: user.user_skills?.map(us => ({
         name: us.skills.name,
         proficiency_level: us.proficiency_level || 3
       })) || [],
-      experience: [], // Would need to fetch from experiences table
-      education: [], // Would need to fetch from educations table
+      experience: (user.experiences as any[]) || [], // From JSON field
+      education: (user.educations as any[]) || [], // From JSON field
       personality_analysis: user.personality_analysis ? {
         problem_solving_style: user.personality_analysis.problem_solving_style || '',
         work_preference: user.personality_analysis.work_preference || '',
@@ -179,8 +178,8 @@ async function calculateMatchScoreForJobUser(
         teamwork_score: user.personality_analysis.teamwork_score || 75,
         strengths: []
       } : undefined,
-      preferred_location: user.profiles?.preferred_location || undefined,
-      remote_preference: user.profiles?.remote_preference || undefined
+      preferred_location: user.location || undefined, // From users table
+      remote_preference: undefined // Could be added to users table if needed
     };
 
     // Calculate match score using AI

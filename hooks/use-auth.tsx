@@ -39,13 +39,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .maybeSingle();
         setUserData((currentUserData as UserRow) || null);
 
-        // Get profile data (extended profile info)
-        const { data: userProfile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', currentUser.id)
-          .maybeSingle();
-        setProfile((userProfile as UserProfile) || null);
+        // Profile data now stored in users table (single-table approach)
+        setProfile(null); // No longer using separate profiles table
       } else {
         setUserData(null);
         setProfile(null);
@@ -90,13 +85,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               .maybeSingle();
             setUserData((currentUserData as UserRow) || null);
             
-            // Get profile data
-            const { data: userProfile } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('user_id', session.user.id)
-              .maybeSingle();
-            setProfile((userProfile as UserProfile) || null);
+            // Profile data now in users table (single-table approach)
+            setProfile(null); // No longer using separate profiles table
           }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);

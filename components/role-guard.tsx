@@ -34,15 +34,15 @@ export function RoleGuard({ allowedRoles, children, redirectPath }: RoleGuardPro
 
         setUser(user || null);
 
-        // Prefer profile.role; fallback to metadata.role
+        // Get role from users table (single-table approach)
         let role: string | undefined = undefined;
         if (user) {
-          const { data: profileRow } = await supabase
-            .from('profiles')
+          const { data: userRow } = await supabase
+            .from('users')
             .select('role')
             .eq('id', user.id)
             .maybeSingle();
-          role = (profileRow?.role as string | undefined) || (user.user_metadata?.role as string | undefined);
+          role = (userRow?.role as string | undefined) || (user.user_metadata?.role as string | undefined);
         }
 
         const normalizedRole = role === 'job-seeker' || role === 'employee' ? 'job_seeker' : role;

@@ -117,10 +117,10 @@ export async function addJobSeekerExperience(formData: FormData) {
       return { error: 'Authentication required' }
     }
 
-    // Verify job seeker role using users table
+    // Verify job seeker role and get current experiences
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select('role, experiences')
       .eq('id', user.id)
       .single()
 
@@ -141,21 +141,28 @@ export async function addJobSeekerExperience(formData: FormData) {
     // Validate data
     const validatedData = jobSeekerExperienceSchema.parse(data)
 
-    // Add experience (foreign key references users.id)
-    const { error: insertError } = await supabase
-      .from('experiences')
-      .insert({
-        user_id: user.id,
-        job_title: validatedData.position,
-        company_name: validatedData.company,
-        start_date: validatedData.startDate,
-        end_date: validatedData.endDate || null,
-        description: validatedData.description || null,
-        is_current: validatedData.isCurrent,
-      })
+    // Get current experiences array and add new experience
+    const currentExperiences = (userData.experiences as any[]) || []
+    const newExperience = {
+      id: crypto.randomUUID(),
+      position: validatedData.position,
+      company: validatedData.company,
+      startDate: validatedData.startDate,
+      endDate: validatedData.endDate || undefined,
+      description: validatedData.description || undefined,
+      isCurrent: validatedData.isCurrent,
+    }
+    
+    const updatedExperiences = [...currentExperiences, newExperience]
 
-    if (insertError) {
-      console.error('Error adding experience:', insertError)
+    // Update experiences JSON array in users table
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ experiences: updatedExperiences })
+      .eq('id', user.id)
+
+    if (updateError) {
+      console.error('Error adding experience:', updateError)
       return { error: 'Failed to add experience' }
     }
 
@@ -179,10 +186,10 @@ export async function addJobSeekerEducation(formData: FormData) {
       return { error: 'Authentication required' }
     }
 
-    // Verify job seeker role using users table
+    // Verify job seeker role and get current educations
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select('role, educations')
       .eq('id', user.id)
       .single()
 
@@ -201,19 +208,26 @@ export async function addJobSeekerEducation(formData: FormData) {
     // Validate data
     const validatedData = jobSeekerEducationSchema.parse(data)
 
-    // Add education (foreign key references users.id)
-    const { error: insertError } = await supabase
-      .from('educations')
-      .insert({
-        user_id: user.id,
-        institution_name: validatedData.institution,
-        degree: validatedData.degree,
-        field_of_study: validatedData.fieldOfStudy,
-        end_date: `${validatedData.graduationYear}-12-31`,
-      })
+    // Get current educations array and add new education
+    const currentEducations = (userData.educations as any[]) || []
+    const newEducation = {
+      id: crypto.randomUUID(),
+      institution: validatedData.institution,
+      degree: validatedData.degree,
+      fieldOfStudy: validatedData.fieldOfStudy,
+      graduationYear: validatedData.graduationYear,
+    }
+    
+    const updatedEducations = [...currentEducations, newEducation]
 
-    if (insertError) {
-      console.error('Error adding education:', insertError)
+    // Update educations JSON array in users table
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ educations: updatedEducations })
+      .eq('id', user.id)
+
+    if (updateError) {
+      console.error('Error adding education:', updateError)
       return { error: 'Failed to add education' }
     }
 
@@ -271,34 +285,41 @@ export async function updateEmployerProfile(formData: FormData) {
     // Validate data
     const validatedData = employerProfileSchema.parse(data)
 
-    // Update or create employer profile
-    const { error: upsertError } = await supabase
-      .from('employer_profiles')
-      .upsert({
-        profile_id: (profile as any).id,
-        company_name: validatedData.companyName,
-        company_description: validatedData.companyDescription || null,
-        industry: validatedData.industry || null,
-        company_size: validatedData.companySize || null,
-        founded_year: validatedData.foundedYear || null,
-        website_url: validatedData.websiteUrl || null,
-        country: validatedData.country || null,
-        city: validatedData.city || null,
-        address: validatedData.address || null,
-        hr_email: validatedData.hrEmail || null,
+    // Update employer info in users table (single-table approach)
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        full_name: validatedData.hrContactName || null,
         phone: validatedData.phone || null,
-        hr_contact_name: validatedData.hrContactName || null,
+        location: `${validatedData.city || ''}, ${validatedData.country || ''}`.trim().replace(/^,\s*|,\s*$/g, '') || null,
         company_culture: validatedData.companyCulture || null,
-        benefits: validatedData.benefits || null,
-        technologies: validatedData.technologies || null,
-        updated_at: new Date().toISOString(),
+        hiring_preferences: null, // Can be extended later if needed
+      })
+      .eq('id', user.id)
+
+    // Also create/update company record
+    const { error: companyError } = await supabase
+      .from('companies')
+      .upsert({
+        owner_id: user.id,
+        name: validatedData.companyName,
+        description: validatedData.companyDescription || null,
+        industry: validatedData.industry || null,
+        size: validatedData.companySize || null,
+        website: validatedData.websiteUrl || null,
+        location: `${validatedData.city || ''}, ${validatedData.country || ''}`.trim().replace(/^,\s*|,\s*$/g, '') || null,
       }, {
-        onConflict: 'profile_id'
+        onConflict: 'owner_id'
       })
 
-    if (upsertError) {
-      console.error('Error updating employer profile:', upsertError)
+    if (updateError) {
+      console.error('Error updating employer profile:', updateError)
       return { error: 'Failed to update profile' }
+    }
+    
+    if (companyError) {
+      console.error('Error updating company:', companyError)
+      return { error: 'Failed to update company information' }
     }
 
     revalidatePath('/employer/company')

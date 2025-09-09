@@ -55,9 +55,9 @@ export async function loginAction(prevState: any, formData: FormData) {
       }
     }
 
-    // Get user profile data (from profiles)
+    // Get user profile data (from users table)
     const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
+      .from('users')
       .select('role')
       .eq('id', authData.user.id)
       .single()
@@ -117,19 +117,14 @@ export async function signupAction(prevState: any, formData: FormData) {
       }
     }
 
-    // Create profile in profiles table
-    const [first, ...rest] = parsed.data.fullName.trim().split(/\s+/)
-    const firstName = first || parsed.data.email.split('@')[0]
-    const lastName = rest.join(' ') || ''
-
+    // Create user profile in users table
     const { error: profileError } = await supabaseAdmin
-      .from('profiles')
+      .from('users')
       .insert({
         id: authData.user.id,
         email: parsed.data.email,
         role: normalizedRole,
-        first_name: firstName,
-        last_name: lastName,
+        full_name: parsed.data.fullName,
       })
 
     if (profileError) {
@@ -157,7 +152,7 @@ export async function signupAction(prevState: any, formData: FormData) {
 export async function findUserByEmail(email: string): Promise<UserRow | null> {
   try {
     const { data, error } = await supabase
-      .from('profiles')
+      .from('users')
       .select('*')
       .eq('email', email)
       .single()
@@ -172,7 +167,7 @@ export async function findUserByEmail(email: string): Promise<UserRow | null> {
 export async function getUserById(id: string): Promise<UserRow | null> {
   try {
     const { data, error } = await supabase
-      .from('profiles')
+      .from('users')
       .select('*')
       .eq('id', id)
       .single()

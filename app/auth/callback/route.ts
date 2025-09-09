@@ -57,10 +57,7 @@ export async function GET(request: Request) {
           role,
         })
 
-        // Create empty profile record
-        await supabaseAdmin.from('profiles').insert({
-          user_id: user.id,
-        })
+        // Profile data now stored in users table (no separate profiles table needed)
       }
 
       const role = (user.user_metadata as any)?.role

@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
         // Get existing user data to avoid overwriting
         const { data: existingUser } = await supabase
           .from('users')
-          .select('full_name, phone, location, linkedin_url, github_url, portfolio_url')
+          .select('full_name, phone, location, linkedin_url, github_url, portfolio_url, experiences, educations')
           .eq('id', user.id)
           .single()
 
@@ -191,6 +191,32 @@ export async function POST(request: NextRequest) {
         }
         if (parsedData.personal_info.portfolio_url && !existingUser?.portfolio_url) {
           userUpdate.portfolio_url = parsedData.personal_info.portfolio_url
+        }
+
+        // Update experiences if parsed and not already set
+        if (parsedData.experiences && (!existingUser?.experiences || (existingUser.experiences as any[]).length === 0)) {
+          const formattedExperiences = (parsedData.experiences as any[]).map(exp => ({
+            id: crypto.randomUUID(),
+            position: exp.job_title || exp.position,
+            company: exp.company_name || exp.company,
+            startDate: exp.start_date || exp.startDate,
+            endDate: exp.end_date || exp.endDate,
+            description: exp.description,
+            isCurrent: exp.is_current || exp.isCurrent || false
+          }))
+          userUpdate.experiences = formattedExperiences
+        }
+
+        // Update educations if parsed and not already set
+        if (parsedData.educations && (!existingUser?.educations || (existingUser.educations as any[]).length === 0)) {
+          const formattedEducations = (parsedData.educations as any[]).map(edu => ({
+            id: crypto.randomUUID(),
+            institution: edu.institution_name || edu.institution,
+            degree: edu.degree,
+            fieldOfStudy: edu.field_of_study || edu.fieldOfStudy,
+            graduationYear: edu.graduation_year || edu.graduationYear || (edu.end_date ? new Date(edu.end_date).getFullYear() : undefined)
+          }))
+          userUpdate.educations = formattedEducations
         }
 
         if (Object.keys(userUpdate).length > 0) {

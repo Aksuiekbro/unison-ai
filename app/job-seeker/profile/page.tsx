@@ -18,10 +18,10 @@ export default async function JobSeekerProfile() {
       redirect('/auth/login')
     }
 
-    // Get user data (now includes all profile fields in single table)
+    // Get user data with all profile fields including JSON arrays
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role, full_name, email, phone, location, bio, current_job_title, linkedin_url, github_url, resume_url')
+      .select('role, full_name, email, phone, location, bio, current_job_title, linkedin_url, github_url, resume_url, experiences, educations')
       .eq('id', user.id)
       .single()
 
@@ -29,20 +29,6 @@ export default async function JobSeekerProfile() {
       console.error('User data fetch failed:', userError)
       redirect('/')
     }
-
-    // Get experiences - simplified without profile dependency
-    const { data: experiences } = await supabase
-      .from('experiences')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('start_date', { ascending: false })
-
-    // Get education - simplified without profile dependency
-    const { data: education } = await supabase
-      .from('educations')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('start_date', { ascending: false })
 
     // Transform data for the form (all from users table now)
     const nameParts = userData.full_name?.split(' ') || []
@@ -58,23 +44,9 @@ export default async function JobSeekerProfile() {
       skills: [], // TODO: Add skills handling if needed
     }
 
-    const transformedExperiences = experiences?.map(exp => ({
-      id: exp.id,
-      position: exp.job_title,
-      company: exp.company_name,
-      startDate: exp.start_date,
-      endDate: exp.end_date || undefined,
-      description: exp.description || undefined,
-      isCurrent: exp.is_current,
-    })) || []
-
-    const transformedEducation = education?.map(edu => ({
-      id: edu.id,
-      institution: edu.institution_name,
-      degree: edu.degree,
-      fieldOfStudy: edu.field_of_study,
-      graduationYear: edu.end_date ? new Date(edu.end_date).getFullYear() : new Date().getFullYear(),
-    })) || []
+    // Get experiences and education from JSON fields (already in correct format)
+    const transformedExperiences = (userData.experiences as any[]) || []
+    const transformedEducation = (userData.educations as any[]) || []
 
     return (
       <div className="min-h-screen bg-gray-50">
