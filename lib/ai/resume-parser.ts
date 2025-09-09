@@ -137,11 +137,12 @@ const resumeParsingSchema = {
 };
 
 /**
- * Parse resume content using AI to extract structured data
+ * Parse resume file directly using AI to extract structured data
  */
 export async function parseResumeWithAI(
-  resumeText: string,
-  filename?: string
+  resumeData: string | Buffer,
+  filename?: string,
+  mimeType?: string
 ): Promise<AIResponse<ResumeParsingResult>> {
   const systemContext = `
 You are an expert resume parser. Your task is to extract structured information from resume text with high accuracy.
@@ -157,37 +158,71 @@ Guidelines:
 - If salary or location preferences aren't mentioned, leave them empty
 - Be conservative with confidence scores - only high scores for very clear data
 
+URL FORMATTING RULES:
+- ALWAYS format URLs with proper https:// prefix
+- For LinkedIn URLs: convert "linkedin.com/in/..." to "https://linkedin.com/in/..."
+- For GitHub URLs: convert "github.com/..." to "https://github.com/..."
+- For portfolio/website URLs: convert "domain.com" to "https://domain.com"
+- Never leave URLs without protocol prefixes
+- If a URL already has http:// or https://, keep it as is
+
 Focus on accuracy over completeness.
 `;
 
-  const prompt = `
+  if (typeof resumeData === 'string') {
+    // Text-based processing (fallback)
+    const prompt = `
 Please parse the following resume content and extract structured information:
 
 ${filename ? `Filename: ${filename}` : ''}
 
 Resume Content:
-${resumeText}
+${resumeData}
 
 Extract all relevant information according to the specified schema, ensuring accuracy and appropriate confidence scoring.
 `;
 
-  return withRateLimit(() => 
-    generateStructuredResponse<ResumeParsingResult>(
-      prompt,
-      systemContext,
-      resumeParsingSchema
-    )
-  );
+    return withRateLimit(() => 
+      generateStructuredResponse<ResumeParsingResult>(
+        prompt,
+        systemContext,
+        resumeParsingSchema
+      )
+    );
+  } else {
+    // Direct file processing (preferred)
+    const prompt = `
+Please analyze the attached resume file and extract structured information:
+
+${filename ? `Filename: ${filename}` : ''}
+
+Extract all relevant information from the resume document according to the specified schema, ensuring accuracy and appropriate confidence scoring. Pay special attention to formatting, tables, and visual elements that might contain important information.
+`;
+
+    return withRateLimit(() => 
+      generateStructuredResponse<ResumeParsingResult>(
+        prompt,
+        systemContext,
+        resumeParsingSchema,
+        {
+          buffer: resumeData,
+          mimeType: mimeType || 'application/pdf',
+          filename
+        }
+      )
+    );
+  }
 }
 
 /**
  * Enhanced resume parsing with validation and cleanup
  */
 export async function parseAndValidateResume(
-  resumeText: string,
-  filename?: string
+  resumeData: string | Buffer,
+  filename?: string,
+  mimeType?: string
 ): Promise<AIResponse<ResumeParsingResult>> {
-  const result = await parseResumeWithAI(resumeText, filename);
+  const result = await parseResumeWithAI(resumeData, filename, mimeType);
   
   if (!result.success || !result.data) {
     return result;

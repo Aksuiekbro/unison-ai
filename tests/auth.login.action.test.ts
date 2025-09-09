@@ -53,31 +53,36 @@ describe('loginAction redirects', () => {
     mockRole = 'employee'
   })
 
-  it('rethrows NEXT_REDIRECT (redirectTo honored)', async () => {
+  it('returns success with role for valid credentials', async () => {
     const form = new FormData()
     form.set('email', 'timeywimey65@gmail.com')
     form.set('password', 'password123')
-    form.set('redirectTo', '/job-seeker/dashboard')
 
-    await expect(loginAction(null as any, form)).rejects.toMatchObject({ digest: 'NEXT_REDIRECT', url: '/job-seeker/dashboard' })
+    const result = await loginAction(null as any, form)
+    expect(result.success).toBe(true)
+    expect(result.role).toBe('employee')
   })
 
-  it('redirects by normalized role (employee -> job_seeker)', async () => {
+  it('returns success with employee role', async () => {
     mockRole = 'employee'
     const form = new FormData()
     form.set('email', 'timeywimey65@gmail.com')
     form.set('password', 'password123')
 
-    await expect(loginAction(null as any, form)).rejects.toMatchObject({ digest: 'NEXT_REDIRECT', url: '/job-seeker/dashboard' })
+    const result = await loginAction(null as any, form)
+    expect(result.success).toBe(true)
+    expect(result.role).toBe('employee')
   })
 
-  it('redirects employer role to employer dashboard', async () => {
+  it('returns success with employer role', async () => {
     mockRole = 'employer'
     const form = new FormData()
     form.set('email', 'timeywimey65@gmail.com')
     form.set('password', 'password123')
 
-    await expect(loginAction(null as any, form)).rejects.toMatchObject({ digest: 'NEXT_REDIRECT', url: '/employer/dashboard' })
+    const result = await loginAction(null as any, form)
+    expect(result.success).toBe(true)
+    expect(result.role).toBe('employer')
   })
 })
 

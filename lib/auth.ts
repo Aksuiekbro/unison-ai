@@ -89,14 +89,8 @@ export async function signUp(
 
     if (userError) throw userError;
 
-    // Create empty profile record
-    const { error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .insert({
-        user_id: data.user.id,
-      });
-
-    if (profileError) throw profileError;
+    // Single-table approach - no separate profiles table needed
+    // All profile data is stored directly in the users table
   }
 
   return data;

@@ -21,7 +21,7 @@ export default async function JobSeekerProfile() {
     // Get user data with all profile fields including JSON arrays
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role, full_name, email, phone, location, bio, current_job_title, linkedin_url, github_url, resume_url, experiences, educations')
+      .select('role, full_name, email, phone, location, bio, current_job_title, linkedin_url, github_url, portfolio_url, resume_url, experiences, educations')
       .eq('id', user.id)
       .single()
 
@@ -104,6 +104,7 @@ export default async function JobSeekerProfile() {
               experiences={transformedExperiences}
               education={transformedEducation}
               viewerEmail={userData.email || user.email || ''}
+              portfolioUrl={userData.portfolio_url || undefined}
             />
           </div>
         </div>

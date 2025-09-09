@@ -8,7 +8,7 @@ try {
   const apiKey = process.env.GEMINI_API_KEY;
   if (apiKey && apiKey !== 'your-gemini-api-key-here' && apiKey.length > 10) {
     genAI = new GoogleGenerativeAI(apiKey);
-    model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
   }
 } catch (error) {
   console.warn('Gemini AI initialization failed:', error);
@@ -23,11 +23,17 @@ export interface AIResponse<T> {
 
 /**
  * Base function to interact with Gemini AI with structured JSON responses
+ * Supports both text and file inputs
  */
 export async function generateStructuredResponse<T>(
   prompt: string,
   systemContext: string,
-  schema: any
+  schema: any,
+  fileData?: {
+    buffer: Buffer;
+    mimeType: string;
+    filename?: string;
+  }
 ): Promise<AIResponse<T>> {
   try {
     // Check if AI model is available
@@ -49,7 +55,21 @@ ${JSON.stringify(schema, null, 2)}
 Ensure your response is valid JSON that can be parsed directly. Do not include any text outside the JSON structure.
 `;
 
-    const result = await model.generateContent(fullPrompt);
+    let result;
+    if (fileData) {
+      // Convert buffer to base64 for file upload
+      const base64Data = fileData.buffer.toString('base64');
+      const filePart = {
+        inlineData: {
+          data: base64Data,
+          mimeType: fileData.mimeType
+        }
+      };
+      
+      result = await model.generateContent([fullPrompt, filePart]);
+    } else {
+      result = await model.generateContent(fullPrompt);
+    }
     const response = await result.response;
     const text = response.text().trim();
 

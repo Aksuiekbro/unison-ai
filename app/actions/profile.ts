@@ -22,6 +22,7 @@ export async function updateJobSeekerProfile(formData: FormData) {
   const supabase = createServerActionClient({ cookies: () => cookieStore })
   
   try {
+    let aiProcessingResult = null
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user) {
@@ -71,34 +72,114 @@ export async function updateJobSeekerProfile(formData: FormData) {
       } else {
         const { data: pub } = await supabase.storage.from('resumes').getPublicUrl(filePath)
         resumeUrl = pub?.publicUrl || null
+        
+        // Process resume with AI after successful upload
+        try {
+          const parseFormData = new FormData()
+          parseFormData.append('resume', resumeFile)
+          
+          const parseResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/resume/parse`, {
+            method: 'POST',
+            body: parseFormData,
+            headers: {
+              'Cookie': (await cookies()).toString()
+            }
+          })
+          
+          if (parseResponse.ok) {
+            const parseResult = await parseResponse.json()
+            console.log('Resume AI processing result:', parseResult)
+            aiProcessingResult = parseResult
+            if (parseResult.fieldsUpdated) {
+              console.log('AI updated fields:', parseResult.fieldsUpdated)
+            }
+          } else {
+            console.error('Resume AI processing failed:', await parseResponse.text())
+          }
+        } catch (parseError) {
+          console.error('Failed to process resume with AI:', parseError)
+          // Non-fatal: continue with profile update
+        }
       }
     }
 
     // Update users table with all profile info (simplified single-table approach)
-    const { error: usersUpdateError } = await supabase
+    // IMPORTANT: Don't overwrite fields that were just updated by AI processing
+    const updateData: any = {
+      resume_url: resumeUrl,
+    }
+
+    // Get list of fields that were updated by AI in this request
+    const aiUpdatedFields = (aiProcessingResult?.fieldsUpdated || []) as string[]
+    console.log('📝 Profile Action - AI updated these fields, will not overwrite:', aiUpdatedFields)
+
+    // Only add fields to update if they have actual data AND weren't updated by AI
+    if ((validatedData.firstName || validatedData.lastName) && !aiUpdatedFields.includes('full_name')) {
+      const fullName = `${validatedData.firstName} ${validatedData.lastName}`.trim()
+      if (fullName) {
+        updateData.full_name = fullName
+      }
+    }
+    
+    if (validatedData.phone?.trim() && !aiUpdatedFields.includes('phone')) {
+      updateData.phone = validatedData.phone
+    }
+    
+    if (validatedData.location?.trim() && !aiUpdatedFields.includes('location')) {
+      updateData.location = validatedData.location
+    }
+    
+    if (validatedData.summary?.trim() && !aiUpdatedFields.includes('bio')) {
+      updateData.bio = validatedData.summary
+    }
+    
+    if (validatedData.title?.trim() && !aiUpdatedFields.includes('current_job_title')) {
+      updateData.current_job_title = validatedData.title
+    }
+    
+    if (validatedData.linkedinUrl?.trim() && !aiUpdatedFields.includes('linkedin_url')) {
+      const normalized = !/^https?:\/\//i.test(validatedData.linkedinUrl) ? 
+        `https://${validatedData.linkedinUrl}` : validatedData.linkedinUrl
+      updateData.linkedin_url = normalized
+    }
+    
+    if (validatedData.githubUrl?.trim() && !aiUpdatedFields.includes('github_url')) {
+      const normalized = !/^https?:\/\//i.test(validatedData.githubUrl) ? 
+        `https://${validatedData.githubUrl}` : validatedData.githubUrl
+      updateData.github_url = normalized
+    }
+
+    // Note: portfolio_url is handled by AI processing, form doesn't have this field
+
+    console.log('📝 Profile Action - Updating database with data:', JSON.stringify(updateData, null, 2))
+    console.log('📝 Profile Action - User ID:', user.id)
+    console.log('📝 Profile Action - AI Processing Result:', aiProcessingResult ? 'Present' : 'Not available')
+    
+    if (aiProcessingResult && aiProcessingResult.fieldsUpdated) {
+      console.log('📝 Profile Action - AI previously updated fields:', aiProcessingResult.fieldsUpdated)
+    }
+
+    const { error: usersUpdateError, data: updateResult } = await supabase
       .from('users')
-      .update({
-        full_name: `${validatedData.firstName} ${validatedData.lastName}`.trim(),
-        phone: validatedData.phone || null,
-        location: validatedData.location || null,
-        bio: validatedData.summary || null,
-        current_job_title: validatedData.title || null,
-        linkedin_url: validatedData.linkedinUrl || null,
-        github_url: validatedData.githubUrl || null,
-        resume_url: resumeUrl,
-      })
+      .update(updateData)
       .eq('id', user.id)
+      .select()
 
     if (usersUpdateError) {
-      console.error('Error updating user profile:', usersUpdateError)
+      console.error('❌ Error updating user profile:', usersUpdateError)
       return { error: `Failed to update profile: ${usersUpdateError.message}` }
     }
+
+    console.log('✅ Profile Action - Database update successful:', updateResult)
 
     // All profile data now stored in users table - simplified single-table approach
 
     revalidatePath('/job-seeker/profile')
     revalidatePath('/job-seeker/dashboard')
-    return { success: true }
+    return { 
+      success: true,
+      aiResponse: aiProcessingResult 
+    }
 
   } catch (error: any) {
     console.error('Error in updateJobSeekerProfile:', error)

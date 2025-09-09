@@ -40,6 +40,7 @@ interface JobSeekerProfileFormProps {
     graduationYear: number
   }>
   viewerEmail?: string
+  portfolioUrl?: string
 }
 
 export default function JobSeekerProfileForm({ 
@@ -47,6 +48,7 @@ export default function JobSeekerProfileForm({
   experiences = [], 
   education = [],
   viewerEmail,
+  portfolioUrl,
 }: JobSeekerProfileFormProps) {
   const { toast } = useToast();
   const router = useRouter()
@@ -60,6 +62,7 @@ export default function JobSeekerProfileForm({
   const [eduOpen, setEduOpen] = useState(false)
   const [expForm, setExpForm] = useState({ position: '', company: '', startDate: '', endDate: '', description: '', isCurrent: false })
   const [eduForm, setEduForm] = useState({ institution: '', degree: '', fieldOfStudy: '', graduationYear: '' })
+  const [aiResponse, setAiResponse] = useState<any>(null)
 
   const form = useForm<JobSeekerProfileData>({
     resolver: zodResolver(jobSeekerProfileSchema),
@@ -108,6 +111,11 @@ export default function JobSeekerProfileForm({
             variant: "destructive",
           })
           return
+        }
+
+        // Store AI response if resume was uploaded
+        if (selectedResume && result.aiResponse) {
+          setAiResponse(result.aiResponse)
         }
 
         toast({
@@ -163,6 +171,8 @@ export default function JobSeekerProfileForm({
   const summary = isEditing ? (form.watch('summary') || '') : (initialData?.summary || '')
   const linkedinUrl = isEditing ? (form.watch('linkedinUrl') || '') : (initialData?.linkedinUrl || '')
   const githubUrl = isEditing ? (form.watch('githubUrl') || '') : (initialData?.githubUrl || '')
+  // Portfolio URL is only set by AI processing, not editable in form
+  const displayPortfolioUrl = portfolioUrl || ''
 
   const missing: string[] = []
   if (!firstName) missing.push('Имя')
@@ -245,12 +255,24 @@ export default function JobSeekerProfileForm({
               <section>
                 <h3 className="text-sm font-semibold text-[#0A2540] mb-2">Портфолио</h3>
                 <div className="flex flex-wrap gap-3 text-sm">
-                  <a href={linkedinUrl || '#'} className="underline text-[#00C49A]" target="_blank" rel="noreferrer">
-                    LinkedIn
-                  </a>
-                  <a href={githubUrl || '#'} className="underline text-[#00C49A]" target="_blank" rel="noreferrer">
-                    GitHub
-                  </a>
+                  {linkedinUrl && (
+                    <a href={linkedinUrl} className="underline text-[#00C49A]" target="_blank" rel="noreferrer">
+                      LinkedIn
+                    </a>
+                  )}
+                  {githubUrl && (
+                    <a href={githubUrl} className="underline text-[#00C49A]" target="_blank" rel="noreferrer">
+                      GitHub
+                    </a>
+                  )}
+                  {displayPortfolioUrl && (
+                    <a href={displayPortfolioUrl} className="underline text-[#00C49A]" target="_blank" rel="noreferrer">
+                      Portfolio
+                    </a>
+                  )}
+                  {!linkedinUrl && !githubUrl && !displayPortfolioUrl && (
+                    <span className="text-sm text-gray-500">—</span>
+                  )}
                 </div>
               </section>
 
@@ -304,6 +326,25 @@ export default function JobSeekerProfileForm({
         </Card>
       )}
 
+      {/* AI Response Display */}
+      {aiResponse && (
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="text-[#0A2540]">🤖 Gemini AI Response</CardTitle>
+            <CardDescription>
+              Результат обработки резюме искусственным интеллектом
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <pre className="text-xs overflow-auto max-h-96 whitespace-pre-wrap">
+                {JSON.stringify(aiResponse, null, 2)}
+              </pre>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {isEditing && (
         <Card className="mb-8">
           <CardHeader>
@@ -351,7 +392,10 @@ export default function JobSeekerProfileForm({
                 type="button"
                 variant="outline"
                 className="border-[#00C49A] text-[#00C49A] bg-transparent"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  fileInputRef.current?.click()
+                }}
               >
                 Выбрать файл
               </Button>
