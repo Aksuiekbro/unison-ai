@@ -3,14 +3,11 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { LayoutDashboard, Briefcase, Building2, Plus, Users, Calendar, TrendingUp } from "lucide-react"
 import Link from "next/link"
-import { RoleGuard } from "@/components/role-guard"
 
 export default function EmployerDashboard() {
-  return (
-    <RoleGuard allowedRoles={['employer']}>
-      <EmployerDashboardContent />
-    </RoleGuard>
-  )
+  // Middleware handles all authentication and role-based access
+  // This component assumes user is authenticated and authorized
+  return <EmployerDashboardContent />
 }
 
 function EmployerDashboardContent() {

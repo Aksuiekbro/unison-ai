@@ -1,7 +1,8 @@
 "use server"
 
-import { supabase } from "@/lib/supabase-client"
-import { getCurrentUser } from "./auth"
+import { createServerActionClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import type { Database } from '@/lib/database.types'
 
 // Types
 interface SavedJob {
@@ -9,22 +10,46 @@ interface SavedJob {
   job_id: string
   candidate_id: string
   created_at?: string
-  // Relations
   job?: {
+    id: string
     title: string
-    location: string
-    employment_type: string
-    salary_from?: number
-    salary_to?: number
-    currency?: string
+    location: string | null
+    job_type: string
+    salary_min?: number | null
+    salary_max?: number | null
+    currency?: string | null
+    remote_allowed?: boolean | null
     employer_id: string
+    company?: {
+      id: string
+      name: string | null
+      logo_url?: string | null
+    }
   }
 }
 
 // Saved jobs functions
 export async function saveJob(jobId: string) {
-  const user = await getCurrentUser()
-  if (!user || user.role !== "employee") {
+  const cookieStore = await cookies()
+  const supabase = createServerActionClient<Database>({ cookies: () => cookieStore })
+  
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  
+  if (authError || !user) {
+    return {
+      success: false,
+      message: "Authentication required.",
+    }
+  }
+
+  // Get user role
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (userError || !userData || userData.role !== "job_seeker") {
     return {
       success: false,
       message: "Unauthorized. Only job seekers can save jobs.",
@@ -93,8 +118,26 @@ export async function saveJob(jobId: string) {
 }
 
 export async function unsaveJob(jobId: string) {
-  const user = await getCurrentUser()
-  if (!user || user.role !== "employee") {
+  const cookieStore = await cookies()
+  const supabase = createServerActionClient<Database>({ cookies: () => cookieStore })
+  
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  
+  if (authError || !user) {
+    return {
+      success: false,
+      message: "Authentication required.",
+    }
+  }
+
+  // Get user role
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (userError || !userData || userData.role !== "job_seeker") {
     return {
       success: false,
       message: "Unauthorized. Only job seekers can unsave jobs.",
@@ -129,8 +172,16 @@ export async function unsaveJob(jobId: string) {
 
 export async function getSavedJobs(candidateId?: string): Promise<SavedJob[]> {
   try {
-    const user = await getCurrentUser()
-    const targetCandidateId = candidateId || user?.id
+    const cookieStore = await cookies()
+    const supabase = createServerActionClient<Database>({ cookies: () => cookieStore })
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      return []
+    }
+
+    const targetCandidateId = candidateId || user.id
 
     if (!targetCandidateId) {
       return []
@@ -141,13 +192,19 @@ export async function getSavedJobs(candidateId?: string): Promise<SavedJob[]> {
       .select(`
         *,
         job:jobs (
+          id,
           title,
           location,
-          employment_type,
-          salary_from,
-          salary_to,
+          job_type,
+          salary_min,
+          salary_max,
           currency,
-          employer_id
+          remote_allowed,
+          company:companies!jobs_company_id_fkey (
+            id,
+            name,
+            logo_url
+          )
         )
       `)
       .eq('candidate_id', targetCandidateId)
@@ -165,8 +222,16 @@ export async function getSavedJobs(candidateId?: string): Promise<SavedJob[]> {
 
 export async function isJobSaved(jobId: string, candidateId?: string): Promise<boolean> {
   try {
-    const user = await getCurrentUser()
-    const targetCandidateId = candidateId || user?.id
+    const cookieStore = await cookies()
+    const supabase = createServerActionClient<Database>({ cookies: () => cookieStore })
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      return false
+    }
+
+    const targetCandidateId = candidateId || user.id
 
     if (!targetCandidateId) {
       return false

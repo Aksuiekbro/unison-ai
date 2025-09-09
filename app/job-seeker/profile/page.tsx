@@ -11,23 +11,25 @@ export default async function JobSeekerProfile() {
   const supabase = createServerComponentClient<Database>({ cookies: () => cookieStore })
   
   try {
-    // Check authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Middleware handles authentication - just get user data
+    const { data: { user } } = await supabase.auth.getUser()
     
-    if (authError || !user) {
-      redirect('/auth/login')
+    if (!user) {
+      // This shouldn't happen due to middleware, but handle gracefully
+      console.error('No user found - middleware should have redirected')
+      return <div>Loading...</div>
     }
 
     // Get user data with all profile fields including JSON arrays
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role, full_name, email, phone, location, bio, current_job_title, linkedin_url, github_url, portfolio_url, resume_url, experiences, educations')
+      .select('role, full_name, email, phone, location, bio, current_job_title, linkedin_url, github_url, portfolio_url, resume_url, experiences, educations, skills')
       .eq('id', user.id)
       .single()
 
-    if (userError || !userData || userData.role !== 'job_seeker') {
+    if (userError || !userData) {
       console.error('User data fetch failed:', userError)
-      redirect('/')
+      return <div>Error loading profile</div>
     }
 
     // Transform data for the form (all from users table now)
@@ -41,7 +43,7 @@ export default async function JobSeekerProfile() {
       location: userData.location || '',
       linkedinUrl: userData.linkedin_url || '',
       githubUrl: userData.github_url || '',
-      skills: [], // TODO: Add skills handling if needed
+      skills: (userData.skills as string[]) || [], // Load skills from database
     }
 
     // Get experiences and education from JSON fields (already in correct format)

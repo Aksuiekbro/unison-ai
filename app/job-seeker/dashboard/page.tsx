@@ -34,6 +34,35 @@ export default async function JobSeekerDashboard() {
   const { data: { user } } = await supabase.auth.getUser()
 
   let displayName = ""
+  let applications: { id: string; company: string; position: string; status: string; date: string }[] = []
+  let recommendations: { id: string; company: string; position: string; location: string; salary: string }[] = []
+  let profileProgress = 0
+
+  function mapStatusToRu(status: string) {
+    switch (status) {
+      case 'pending': return 'Отправлено'
+      case 'reviewing': return 'В просмотре'
+      case 'interview': return 'Приглашение на интервью'
+      case 'accepted': return 'Принято'
+      case 'rejected': return 'Отклонено'
+      default: return status
+    }
+  }
+
+  function formatDateRu(iso?: string | null) {
+    if (!iso) return '—'
+    try {
+      return new Date(iso).toLocaleDateString('ru-RU')
+    } catch { return '—' }
+  }
+
+  function formatSalary(min?: number | null, max?: number | null, currency?: string | null) {
+    if (!min && !max) return '—'
+    const cur = currency || '₸'
+    if (min && max) return `${min.toLocaleString()} - ${max.toLocaleString()} ${cur}`
+    return `${(min || max || 0).toLocaleString()} ${cur}`
+  }
+
   if (user) {
     const { data: userData } = await supabase
       .from('users')
@@ -41,33 +70,89 @@ export default async function JobSeekerDashboard() {
       .eq('id', user.id)
       .single()
     displayName = userData?.full_name || (userData?.email ? userData.email.split('@')[0] : '')
+
+    // Applications (latest 5)
+    const { data: apps } = await supabase
+      .from('applications')
+      .select(`
+        id,
+        status,
+        applied_at,
+        job:jobs (
+          title,
+          company:companies (
+            name
+          )
+        )
+      `)
+      .eq('applicant_id', user.id)
+      .order('applied_at', { ascending: false })
+      .limit(5)
+
+    applications = (apps as any[] | null || []).map((a: any) => ({
+      id: a.id,
+      company: a.job?.company?.name || '—',
+      position: a.job?.title || '—',
+      status: mapStatusToRu(a.status),
+      date: formatDateRu(a.applied_at),
+    }))
+
+    // Recommended jobs (latest published 3)
+    const { data: jobs } = await supabase
+      .from('jobs')
+      .select(`
+        id,
+        title,
+        location,
+        salary_min,
+        salary_max,
+        currency,
+        company:companies (
+          name
+        )
+      `)
+      .eq('status', 'published')
+      .order('posted_at', { ascending: false })
+      .limit(3)
+
+    recommendations = (jobs as any[] | null || []).map((j: any) => ({
+      id: j.id,
+      company: j.company?.name || '—',
+      position: j.title,
+      location: j.location || '—',
+      salary: formatSalary(j.salary_min, j.salary_max, j.currency),
+    }))
+
+    // Profile progress (simple heuristic)
+    const { data: profile } = await supabase
+      .from('users')
+      .select('full_name,current_job_title,bio,skills,experiences,educations,location,linkedin_url,github_url,portfolio_url,resume_url')
+      .eq('id', user.id)
+      .single()
+
+    if (profile) {
+      const items: boolean[] = [
+        !!profile.full_name && !!profile.current_job_title,
+        !!profile.bio,
+        Array.isArray(profile.skills) && profile.skills.length > 0,
+        Array.isArray(profile.experiences) && (profile.experiences as any[]).length > 0,
+        Array.isArray(profile.educations) && (profile.educations as any[]).length > 0,
+        !!profile.location,
+        !!(profile.linkedin_url || profile.github_url || profile.portfolio_url),
+        !!profile.resume_url,
+      ]
+      const filled = items.filter(Boolean).length
+      profileProgress = Math.round((filled / items.length) * 100)
+    }
   }
 
-  return <JobSeekerDashboardContent displayName={displayName} />
+  return <JobSeekerDashboardContent displayName={displayName} applications={applications} recommendations={recommendations} profileProgress={profileProgress} />
 }
 
-function JobSeekerDashboardContent({ displayName }: { displayName: string }) {
-  const applications = [
-    { id: 1, company: "TechCorp", position: "Frontend Developer", status: "В просмотре", date: "2 дня назад" },
-    {
-      id: 2,
-      company: "StartupXYZ",
-      position: "React Developer",
-      status: "Приглашение на интервью",
-      date: "1 день назад",
-    },
-    { id: 3, company: "BigTech", position: "Senior Developer", status: "В просмотре", date: "5 дней назад" },
-  ]
-
-  const recommendations = [
-    { id: 1, company: "InnovateLab", position: "Full Stack Developer", location: "Москва", salary: "150-200k" },
-    { id: 2, company: "DevStudio", position: "React Native Developer", location: "СПб", salary: "120-180k" },
-    { id: 3, company: "TechFlow", position: "Frontend Lead", location: "Удаленно", salary: "200-250k" },
-  ]
-
+function JobSeekerDashboardContent({ displayName, applications, recommendations, profileProgress }: { displayName: string, applications: { id: string; company: string; position: string; status: string; date: string }[], recommendations: { id: string; company: string; position: string; location: string; salary: string }[], profileProgress: number }) {
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="flex">
+      <div className="flex min-h-screen">
         {/* Sidebar */}
         <div className="w-64 bg-white shadow-sm border-r">
           <div className="p-6">
@@ -166,14 +251,14 @@ function JobSeekerDashboardContent({ displayName }: { displayName: string }) {
                   <CardContent>
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <span className="text-2xl font-bold text-[#00C49A]">75%</span>
+                        <span className="text-2xl font-bold text-[#00C49A]">{profileProgress}%</span>
                         <Link href="/job-seeker/profile">
                           <Button variant="outline" size="sm">
                             Завершить профиль
                           </Button>
                         </Link>
                       </div>
-                      <Progress value={75} className="h-3" />
+                      <Progress value={profileProgress} className="h-3" />
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div className="flex items-center text-green-600">
                           <div className="w-2 h-2 bg-green-600 rounded-full mr-2"></div>

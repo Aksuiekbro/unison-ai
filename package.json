@@ -74,6 +74,7 @@
   "devDependencies": {
     "@playwright/test": "^1.55.0",
     "@types/node": "^22",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "postcss": "^8.5",

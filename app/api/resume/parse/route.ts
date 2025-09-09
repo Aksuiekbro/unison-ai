@@ -37,28 +37,6 @@ async function extractTextFromFile(file: File): Promise<string> {
   }
 }
 
-// Simple text extraction for demo purposes
-function simpleTextExtraction(buffer: ArrayBuffer): string {
-  // This is a very basic approach - extract readable text
-  const uint8Array = new Uint8Array(buffer)
-  let text = ''
-  
-  for (let i = 0; i < uint8Array.length; i++) {
-    const char = uint8Array[i]
-    // Only include printable ASCII characters and common punctuation
-    if ((char >= 32 && char <= 126) || char === 10 || char === 13) {
-      text += String.fromCharCode(char)
-    } else if (char === 0) {
-      text += ' ' // Replace null bytes with spaces
-    }
-  }
-  
-  // Clean up the text
-  return text
-    .replace(/\0+/g, ' ') // Replace null bytes
-    .replace(/\s+/g, ' ') // Replace multiple whitespace with single space
-    .trim()
-}
 
 export async function POST(request: NextRequest) {
   let fieldsUpdated: string[] = []
@@ -214,17 +192,36 @@ export async function POST(request: NextRequest) {
       const parsedData = parseResult.data!
       
       if (parsedData.personal_info) {
-        // Get existing user data
-        const { data: existingUser } = await supabase
+        // Get existing user data  
+        const { data: existingUser, error: fetchError } = await supabase
           .from('users')
-          .select('full_name, phone, location, linkedin_url, github_url, portfolio_url, experiences, educations')
+          .select('full_name, phone, location, linkedin_url, github_url, portfolio_url, experiences, educations, skills')
           .eq('id', user.id)
           .single()
 
+        if (fetchError) {
+          console.error('🤖 AI Processing - Error fetching user data:', fetchError)
+          return
+        }
+
         const userUpdate: any = {}
         
-        // Update personal info fields (be more permissive for better user experience)
-        if (parsedData.personal_info.full_name && (!existingUser?.full_name || existingUser.full_name !== parsedData.personal_info.full_name)) {
+        console.log('🤖 AI Processing - Existing user data:', {
+          full_name: existingUser?.full_name,
+          phone: existingUser?.phone,
+          linkedin_url: existingUser?.linkedin_url,
+          skills: existingUser?.skills ? `${(existingUser.skills as any[]).length} skills` : 'no skills'
+        })
+        
+        console.log('🤖 AI Processing - Extracted data:', {
+          full_name: parsedData.personal_info.full_name,
+          phone: parsedData.personal_info.phone,
+          linkedin_url: parsedData.personal_info.linkedin_url,
+          skills: parsedData.skills ? `${parsedData.skills.length} skills` : 'no skills'
+        })
+        
+        // Update personal info fields - always update from AI if different or more complete
+        if (parsedData.personal_info.full_name && parsedData.personal_info.full_name !== existingUser?.full_name) {
           userUpdate.full_name = parsedData.personal_info.full_name
           fieldsUpdated.push('full_name')
         }
@@ -262,9 +259,10 @@ export async function POST(request: NextRequest) {
         }
 
         // For experiences and educations, merge instead of replacing for better UX
-        if (parsedData.experiences && parsedData.experiences.length > 0) {
+        // Note: AI returns 'experience' but we store as 'experiences'
+        if (parsedData.experience && parsedData.experience.length > 0) {
           const existingExperiences = (existingUser?.experiences as any[]) || []
-          const formattedExperiences = (parsedData.experiences as any[]).map(exp => ({
+          const formattedExperiences = (parsedData.experience as any[]).map(exp => ({
             id: crypto.randomUUID(),
             position: exp.job_title || exp.position,
             company: exp.company_name || exp.company,
@@ -287,9 +285,10 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        if (parsedData.educations && parsedData.educations.length > 0) {
+        // Note: AI returns 'education' but we store as 'educations'  
+        if (parsedData.education && parsedData.education.length > 0) {
           const existingEducations = (existingUser?.educations as any[]) || []
-          const formattedEducations = (parsedData.educations as any[]).map(edu => ({
+          const formattedEducations = (parsedData.education as any[]).map(edu => ({
             id: crypto.randomUUID(),
             institution: edu.institution_name || edu.institution,
             degree: edu.degree,
@@ -307,6 +306,22 @@ export async function POST(request: NextRequest) {
           if (newEducations.length > 0) {
             userUpdate.educations = [...existingEducations, ...newEducations]
             fieldsUpdated.push(`educations (+${newEducations.length})`)
+          }
+        }
+
+        // Process skills - always update/merge skills from AI
+        if (parsedData.skills && parsedData.skills.length > 0) {
+          const existingSkills = (existingUser?.skills as any[]) || []
+          
+          // Convert AI skills format to simple string array for now
+          const extractedSkills = parsedData.skills.map(skill => skill.name).filter(Boolean)
+          
+          // Merge skills (avoid duplicates)
+          const uniqueSkills = Array.from(new Set([...existingSkills, ...extractedSkills]))
+          
+          if (uniqueSkills.length > existingSkills.length) {
+            userUpdate.skills = uniqueSkills
+            fieldsUpdated.push(`skills (+${uniqueSkills.length - existingSkills.length})`)
           }
         }
 

@@ -8,7 +8,7 @@ import Link from "next/link"
 export default async function JobSeekerSettings() {
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="flex">
+      <div className="flex min-h-screen">
         {/* Sidebar */}
         <div className="w-64 bg-white shadow-sm border-r">
           <div className="p-6">

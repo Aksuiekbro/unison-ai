@@ -1,6 +1,5 @@
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
 import { LayoutDashboard, Briefcase, Building2 } from "lucide-react"
 import Link from "next/link"
 import type { Database } from '@/lib/database.types'
@@ -9,49 +8,52 @@ import EmployerProfileForm from '@/components/profile/employer-profile-form'
 export default async function CompanyProfile() {
   const supabase = createServerComponentClient<Database>({ cookies })
   
-  // Check authentication
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  // Middleware handles authentication - just get user data
+  const { data: { user } } = await supabase.auth.getUser()
   
-  if (authError || !user) {
-    redirect('/auth/login')
+  if (!user) {
+    // This shouldn't happen due to middleware, but handle gracefully
+    console.error('No user found - middleware should have redirected')
+    return <div>Loading...</div>
   }
 
-  // Get user profile
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
+  // Get user data (single-table approach)
+  const { data: userData } = await supabase
+    .from('users')
     .select('*')
     .eq('id', user.id)
     .single()
 
-  if (profileError || !profile || profile.role !== 'employer') {
-    redirect('/')
+  if (!userData) {
+    console.error('User data fetch failed')
+    return <div>Error loading profile</div>
   }
 
-  // Get employer profile data
-  const { data: empProfile } = await supabase
-    .from('employer_profiles')
+  // Get company data
+  const { data: companyData } = await supabase
+    .from('companies')
     .select('*')
-    .eq('profile_id', profile.id)
+    .eq('owner_id', user.id)
     .single()
 
-  // Transform data for the form
-  const initialData = empProfile ? {
-    companyName: empProfile.company_name,
-    companyDescription: empProfile.company_description || '',
-    industry: empProfile.industry || '',
-    companySize: empProfile.company_size || '',
-    foundedYear: empProfile.founded_year || undefined,
-    websiteUrl: empProfile.website_url || '',
-    country: empProfile.country || '',
-    city: empProfile.city || '',
-    address: empProfile.address || '',
-    hrEmail: empProfile.hr_email || '',
-    phone: empProfile.phone || '',
-    hrContactName: empProfile.hr_contact_name || '',
-    companyCulture: empProfile.company_culture || '',
-    benefits: empProfile.benefits || [],
-    technologies: empProfile.technologies || [],
-  } : undefined
+  // Transform data for the form (combining user data and company data)
+  const initialData = {
+    companyName: companyData?.name || '',
+    companyDescription: companyData?.description || '',
+    industry: companyData?.industry || '',
+    companySize: companyData?.size || '',
+    foundedYear: undefined, // Not in current schema
+    websiteUrl: companyData?.website || '',
+    country: '', // Extract from location if needed
+    city: '', // Extract from location if needed  
+    address: companyData?.location || '',
+    hrEmail: userData.email || '',
+    phone: userData.phone || '',
+    hrContactName: userData.full_name || '',
+    companyCulture: userData.company_culture || '',
+    benefits: [], // Not in current schema
+    technologies: [], // Not in current schema
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -63,7 +65,7 @@ export default async function CompanyProfile() {
               Unison AI
             </Link>
             <p className="text-sm text-[#333333] mt-1">
-              {empProfile?.company_name || 'Company'}
+              {companyData?.name || 'Company'}
             </p>
           </div>
           <nav className="px-4 space-y-2">

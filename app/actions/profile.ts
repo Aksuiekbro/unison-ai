@@ -149,6 +149,12 @@ export async function updateJobSeekerProfile(formData: FormData) {
       updateData.github_url = normalized
     }
 
+    // Handle skills - always update from form state (which includes AI-extracted + manually added)
+    // Only skip if AI processing just updated skills in this same request
+    if (!aiUpdatedFields.includes('skills')) {
+      updateData.skills = validatedData.skills || []
+    }
+
     // Note: portfolio_url is handled by AI processing, form doesn't have this field
 
     console.log('📝 Profile Action - Updating database with data:', JSON.stringify(updateData, null, 2))

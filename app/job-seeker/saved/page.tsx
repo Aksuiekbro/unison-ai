@@ -3,40 +3,37 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { LayoutDashboard, User, Search, Settings, Heart, MapPin, Clock, Building2, Trash2 } from "lucide-react"
 import Link from "next/link"
+import { getSavedJobs, unsaveJob } from "@/actions/saved-jobs"
+import { revalidatePath } from "next/cache"
 
-export default function SavedJobs() {
-  const savedJobs = [
-    {
-      id: 1,
-      title: "Senior React Developer",
-      company: "TechCorp",
-      location: "Москва",
-      salary: "200-300k",
-      type: "Полная занятость",
-      remote: true,
-      posted: "2 дня назад",
-      matchScore: 95,
-      saved: "3 дня назад",
-      skills: ["React", "TypeScript", "GraphQL"],
-    },
-    {
-      id: 2,
-      title: "Frontend Team Lead",
-      company: "StartupXYZ",
-      location: "СПб",
-      salary: "250-350k",
-      type: "Полная занятость",
-      remote: false,
-      posted: "1 день назад",
-      matchScore: 88,
-      saved: "1 день назад",
-      skills: ["React", "Vue.js", "Leadership"],
-    },
-  ]
+async function handleUnsaveJob(jobId: string) {
+  'use server'
+  await unsaveJob(jobId)
+  revalidatePath('/job-seeker/saved')
+}
+
+export default async function SavedJobs() {
+  const savedJobs = await getSavedJobs()
+
+  const formatSalary = (min?: number | null, max?: number | null, currency?: string | null) => {
+    if (!min && !max) return "—"
+    const cur = currency || "₸"
+    if (min && max) return `${min.toLocaleString()} - ${max.toLocaleString()} ${cur}`
+    return `${(min || max || 0).toLocaleString()} ${cur}`
+  }
+
+  const formatSavedDate = (iso?: string) => {
+    if (!iso) return "—"
+    try {
+      return new Date(iso).toLocaleDateString("ru-RU")
+    } catch {
+      return "—"
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="flex">
+      <div className="flex min-h-screen">
         {/* Sidebar */}
         <div className="w-64 bg-white shadow-sm border-r">
           <div className="p-6">
@@ -90,74 +87,54 @@ export default function SavedJobs() {
 
             {savedJobs.length > 0 ? (
               <div className="space-y-4">
-                {savedJobs.map((job) => (
-                  <Card key={job.id} className="hover:shadow-lg transition-shadow">
+                {savedJobs.map((saved) => (
+                  <Card key={saved.id} className="hover:shadow-lg transition-shadow">
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-start justify-between mb-3">
                             <div>
-                              <h3 className="text-xl font-semibold text-[#0A2540] mb-1">{job.title}</h3>
+                              <h3 className="text-xl font-semibold text-[#0A2540] mb-1">{saved.job?.title}</h3>
                               <div className="flex items-center space-x-4 text-sm text-[#333333]">
                                 <div className="flex items-center">
                                   <Building2 className="w-4 h-4 mr-1" />
-                                  {job.company}
+                                  {saved.job?.company?.name || "Компания не указана"}
                                 </div>
                                 <div className="flex items-center">
                                   <MapPin className="w-4 h-4 mr-1" />
-                                  {job.location}
+                                  {saved.job?.location || "—"}
                                 </div>
                                 <div className="flex items-center">
                                   <Clock className="w-4 h-4 mr-1" />
-                                  Сохранено {job.saved}
+                                  Сохранено {formatSavedDate(saved.created_at)}
                                 </div>
                               </div>
                             </div>
-                            <Button variant="ghost" size="sm" className="text-red-500">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            <form action={saved.job?.id ? handleUnsaveJob.bind(null, saved.job.id) : undefined}>
+                              <Button type="submit" variant="ghost" size="sm" className="text-red-500">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </form>
                           </div>
 
                           <div className="flex items-center justify-between">
                             <div className="flex flex-wrap gap-2">
-                              {job.skills.map((skill) => (
-                                <Badge key={skill} variant="secondary" className="text-xs">
-                                  {skill}
-                                </Badge>
-                              ))}
-                              {job.remote && <Badge className="bg-[#00C49A] text-white text-xs">Удаленно</Badge>}
+                              {saved.job?.remote_allowed ? (
+                                <Badge className="bg-[#00C49A] text-white text-xs">Удаленно</Badge>
+                              ) : null}
+                              <Badge variant="secondary" className="text-xs">
+                                {saved.job?.job_type}
+                              </Badge>
                             </div>
                             <div className="text-right">
-                              <p className="font-semibold text-[#0A2540]">{job.salary} ₽</p>
-                              <p className="text-sm text-[#333333]">{job.type}</p>
+                              <p className="font-semibold text-[#0A2540]">
+                                {formatSalary(saved.job?.salary_min, saved.job?.salary_max, saved.job?.currency)}
+                              </p>
+                              <p className="text-sm text-[#333333]">{saved.job?.job_type}</p>
                             </div>
                           </div>
                         </div>
-
-                        <div className="ml-6 text-center">
-                          <div className="relative w-16 h-16 mb-2">
-                            <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 36 36">
-                              <path
-                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                fill="none"
-                                stroke="#e5e7eb"
-                                strokeWidth="2"
-                              />
-                              <path
-                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                fill="none"
-                                stroke="#00C49A"
-                                strokeWidth="2"
-                                strokeDasharray={`${job.matchScore}, 100`}
-                              />
-                            </svg>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <span className="text-sm font-bold text-[#00C49A]">{job.matchScore}</span>
-                            </div>
-                          </div>
-                          <p className="text-xs text-[#333333] mb-3">Match</p>
-                          <Button className="bg-[#FF7A00] hover:bg-[#E66A00] text-white">Откликнуться</Button>
-                        </div>
+                        
                       </div>
                     </CardContent>
                   </Card>

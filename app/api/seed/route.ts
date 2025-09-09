@@ -388,6 +388,50 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Seed saved jobs for the current user (requires jobs to exist)
+    if (!tables || tables.includes('saved_jobs')) {
+      const userId = session.user.id
+
+      // Ensure current user exists in users table
+      const { data: currentUser } = await supabase
+        .from('users')
+        .select('id, role')
+        .eq('id', userId)
+        .single()
+
+      if (currentUser) {
+        const { data: existingSaved } = await supabase
+          .from('saved_jobs')
+          .select('job_id')
+          .eq('candidate_id', userId)
+
+        const alreadySaved = new Set((existingSaved || []).map((s: any) => s.job_id))
+
+        const { data: jobs } = await supabase
+          .from('jobs')
+          .select('id, status')
+          .eq('status', 'published')
+          .limit(3)
+
+        const toSave = (jobs || [])
+          .filter(j => !alreadySaved.has(j.id))
+          .map(j => ({ job_id: j.id, candidate_id: userId }))
+
+        if (toSave.length > 0) {
+          const { data: saved, error: savedError } = await supabase
+            .from('saved_jobs')
+            .insert(toSave)
+            .select()
+
+          results.saved_jobs = { inserted: saved?.length || 0, error: savedError }
+        } else {
+          results.saved_jobs = { inserted: 0, message: 'No new saved jobs to insert' }
+        }
+      } else {
+        results.saved_jobs = { inserted: 0, error: 'Current user not found in users table' }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Database seeded successfully',
