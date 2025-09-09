@@ -9,9 +9,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export function Header() {
   const [open, setOpen] = useState(false);
-  const { user, profile } = useAuth();
+  const { user, userData } = useAuth();
 
-  const displayName = profile?.full_name || (user?.user_metadata as any)?.full_name || user?.email || "";
+  const displayName = userData?.full_name || (user?.user_metadata as any)?.full_name || user?.email || "";
   const avatarUrl = (user?.user_metadata as any)?.avatar_url as string | undefined;
   const initials = (displayName || "U").split(" ").map((n) => n[0]).join("").toUpperCase();
 
