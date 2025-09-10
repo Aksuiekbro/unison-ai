@@ -17,7 +17,7 @@ export default async function JobSeekerProfile() {
     if (!user) {
       // This shouldn't happen due to middleware, but handle gracefully
       console.error('No user found - middleware should have redirected')
-      return <div>Loading...</div>
+      redirect('/auth/login?redirectTo=/job-seeker/profile')
     }
 
     // Get user data with all profile fields including JSON arrays

@@ -8,10 +8,10 @@ export async function middleware(req: NextRequest) {
 
   const supabase = createMiddlewareClient<Database>({ req, res: response })
 
-  // Refresh session if expired - required for Server Components
+  // Validate user via access token; refresh if needed
   const {
-    data: { session },
-  } = await supabase.auth.getSession()
+    data: { user },
+  } = await supabase.auth.getUser()
 
   const { pathname } = req.nextUrl
 
@@ -37,24 +37,24 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith(route)
   )
 
-  // If trying to access protected route without session, redirect to login
-  if (isProtectedRoute && !session) {
+  // If trying to access protected route without authenticated user, redirect to login
+  if (isProtectedRoute && !user) {
     const redirectUrl = new URL('/auth/login', req.url)
     redirectUrl.searchParams.set('redirectTo', pathname)
     return NextResponse.redirect(redirectUrl)
   }
 
   // If accessing auth routes while logged in, redirect to appropriate dashboard
-  if (isAuthRoute && session) {
+  if (isAuthRoute && user) {
     try {
       // Get user data to determine role
       const { data: userData } = await supabase
         .from('users')
         .select('role')
-        .eq('id', session.user.id)
+        .eq('id', user.id)
         .single()
 
-      const role = (userData?.role || (session.user.user_metadata as any)?.role) as any
+      const role = (userData?.role || (user.user_metadata as any)?.role) as any
       const normalizedRole = role === 'job-seeker' ? 'job_seeker' : role
 
       if (normalizedRole === 'employer') {
@@ -67,7 +67,7 @@ export async function middleware(req: NextRequest) {
     } catch (error) {
       // If database query fails, fall back to user metadata or allow auth page
       console.warn('Middleware database query failed:', error)
-      const role = (session.user.user_metadata as any)?.role
+      const role = (user?.user_metadata as any)?.role
       const normalizedRole = role === 'job-seeker' ? 'job_seeker' : role
       
       if (normalizedRole === 'employer') {
@@ -80,15 +80,15 @@ export async function middleware(req: NextRequest) {
   }
 
   // Role-based route protection
-  if (session && isProtectedRoute) {
+  if (user && isProtectedRoute) {
     try {
       const { data: userData } = await supabase
         .from('users')
         .select('role')
-        .eq('id', session.user.id)
+        .eq('id', user.id)
         .single()
 
-      const role = (userData?.role || (session.user.user_metadata as any)?.role) as any
+      const role = (userData?.role || (user.user_metadata as any)?.role) as any
       const normalizedRole = role === 'job-seeker' ? 'job_seeker' : role
 
       // If role is unknown, do not bounce between dashboards
@@ -107,7 +107,7 @@ export async function middleware(req: NextRequest) {
     } catch (error) {
       // If database query fails, fall back to user metadata
       console.warn('Middleware role protection query failed:', error)
-      const role = (session.user.user_metadata as any)?.role
+      const role = (user?.user_metadata as any)?.role
       const normalizedRole = role === 'job-seeker' ? 'job_seeker' : role
 
       if (normalizedRole !== 'employer' && normalizedRole !== 'job_seeker') {

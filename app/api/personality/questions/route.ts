@@ -57,7 +57,8 @@ const DEFAULT_QUESTIONS = [
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies })
+    const cookieStore = await cookies()
+    const supabase = createRouteHandlerClient<Database>({ cookies: () => cookieStore })
     
     // Verify user authentication for questions access
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -112,7 +113,8 @@ export async function GET(request: NextRequest) {
 // POST endpoint to seed default questions into database
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies })
+    const cookieStore = await cookies()
+    const supabase = createRouteHandlerClient<Database>({ cookies: () => cookieStore })
     
     // Verify user authentication - only authenticated users can seed
     const { data: { user }, error: authError } = await supabase.auth.getUser()

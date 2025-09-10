@@ -48,17 +48,18 @@ This is a **Next.js 15 App Router** AI-powered recruitment platform with role-ba
 - **AI-Driven Workflows**: Core platform features depend on AI analysis and scoring
 
 ### Database Architecture
-- **Simplified Single-Table Profile Storage**: All user profile data (name, phone, location, bio, LinkedIn/GitHub URLs, job title, resume) stored directly in the `users` table
-- **Role-Based Access**: Single `users` table serves both job seekers and employers with role-specific UI/permissions
+- **Simplified Single-Table Profile Storage**: All user profile data (name, phone, location, bio, LinkedIn/GitHub URLs, job title, resume) stored directly in the `public.users` table (not `auth.users`)
+- **Role-Based Access**: Single `public.users` table serves both job seekers and employers with role-specific UI/permissions
 - **Application Tracking**: Complete job application workflow with status management including Match Score
 - **Skills Taxonomy**: Junction tables for user skills and job requirements
 - **AI Analysis Storage**: Tables for storing personality analysis results and match scores
 - **File Storage**: Supabase Storage integration for resume uploads (PDF/DOCX support)
 
 #### Database Schema Note
-**IMPORTANT**: The codebase uses a simplified single-table approach where ALL profile information is stored in the `users` table. The `users` table includes:
+**IMPORTANT**: We use a single-table approach where ALL profile information is stored in an application-owned `public.users` table (not `auth.users`). Do not alter `auth.users`. The `public.users` table includes:
 - Basic info: `full_name`, `email`, `phone`, `location`, `bio`, `role`
 - Profile extensions: `linkedin_url`, `github_url`, `current_job_title`, `portfolio_url`, `resume_url`
+- Foreign key: `id` references `auth.users(id)` ON DELETE CASCADE
 - This eliminates the need for a separate `profiles` table and reduces data redundancy
 
 ### Key Directories
@@ -157,9 +158,9 @@ This is a **Next.js 15 App Router** AI-powered recruitment platform with role-ba
 - **Error Handling**: User-friendly error messages with actionable guidance
 
 ### Database Migration Context
-**Latest Change**: The codebase has been simplified from a dual-table approach (`users` + `profiles`) to a **single-table approach** where all profile data is stored directly in the `users` table. This eliminates redundancy and confusion between overlapping fields.
+**Latest Change**: The codebase has been simplified from a dual-table approach (`public.users` + `profiles`) to a **single-table approach** where all profile data is stored directly in the `public.users` table. This eliminates redundancy and confusion between overlapping fields.
 
-**Migration Required**: Run `/supabase/migrations/create_profiles_table.sql` (now renamed to add missing columns to `users` table) to add `linkedin_url`, `github_url`, `current_job_title`, `portfolio_url`, `resume_url` columns to your existing `users` table.
+**Migration Required**: Run `/supabase/migrations/2025-xx-xx_add_user_profile_columns.sql` to add `linkedin_url`, `github_url`, `current_job_title`, `portfolio_url`, `resume_url` columns to `public.users`. Do not modify `auth.users`. If you previously had a `profiles` table, migrate data into `public.users`, then drop `profiles`.
 
 ### Important Cursor Rules
 - **Server Startup**: Never start servers - ask user to run development commands
@@ -223,34 +224,41 @@ This is a **Next.js 15 App Router** AI-powered recruitment platform with role-ba
 - Database Schema - Single Table Architecture
 
   CRITICAL: The application uses a single-table approach for user
-  profiles. ALL profile data is stored in the users table only.
+  profiles. ALL profile data is stored in the public.users table only
+  (not auth.users).
 
-  users table contains:
+  public.users table contains:
 
   - Basic info: id, email, full_name, phone, location, bio, role
   - Profile fields: linkedin_url, github_url, current_job_title,
   portfolio_url, resume_url
   - Timestamps: created_at, updated_at
+  - Foreign key: id REFERENCES auth.users(id) ON DELETE CASCADE
 
-  NO separate profiles table:
+  NO separate profiles table and do not write to auth.users:
 
   - Do NOT create or reference a profiles table
+  - Do NOT modify auth.users directly
   - Do NOT use dual-table queries or joins
-  - ALL profile operations (read/write) use the users table
+  - ALL profile operations (read/write) use the public.users table
   exclusively
 
   Code patterns:
 
-  // ✅ CORRECT - Single table approach
+  // ✅ CORRECT - Single table approach (public.users)
   const userData = await supabase.from('users').select('*').eq('id',
   userId)
   await supabase.from('users').update({linkedin_url: url}).eq('id',
   userId)
 
-  // ❌ WRONG - Dual table approach
+  // ❌ WRONG - Dual table approach or auth.users modification
   const profile = await
   supabase.from('profiles').select('*').eq('user_id', userId)
+  await supabase.auth.admin.updateUserById(userId, {user_metadata: {}})
 
-  This eliminates confusion between overlapping users and profiles
-  tables and ensures all profile data is stored consistently in one
-  place.
+  Add constraints and indexes:
+  - Unique: email
+  - Indexes: role, created_at
+  - FK: optional company_id if employers are linked
+  This eliminates confusion between overlapping tables and keeps profile
+  data consistent in one place.

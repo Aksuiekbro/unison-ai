@@ -4,34 +4,16 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { LayoutDashboard, User, Search, Settings, Eye, Calendar, MapPin, Clock, Heart } from "lucide-react"
 import Link from "next/link"
-import { cookies } from "next/headers"
-import { createServerClient } from "@supabase/ssr"
-import type { Database } from "@/lib/database.types"
+import { createClient } from '@/lib/supabase-server'
+import { redirect } from 'next/navigation'
+import type { Database } from "@/lib/types/database"
 
 export default async function JobSeekerDashboard() {
-  const cookieStore = await cookies()
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          try {
-            cookieStore.set({ name, value, ...options })
-          } catch {}
-        },
-        remove(name: string, options: any) {
-          try {
-            cookieStore.set({ name, value: '', ...options })
-          } catch {}
-        },
-      },
-    }
-  )
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    redirect('/auth/login?redirectTo=/job-seeker/dashboard')
+  }
 
   let displayName = ""
   let applications: { id: string; company: string; position: string; status: string; date: string }[] = []

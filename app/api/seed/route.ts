@@ -197,7 +197,8 @@ const DEFAULT_QUESTIONS = [
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies })
+    const cookieStore = await cookies()
+    const supabase = createRouteHandlerClient<Database>({ cookies: () => cookieStore })
     
     // Verify authentication
     const { data: { session } } = await supabase.auth.getSession()

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { analyzePersonality, validatePersonalityAnalysis } from '@/lib/ai/personality-analyzer'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import type { Database } from '@/lib/types/database'
+import type { Database } from '@/lib/database.types'
 
 interface TestResponse {
   questionId: string
@@ -13,7 +13,8 @@ interface TestResponse {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies })
+    const cookieStore = await cookies()
+    const supabase = createRouteHandlerClient<Database>({ cookies: async () => cookieStore })
     
     // Verify user authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -60,10 +61,26 @@ export async function POST(request: NextRequest) {
     // Store responses in database first
     try {
       // Delete existing responses for this user
-      await supabase
-        .from('test_responses')
-        .delete()
-        .eq('user_id', user.id)
+      try {
+        const { error: deleteError } = await supabase
+          .from('test_responses')
+          .delete()
+          .eq('user_id', user.id)
+
+        if (deleteError) {
+          console.error('Error deleting existing test responses:', deleteError)
+          return NextResponse.json(
+            { success: false, error: 'Failed to reset previous test responses' },
+            { status: 500 }
+          )
+        }
+      } catch (deleteCaughtError) {
+        console.error('Unexpected error deleting existing test responses:', deleteCaughtError)
+        return NextResponse.json(
+          { success: false, error: 'Failed to reset previous test responses' },
+          { status: 500 }
+        )
+      }
 
       // Insert new responses
       const responseInserts = questionResponses.map(qr => ({
@@ -110,10 +127,26 @@ export async function POST(request: NextRequest) {
     // Store personality analysis in database
     try {
       // Delete existing analysis for this user
-      await supabase
-        .from('personality_analysis')
-        .delete()
-        .eq('user_id', user.id)
+      try {
+        const { error: deleteAnalysisError } = await supabase
+          .from('personality_analysis')
+          .delete()
+          .eq('user_id', user.id)
+
+        if (deleteAnalysisError) {
+          console.error('Error deleting existing personality analysis:', deleteAnalysisError)
+          return NextResponse.json(
+            { success: false, error: 'Failed to reset previous personality analysis' },
+            { status: 500 }
+          )
+        }
+      } catch (deleteAnalysisCaughtError) {
+        console.error('Unexpected error deleting existing personality analysis:', deleteAnalysisCaughtError)
+        return NextResponse.json(
+          { success: false, error: 'Failed to reset previous personality analysis' },
+          { status: 500 }
+        )
+      }
 
       // Insert new analysis
       const { error: analysisError } = await supabase
@@ -141,14 +174,19 @@ export async function POST(request: NextRequest) {
       }
 
       // Update user profile to mark personality test as completed
+      // Use DB-native upsert with defaultToNull=false to avoid overwriting other columns
       const { error: profileError } = await supabase
         .from('profiles')
-        .upsert({
-          user_id: user.id,
-          personality_test_completed: true,
-          ai_analysis_completed: true
-        }, {
-          onConflict: 'user_id'
+        .upsert([
+          {
+            user_id: user.id,
+            personality_test_completed: true,
+            ai_analysis_completed: true
+          }
+        ], {
+          onConflict: 'user_id',
+          // Critical: do not set unspecified columns to null on conflict
+          defaultToNull: false
         })
 
       if (profileError) {

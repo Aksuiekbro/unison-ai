@@ -1,12 +1,12 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase-server'
 import { LayoutDashboard, Briefcase, Building2 } from "lucide-react"
 import Link from "next/link"
-import type { Database } from '@/lib/database.types'
+import type { Database } from '@/lib/types/database'
 import EmployerProfileForm from '@/components/profile/employer-profile-form'
+import { redirect } from 'next/navigation'
 
 export default async function CompanyProfile() {
-  const supabase = createServerComponentClient<Database>({ cookies })
+  const supabase = await createClient()
   
   // Middleware handles authentication - just get user data
   const { data: { user } } = await supabase.auth.getUser()
@@ -14,27 +14,27 @@ export default async function CompanyProfile() {
   if (!user) {
     // This shouldn't happen due to middleware, but handle gracefully
     console.error('No user found - middleware should have redirected')
-    return <div>Loading...</div>
+    redirect('/auth/login?redirectTo=/employer/company')
   }
 
   // Get user data (single-table approach)
-  const { data: userData } = await supabase
+  const { data: userData, error: userError } = await supabase
     .from('users')
     .select('*')
     .eq('id', user.id)
     .single()
 
-  if (!userData) {
-    console.error('User data fetch failed')
+  if (userError || !userData) {
+    console.error('User data fetch failed:', userError)
     return <div>Error loading profile</div>
   }
 
   // Get company data
-  const { data: companyData } = await supabase
+  const { data: companyData, error: companyError } = await supabase
     .from('companies')
     .select('*')
     .eq('owner_id', user.id)
-    .single()
+    .maybeSingle() // Use maybeSingle since company might not exist yet
 
   // Transform data for the form (combining user data and company data)
   const initialData = {

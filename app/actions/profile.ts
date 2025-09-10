@@ -16,10 +16,48 @@ import {
   type EmployerProfileData
 } from '@/lib/validations'
 
+// Normalize and validate external URLs to prevent unsafe schemes and invalid hostnames
+function normalizeAndValidateUrl(raw: string, allowedHosts?: string[]): string | null {
+  if (!raw) return null
+  let input = raw.trim()
+  if (!input) return null
+
+  // If no scheme is present, default to https for parsing
+  if (!/^[a-zA-Z][a-zA-Z0-9+\-.]*:/.test(input)) {
+    input = `https://${input}`
+  }
+
+  try {
+    const url = new URL(input)
+
+    // Only allow http/https
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return null
+    }
+
+    // Require a hostname and strip potential credentials
+    if (!url.hostname) return null
+    url.username = ''
+    url.password = ''
+
+    // Enforce allowed hostnames if provided
+    if (allowedHosts && allowedHosts.length > 0) {
+      const host = url.hostname.toLowerCase()
+      const isAllowed = allowedHosts.some(allowed => host === allowed || host.endsWith(`.${allowed}`))
+      if (!isAllowed) return null
+    }
+
+    // Return the canonical, percent-encoded URL string
+    return url.toString()
+  } catch {
+    return null
+  }
+}
+
 // Job Seeker Actions
 export async function updateJobSeekerProfile(formData: FormData) {
   const cookieStore = await cookies()
-  const supabase = createServerActionClient({ cookies: () => cookieStore })
+  const supabase = createServerActionClient({ cookies: async () => cookieStore })
   
   try {
     let aiProcessingResult = null
@@ -138,15 +176,17 @@ export async function updateJobSeekerProfile(formData: FormData) {
     }
     
     if (validatedData.linkedinUrl?.trim() && !aiUpdatedFields.includes('linkedin_url')) {
-      const normalized = !/^https?:\/\//i.test(validatedData.linkedinUrl) ? 
-        `https://${validatedData.linkedinUrl}` : validatedData.linkedinUrl
-      updateData.linkedin_url = normalized
+      const normalized = normalizeAndValidateUrl(validatedData.linkedinUrl, ['linkedin.com'])
+      if (normalized) {
+        updateData.linkedin_url = normalized
+      }
     }
     
     if (validatedData.githubUrl?.trim() && !aiUpdatedFields.includes('github_url')) {
-      const normalized = !/^https?:\/\//i.test(validatedData.githubUrl) ? 
-        `https://${validatedData.githubUrl}` : validatedData.githubUrl
-      updateData.github_url = normalized
+      const normalized = normalizeAndValidateUrl(validatedData.githubUrl, ['github.com'])
+      if (normalized) {
+        updateData.github_url = normalized
+      }
     }
 
     // Handle skills - always update from form state (which includes AI-extracted + manually added)
@@ -195,7 +235,7 @@ export async function updateJobSeekerProfile(formData: FormData) {
 
 export async function addJobSeekerExperience(formData: FormData) {
   const cookieStore = await cookies()
-  const supabase = createServerActionClient({ cookies: () => cookieStore })
+  const supabase = createServerActionClient({ cookies: async () => cookieStore })
   
   try {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -264,7 +304,7 @@ export async function addJobSeekerExperience(formData: FormData) {
 
 export async function addJobSeekerEducation(formData: FormData) {
   const cookieStore = await cookies()
-  const supabase = createServerActionClient({ cookies: () => cookieStore })
+  const supabase = createServerActionClient({ cookies: async () => cookieStore })
   
   try {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -330,7 +370,7 @@ export async function addJobSeekerEducation(formData: FormData) {
 // Employer Actions
 export async function updateEmployerProfile(formData: FormData) {
   const cookieStore = await cookies()
-  const supabase = createServerActionClient({ cookies: () => cookieStore })
+  const supabase = createServerActionClient({ cookies: async () => cookieStore })
   
   try {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -421,7 +461,7 @@ export async function updateEmployerProfile(formData: FormData) {
 // Basic account info (first/last name) for profiles table
 export async function updateBasicProfile(formData: FormData) {
   const cookieStore = await cookies()
-  const supabase = createServerActionClient({ cookies: () => cookieStore })
+  const supabase = createServerActionClient({ cookies: async () => cookieStore })
 
   try {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
