@@ -3,6 +3,24 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import type { Database } from '@/lib/database.types'
 
+// Type definitions for seeding results
+type SeedResult = {
+  inserted: number
+  error?: any
+  message?: string
+  jobSkillsInserted?: number
+  userError?: any
+  savedError?: any
+}
+
+type SeedResults = {
+  skills?: SeedResult
+  questionnaires?: SeedResult
+  companies?: SeedResult
+  jobs?: SeedResult
+  saved_jobs?: SeedResult
+}
+
 // Sample data for seeding the database
 const SAMPLE_COMPANIES = [
   {
@@ -204,13 +222,35 @@ export async function POST(request: NextRequest) {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
       return NextResponse.json(
-        { error: 'Unauthorized' }, 
+        { error: 'Unauthorized' },
         { status: 401 }
+      )
+    }
+
+    // Check if user has admin role
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', session.user.id)
+      .single()
+
+    if (userError || !user || (user as any).role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Forbidden: Admin access required' },
+        { status: 403 }
+      )
+    }
+
+    // Environment protection - only allow in development/staging
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        { error: 'Forbidden: Seeding not allowed in production' },
+        { status: 403 }
       )
     }
     
     const { tables } = await request.json()
-    const results: any = {}
+    const results: SeedResults = {}
 
     // Seed skills
     if (!tables || tables.includes('skills')) {
@@ -261,9 +301,11 @@ export async function POST(request: NextRequest) {
       const newCompanies = SAMPLE_COMPANIES.filter(company => !existingCompanyNames.includes(company.name))
 
       if (newCompanies.length > 0) {
-        // We need to create dummy employer users first
+        // Generate proper UUIDs for dummy employer users
+        const userIds = newCompanies.map(() => crypto.randomUUID())
+        
         const dummyEmployers = newCompanies.map((company, index) => ({
-          id: `employer_${index + 1}`,
+          id: userIds[index],
           email: `employer${index + 1}@${company.name.toLowerCase().replace(/\s+/g, '')}.kz`,
           full_name: `${company.name} HR Manager`,
           role: 'employer' as const
@@ -277,7 +319,7 @@ export async function POST(request: NextRequest) {
         // Insert companies with owner references
         const companiesWithOwners = newCompanies.map((company, index) => ({
           ...company,
-          owner_id: `employer_${index + 1}`
+          owner_id: userIds[index]
         }))
 
         const { data, error } = await supabase
@@ -440,7 +482,9 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Seeding error:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Seeding error:', error)
+    }
     return NextResponse.json(
       { success: false, error: 'Failed to seed database' },
       { status: 500 }

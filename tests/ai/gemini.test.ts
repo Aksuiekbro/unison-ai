@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-// Mock the entire gemini module
+// Partially mock: stub only the AI call; keep retry util real
 vi.mock('@/lib/ai/gemini', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/ai/gemini')>('@/lib/ai/gemini')
   return {
+    ...actual,
     generateStructuredResponse: vi.fn(),
-    withRateLimit: vi.fn(),
-    default: null
   }
 })
 
@@ -64,6 +64,14 @@ describe('Gemini AI Integration', () => {
   })
 
   describe('withRateLimit', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
     it('should retry failed requests', async () => {
       let callCount = 0
       const mockFunction = vi.fn().mockImplementation(async () => {
@@ -74,21 +82,13 @@ describe('Gemini AI Integration', () => {
         return { success: true, data: 'Success after retries' }
       })
 
-      vi.mocked(withRateLimit).mockImplementation(async (fn, retries) => {
-        // Simulate retry logic
-        let lastError = ''
-        for (let i = 0; i < (retries || 3); i++) {
-          const result = await fn()
-          if (result.success) return result
-          lastError = result.error || 'Unknown error'
-        }
-        return { success: false, error: `Failed after ${retries || 3} retries: ${lastError}` }
-      })
-
-      const result = await withRateLimit(mockFunction, 3)
+      const promise = withRateLimit(mockFunction, 3)
+      await vi.advanceTimersByTimeAsync(3000)
+      const result = await promise
 
       expect(result.success).toBe(true)
       expect(result.data).toBe('Success after retries')
+      expect(callCount).toBe(3)
     })
 
     it('should fail after max retries', async () => {
@@ -97,12 +97,9 @@ describe('Gemini AI Integration', () => {
         error: 'Persistent failure'
       })
 
-      vi.mocked(withRateLimit).mockResolvedValue({
-        success: false,
-        error: 'Failed after 2 retries: Persistent failure'
-      })
-
-      const result = await withRateLimit(mockFunction, 2)
+      const promise = withRateLimit(mockFunction, 2)
+      await vi.advanceTimersByTimeAsync(1000)
+      const result = await promise
 
       expect(result.success).toBe(false)
       expect(result.error).toContain('Failed after 2 retries')

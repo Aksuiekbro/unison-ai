@@ -67,6 +67,19 @@ const DEFAULT_QUESTIONS: Question[] = [
 ]
 
 export function PersonalityTest({ userId, onTestComplete, className }: PersonalityTestProps) {
+  // Runtime validation for userId prop
+  if (!userId || typeof userId !== 'string' || !userId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('PersonalityTest: Invalid or missing userId prop:', userId)
+    }
+    return (
+      <div className="p-4 text-center text-red-600">
+        <p>Unable to load personality test: Invalid user session</p>
+        <p className="text-sm text-gray-500">Please refresh the page and try again</p>
+      </div>
+    )
+  }
+
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [responses, setResponses] = useState<Record<string, string>>({})
@@ -106,9 +119,11 @@ export function PersonalityTest({ userId, onTestComplete, className }: Personali
     }
   }
 
-  const currentQuestion = questions[currentQuestionIndex]
-  const progress = ((currentQuestionIndex + 1) / questions.length) * 100
-  const isLastQuestion = currentQuestionIndex === questions.length - 1
+  // Guard against empty questions array and bounds check currentQuestionIndex
+  const safeQuestionIndex = questions.length === 0 ? 0 : Math.max(0, Math.min(currentQuestionIndex, questions.length - 1))
+  const currentQuestion = questions[safeQuestionIndex]
+  const progress = questions.length === 0 ? 0 : ((safeQuestionIndex + 1) / questions.length) * 100
+  const isLastQuestion = questions.length === 0 ? false : safeQuestionIndex === questions.length - 1
 
   const handleNextQuestion = () => {
     if (!currentResponse.trim()) {
@@ -166,33 +181,65 @@ export function PersonalityTest({ userId, onTestComplete, className }: Personali
       }
 
       // Submit responses and get AI analysis
-      const response = await fetch('/api/personality/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          responses: finalResponses
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to submit personality test')
+      const payload = {
+        userId,
+        responses: finalResponses
       }
-
-      const result = await response.json()
-
-      if (result.success) {
-        setTestCompleted(true)
-        toast.success('Тест личности завершен! Анализ готов.')
-        onTestComplete?.(result.analysis)
-      } else {
-        throw new Error(result.error || 'Failed to analyze responses')
+      
+      // Serialize and validate payload size (max 512KB)
+      const bodyData = JSON.stringify(payload)
+      const bodySizeKB = new Blob([bodyData]).size / 1024
+      const maxSizeKB = 512
+      
+      if (bodySizeKB > maxSizeKB) {
+        throw new Error(`Ответы слишком длинные (${Math.round(bodySizeKB)}KB). Пожалуйста, сократите ваши ответы до ${maxSizeKB}KB.`)
+      }
+      
+      // Create AbortController for timeout (20 seconds)
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 20000)
+      
+      try {
+        const response = await fetch('/api/personality/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: bodyData,
+          signal: controller.signal
+        })
+        
+        clearTimeout(timeoutId)
+        
+        if (!response.ok) {
+          throw new Error('Failed to submit personality test')
+        }
+        
+        const result = await response.json()
+        
+        if (result.success) {
+          setTestCompleted(true)
+          toast.success('Тест личности завершен! Анализ готов.')
+          onTestComplete?.(result.analysis)
+        } else {
+          throw new Error(result.error || 'Failed to analyze responses')
+        }
+      } catch (error) {
+        clearTimeout(timeoutId)
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new Error('Анализ занимает слишком много времени. Пожалуйста, попробуйте еще раз.')
+        }
+        throw error
       }
     } catch (error) {
       console.error('Test submission error:', error)
-      toast.error('Ошибка при отправке теста. Попробуйте еще раз.')
+      
+      // Show user-friendly error messages
+      if (error instanceof Error) {
+        toast.error(error.message)
+      } else {
+        toast.error('Ошибка при отправке теста. Попробуйте еще раз.')
+      }
     } finally {
       setIsSubmitting(false)
       setIsAnalyzing(false)

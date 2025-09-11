@@ -13,6 +13,13 @@ interface ResumeUploadProps {
   className?: string
 }
 
+interface Skill {
+  id?: string
+  name?: string
+  level?: string | number
+  category?: string
+}
+
 interface ParsedResumeData {
   personal_info: {
     full_name: string
@@ -25,7 +32,7 @@ interface ParsedResumeData {
   professional_summary: string
   experience: any[]
   education: any[]
-  skills: any[]
+  skills: Skill[]
   confidence_scores: {
     overall: number
     personal_info: number
@@ -100,36 +107,134 @@ export function ResumeUpload({ userId, onParsingComplete, className }: ResumeUpl
     setIsUploading(true)
     setIsParsing(true)
     
-    try {
-      // Create FormData for file upload
-      const formData = new FormData()
-      formData.append('resume', file)
-      formData.append('userId', userId)
-
-      // Upload and parse resume
-      const response = await fetch('/api/resume/parse', {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to upload and parse resume')
-      }
-
-      const result = await response.json()
+    // Helper function for exponential backoff
+    const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+    
+    // Get CSRF token from meta tag or cookie
+    const getCsrfToken = (): string | null => {
+      // Try meta tag first
+      const metaTag = document.querySelector('meta[name="csrf-token"]')
+      if (metaTag) return metaTag.getAttribute('content')
       
-      if (result.success) {
-        setParseResult(result.data)
-        toast.success('Resume parsed successfully!')
-        onParsingComplete?.(result.data)
-      } else {
-        throw new Error(result.error || 'Failed to parse resume')
+      // Try cookie fallback
+      const cookies = document.cookie.split(';')
+      const csrfCookie = cookies.find(c => c.trim().startsWith('csrf-token='))
+      return csrfCookie ? csrfCookie.split('=')[1] : null
+    }
+    
+    const maxRetries = 3
+    let controller: AbortController | null = null
+    
+    try {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+        
+        try {
+          // Create FormData for file upload
+          const formData = new FormData()
+          formData.append('resume', file)
+          formData.append('userId', userId)
+          
+          // Prepare headers with CSRF protection
+          const headers: Record<string, string> = {}
+          const csrfToken = getCsrfToken()
+          if (csrfToken) {
+            headers['X-CSRF-Token'] = csrfToken
+          }
+
+          // Upload and parse resume with timeout and CSRF protection
+          const response = await fetch('/api/resume/parse', {
+            method: 'POST',
+            body: formData,
+            headers,
+            signal: controller.signal
+          })
+          
+          clearTimeout(timeoutId)
+
+          if (!response.ok) {
+            // Try to extract server error message
+            let errorMessage = `HTTP ${response.status}: ${response.statusText}`
+            
+            try {
+              const contentType = response.headers.get('content-type')
+              if (contentType && contentType.includes('application/json')) {
+                const errorData = await response.json()
+                errorMessage = errorData.error || errorData.message || errorMessage
+              }
+            } catch {
+              // Ignore JSON parse errors for error responses
+            }
+            
+            throw new Error(errorMessage)
+          }
+
+          // Validate content type before parsing JSON
+          const contentType = response.headers.get('content-type')
+          if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Server returned invalid response format')
+          }
+          
+          let result
+          try {
+            result = await response.json()
+          } catch (jsonError) {
+            throw new Error('Failed to parse server response')
+          }
+          
+          if (result.success) {
+            setParseResult(result.data)
+            toast.success('Resume parsed successfully!')
+            onParsingComplete?.(result.data)
+            return // Success - exit retry loop
+          } else {
+            throw new Error(result.error || 'Failed to parse resume')
+          }
+        } catch (error) {
+          clearTimeout(timeoutId)
+          
+          // Handle specific error types
+          if (error instanceof Error) {
+            if (error.name === 'AbortError') {
+              const timeoutError = new Error('Upload timed out. Please try again.')
+              if (attempt === maxRetries) throw timeoutError
+              
+              toast.error(`Attempt ${attempt} timed out, retrying...`)
+              await sleep(1000 * Math.pow(2, attempt - 1)) // Exponential backoff
+              continue
+            }
+            
+            // Network or other fetch errors
+            if (error.message.includes('fetch') || error.message.includes('network')) {
+              if (attempt === maxRetries) {
+                throw new Error('Network error. Please check your connection and try again.')
+              }
+              
+              toast.error(`Network error on attempt ${attempt}, retrying...`)
+              await sleep(1000 * Math.pow(2, attempt - 1)) // Exponential backoff
+              continue
+            }
+          }
+          
+          // For other errors, don't retry
+          throw error
+        }
       }
     } catch (error) {
       console.error('Resume upload error:', error)
-      setParseError(error instanceof Error ? error.message : 'Failed to upload resume')
-      toast.error('Failed to parse resume')
+      
+      let userMessage = 'Failed to upload resume'
+      if (error instanceof Error) {
+        userMessage = error.message
+      }
+      
+      setParseError(userMessage)
+      toast.error(userMessage)
     } finally {
+      if (controller) {
+        controller = null
+      }
       setIsUploading(false)
       setIsParsing(false)
     }
@@ -291,7 +396,7 @@ export function ResumeUpload({ userId, onParsingComplete, className }: ResumeUpl
                         <div className="flex flex-wrap gap-2">
                           {parseResult.skills.slice(0, 10).map((skill, index) => (
                             <Badge key={index} variant="secondary" className="text-xs">
-                              {skill.name}
+                              {skill?.name ?? 'Unknown skill'}
                             </Badge>
                           ))}
                           {parseResult.skills.length > 10 && (

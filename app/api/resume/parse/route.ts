@@ -3,6 +3,8 @@ import { parseAndValidateResume } from '@/lib/ai/resume-parser'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import type { Database } from '@/lib/types/database'
+import { supabaseAdmin } from '@/lib/supabase-admin'
+import { timingSafeEqual } from 'crypto'
 
 // Proper PDF text extraction using pdf-parse with dynamic import
 async function extractTextFromPDF(buffer: ArrayBuffer): Promise<string> {
@@ -42,16 +44,54 @@ export async function POST(request: NextRequest) {
   let fieldsUpdated: string[] = []
   
   try {
-    const cookieStore = await cookies()
-    const supabase = createRouteHandlerClient<Database>({ cookies: () => cookieStore })
-    
-    // Verify user authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
+    // Support two auth modes:
+    // 1) Internal calls authorized via Authorization: Bearer <INTERNAL_API_TOKEN> and X-User-Id header
+    // 2) Standard user calls authorized via Supabase session cookies
+    const authHeader = request.headers.get('authorization') || request.headers.get('Authorization')
+    const internalToken = process.env.INTERNAL_API_TOKEN
+
+    let isInternal = false
+    let targetUserId: string | null = null
+    let supabase: ReturnType<typeof createRouteHandlerClient<Database>> | typeof supabaseAdmin
+
+    if (authHeader && internalToken) {
+      const [type, token] = authHeader.split(' ')
+      if (type === 'Bearer' && token) {
+        const a = Buffer.from(token)
+        const b = Buffer.from(internalToken)
+        if (a.length === b.length && timingSafeEqual(a, b)) {
+          isInternal = true
+          targetUserId = request.headers.get('x-user-id') || request.headers.get('X-User-Id')
+          if (!targetUserId) {
+            return NextResponse.json(
+              { success: false, error: 'Missing X-User-Id header' },
+              { status: 400 }
+            )
+          }
+          supabase = supabaseAdmin
+        }
+      }
+      if (!isInternal) {
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+    }
+
+    if (!isInternal) {
+      const cookieStore = await cookies()
+      const routeClient = createRouteHandlerClient<Database>({ cookies: () => cookieStore })
+      // Verify user authentication
+      const { data: { user }, error: authError } = await routeClient.auth.getUser()
+      if (authError || !user) {
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+      targetUserId = user.id
+      supabase = routeClient
     }
 
     const formData = await request.formData()
@@ -168,13 +208,13 @@ export async function POST(request: NextRequest) {
       await supabase
         .from('resume_parsing_results')
         .delete()
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId!)
 
       // Insert new parsing result
       const { error: insertError } = await supabase
         .from('resume_parsing_results')
         .insert({
-          user_id: user.id,
+          user_id: targetUserId!,
           original_filename: file.name,
           file_type: file.type,
           extracted_data: parseResult.data,
@@ -196,7 +236,7 @@ export async function POST(request: NextRequest) {
         const { data: existingUser, error: fetchError } = await supabase
           .from('users')
           .select('full_name, phone, location, linkedin_url, github_url, portfolio_url, experiences, educations, skills')
-          .eq('id', user.id)
+          .eq('id', targetUserId!)
           .single()
 
         if (fetchError) {
@@ -327,12 +367,12 @@ export async function POST(request: NextRequest) {
 
         if (Object.keys(userUpdate).length > 0) {
           console.log('🤖 AI Processing - About to update user profile:', JSON.stringify(userUpdate, null, 2))
-          console.log('🤖 AI Processing - User ID:', user.id)
+          console.log('🤖 AI Processing - User ID:', targetUserId)
           
           const { error: userUpdateError, data: updateResult } = await supabase
             .from('users')
             .update(userUpdate)
-            .eq('id', user.id)
+            .eq('id', targetUserId!)
             .select()
 
           if (userUpdateError) {

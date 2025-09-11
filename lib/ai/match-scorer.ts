@@ -73,7 +73,7 @@ const matchScoreSchema = {
   potential_concerns: "string - areas where candidate might not be ideal fit",
   
   confidence_score: "number 0-1 - AI confidence in this analysis",
-  recommendations: ["array of strings - specific recommendations for both candidate and employer"]
+  recommendations: "array of strings - specific recommendations for both candidate and employer"
 };
 
 /**
@@ -232,7 +232,7 @@ export async function getQuickMatchScore(
   candidateSkills: string[],
   candidateExperience: string
 ): Promise<number> {
-  const systemContext = `You are a quick job-candidate matcher. Provide only a single number from 0-100 representing match quality.`;
+  const systemContext = `You are a quick job-candidate matcher. Respond ONLY with valid minified JSON: {"score": <0-100 integer>}. No prose.`;
   
   const prompt = `
 Job: ${jobTitle}
@@ -240,7 +240,7 @@ Requirements: ${jobRequirements}
 Candidate Skills: ${candidateSkills.join(', ')}
 Experience: ${candidateExperience}
 
-Match score (0-100 only):`;
+Respond with: {"score": <0-100>}`;
 
   try {
     const result = await generateStructuredResponse<{score: number}>(

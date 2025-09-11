@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import type { Database } from '@/lib/types/database';
+import type { Database } from '@/lib/database.types';
 import { AuthUser, ProfileRow as UserProfile, UserRow, AuthState } from '@/lib/auth';
 
 const AuthContext = createContext<AuthState & {
@@ -32,12 +32,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (currentUser) {
         // Get user data (role, email, full_name, etc.)
-        const { data: currentUserData } = await supabase
+        const { data: currentUserData, error: currentUserDataError } = await supabase
           .from('users')
           .select('*')
           .eq('id', currentUser.id)
           .maybeSingle();
-        setUserData((currentUserData as UserRow) || null);
+        
+        if (currentUserDataError) {
+          console.error('Error fetching user data:', currentUserDataError);
+          // Keep user authenticated but set userData to null
+          setUserData(null);
+          setProfile(null);
+        } else {
+          setUserData((currentUserData as UserRow) || null);
+        }
 
         // Profile data now stored in users table (single-table approach)
         setProfile(null); // No longer using separate profiles table
@@ -77,16 +85,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (session?.user) {
             setUser(session.user as AuthUser);
             
-            // Get user data
-            const { data: currentUserData } = await supabase
-              .from('users')
-              .select('*')
-              .eq('id', session.user.id)
-              .maybeSingle();
-            setUserData((currentUserData as UserRow) || null);
-            
-            // Profile data now in users table (single-table approach)
-            setProfile(null); // No longer using separate profiles table
+            try {
+              // Get user data
+              const { data: currentUserData, error: currentUserDataError } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', session.user.id)
+                .maybeSingle();
+
+              if (currentUserDataError) {
+                console.error('Error fetching user data on auth state change:', currentUserDataError);
+                // Keep user authenticated but set userData to null
+                setUserData(null);
+                setProfile(null);
+              } else {
+                setUserData((currentUserData as UserRow) || null);
+              }
+
+              // Profile data now in users table (single-table approach)
+              setProfile(null); // No longer using separate profiles table
+            } catch (err) {
+              console.error('Unexpected error during auth state change user fetch:', err);
+              // Keep user authenticated but clear userData
+              setUserData(null);
+              setProfile(null);
+            }
           }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);

@@ -72,14 +72,14 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
       
       if (result.error) {
         toast({
-          title: "Error",
+          title: "Ошибка",
           description: result.error,
           variant: "destructive",
         })
       } else {
         toast({
-          title: "Success",
-          description: "Company profile updated successfully",
+          title: "Успешно",
+          description: "Профиль компании успешно обновлён",
         })
       }
     })
@@ -124,13 +124,13 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-[#0A2540]">Company Profile</h1>
+        <h1 className="text-3xl font-bold text-[#0A2540]">Профиль компании</h1>
         <Button 
           onClick={form.handleSubmit(onSubmit)}
           disabled={isPending}
           className="bg-[#FF7A00] hover:bg-[#E66A00]"
         >
-          {isPending ? 'Saving...' : 'Save Changes'}
+          {isPending ? 'Сохранение...' : 'Сохранить изменения'}
         </Button>
       </div>
 
@@ -162,10 +162,10 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
                       name="companyName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Company Name</FormLabel>
+                          <FormLabel>Название компании</FormLabel>
                           <FormControl>
                             <Input 
-                              placeholder="TechCorp Inc." 
+                              placeholder="ООО ТехКорп" 
                               className="text-lg font-semibold" 
                               {...field} 
                             />
@@ -180,9 +180,9 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
                         name="industry"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Industry</FormLabel>
+                            <FormLabel>Отрасль</FormLabel>
                             <FormControl>
-                              <Input placeholder="Information Technology" {...field} />
+                              <Input placeholder="Информационные технологии" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -193,9 +193,9 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
                         name="companySize"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Company Size</FormLabel>
+                            <FormLabel>Размер компании</FormLabel>
                             <FormControl>
-                              <Input placeholder="50-100 employees" {...field} />
+                              <Input placeholder="50–100 сотрудников" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -211,8 +211,8 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
           {/* Company Info */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-[#0A2540]">Basic Information</CardTitle>
-              <CardDescription>Tell candidates about your company</CardDescription>
+              <CardTitle className="text-[#0A2540]">Основная информация</CardTitle>
+              <CardDescription>Расскажите кандидатам о вашей компании</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <FormField
@@ -220,10 +220,10 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
                 name="companyDescription"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Company Description</FormLabel>
+                    <FormLabel>Описание компании</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Tell us about your mission, values and company activities..."
+                        placeholder="Опишите миссию, ценности и деятельность компании..."
                         className="min-h-[120px]"
                         {...field}
                       />
@@ -239,7 +239,7 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
                   name="foundedYear"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Founded Year</FormLabel>
+                      <FormLabel>Год основания</FormLabel>
                       <FormControl>
                         <Input 
                           type="number"
@@ -257,7 +257,7 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
                   name="websiteUrl"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Website</FormLabel>
+                      <FormLabel>Сайт</FormLabel>
                       <FormControl>
                         <Input placeholder="https://techcorp.com" {...field} />
                       </FormControl>
@@ -274,7 +274,7 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
             <CardHeader>
               <CardTitle className="text-[#0A2540] flex items-center">
                 <MapPin className="w-5 h-5 mr-2" />
-                Location
+                Местоположение
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -284,9 +284,9 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
                   name="country"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Country</FormLabel>
+                      <FormLabel>Страна</FormLabel>
                       <FormControl>
-                        <Input placeholder="United States" {...field} />
+                        <Input placeholder="Страна" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -297,9 +297,9 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
                   name="city"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>City</FormLabel>
+                      <FormLabel>Город</FormLabel>
                       <FormControl>
-                        <Input placeholder="New York" {...field} />
+                        <Input placeholder="Город" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -311,9 +311,9 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Office Address</FormLabel>
+                    <FormLabel>Адрес офиса</FormLabel>
                     <FormControl>
-                      <Input placeholder="123 Tech Street, Suite 100" {...field} />
+                      <Input placeholder="Улица, дом, офис" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -325,8 +325,8 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
           {/* Benefits */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-[#0A2540]">Benefits and Perks</CardTitle>
-              <CardDescription>What do you offer to your employees</CardDescription>
+              <CardTitle className="text-[#0A2540]">Льготы и бонусы</CardTitle>
+              <CardDescription>Что вы предлагаете сотрудникам</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap gap-2">
@@ -342,7 +342,7 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
               </div>
               <div className="flex space-x-2">
                 <Input 
-                  placeholder="Add benefit..." 
+                  placeholder="Добавить льготу..." 
                   value={newBenefit}
                   onChange={(e) => setNewBenefit(e.target.value)}
                   onKeyPress={handleBenefitKeyPress}
@@ -361,8 +361,8 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
           {/* Technologies */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-[#0A2540]">Technologies and Tools</CardTitle>
-              <CardDescription>Your company's technology stack</CardDescription>
+              <CardTitle className="text-[#0A2540]">Технологии и инструменты</CardTitle>
+              <CardDescription>Технологический стек компании</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap gap-2">
@@ -378,7 +378,7 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
               </div>
               <div className="flex space-x-2">
                 <Input 
-                  placeholder="Add technology..." 
+                  placeholder="Добавить технологию..." 
                   value={newTechnology}
                   onChange={(e) => setNewTechnology(e.target.value)}
                   onKeyPress={handleTechnologyKeyPress}
@@ -397,8 +397,8 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
           {/* Company Culture */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-[#0A2540]">Company Culture</CardTitle>
-              <CardDescription>Tell us about work atmosphere and values</CardDescription>
+              <CardTitle className="text-[#0A2540]">Культура компании</CardTitle>
+              <CardDescription>Опишите атмосферу и ценности в компании</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <FormField
@@ -406,10 +406,10 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
                 name="companyCulture"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Culture Description</FormLabel>
+                    <FormLabel>Описание культуры</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Describe work atmosphere, team values, approach to work..."
+                        placeholder="Опишите атмосферу, ценности команды и подход к работе..."
                         className="min-h-[100px]"
                         {...field}
                       />
@@ -424,7 +424,7 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
           {/* Contact Information */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-[#0A2540]">Contact Information</CardTitle>
+              <CardTitle className="text-[#0A2540]">Контактная информация</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -433,11 +433,11 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
                   name="hrEmail"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>HR Department Email</FormLabel>
+                      <FormLabel>Email отдела HR</FormLabel>
                       <FormControl>
                         <Input 
                           type="email" 
-                          placeholder="hr@techcorp.com" 
+                          placeholder="hr@company.com" 
                           {...field} 
                         />
                       </FormControl>
@@ -450,9 +450,9 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Phone</FormLabel>
+                      <FormLabel>Телефон</FormLabel>
                       <FormControl>
-                        <Input placeholder="+1 (555) 123-4567" {...field} />
+                        <Input placeholder="+7 (777) 123-45-67" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -464,9 +464,9 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
                 name="hrContactName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>HR Contact Person</FormLabel>
+                    <FormLabel>Контактное лицо HR</FormLabel>
                     <FormControl>
-                      <Input placeholder="Anna Smith, HR Manager" {...field} />
+                      <Input placeholder="Имя и должность" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

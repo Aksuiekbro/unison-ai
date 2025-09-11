@@ -115,24 +115,38 @@ export async function updateJobSeekerProfile(formData: FormData) {
         try {
           const parseFormData = new FormData()
           parseFormData.append('resume', resumeFile)
-          
-          const parseResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/resume/parse`, {
-            method: 'POST',
-            body: parseFormData,
-            headers: {
-              'Cookie': (await cookies()).toString()
-            }
-          })
-          
-          if (parseResponse.ok) {
-            const parseResult = await parseResponse.json()
-            console.log('Resume AI processing result:', parseResult)
-            aiProcessingResult = parseResult
-            if (parseResult.fieldsUpdated) {
-              console.log('AI updated fields:', parseResult.fieldsUpdated)
-            }
+
+          // Use a server-side internal token instead of forwarding raw cookies
+          const internalToken = process.env.INTERNAL_API_TOKEN
+          if (!internalToken) {
+            console.warn('INTERNAL_API_TOKEN is not configured; skipping resume AI processing')
           } else {
-            console.error('Resume AI processing failed:', await parseResponse.text())
+            const parseResponse = await fetch('/api/resume/parse', {
+              method: 'POST',
+              body: parseFormData,
+              headers: {
+                Authorization: `Bearer ${internalToken}`,
+                'X-User-Id': user.id,
+              },
+              // Do not include cookies or credentials; this is an internal call
+              // and is authorized solely by the internal token
+              cache: 'no-store',
+            })
+            
+            if (parseResponse.ok) {
+              const parseResult = await parseResponse.json()
+              if (process.env.NODE_ENV !== 'production') {
+                console.log('Resume AI processing result: success, fields updated:', parseResult?.fieldsUpdated?.length || 0)
+              }
+              aiProcessingResult = parseResult
+              if (parseResult.fieldsUpdated) {
+                if (process.env.NODE_ENV !== 'production') {
+                  console.log('AI updated fields count:', parseResult.fieldsUpdated?.length || 0)
+                }
+              }
+            } else {
+              console.error('Resume AI processing failed:', await parseResponse.text())
+            }
           }
         } catch (parseError) {
           console.error('Failed to process resume with AI:', parseError)
@@ -149,7 +163,9 @@ export async function updateJobSeekerProfile(formData: FormData) {
 
     // Get list of fields that were updated by AI in this request
     const aiUpdatedFields = (aiProcessingResult?.fieldsUpdated || []) as string[]
-    console.log('📝 Profile Action - AI updated these fields, will not overwrite:', aiUpdatedFields)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📝 Profile Action - AI protection: avoiding overwrite of', aiUpdatedFields.length, 'fields')
+    }
 
     // Only add fields to update if they have actual data AND weren't updated by AI
     if ((validatedData.firstName || validatedData.lastName) && !aiUpdatedFields.includes('full_name')) {
@@ -197,15 +213,19 @@ export async function updateJobSeekerProfile(formData: FormData) {
 
     // Note: portfolio_url is handled by AI processing, form doesn't have this field
 
-    console.log('📝 Profile Action - Updating database with data:', JSON.stringify(updateData, null, 2))
-    console.log('📝 Profile Action - User ID:', user.id)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📝 Profile Action - Update data fields:', Object.keys(updateData))
+      console.log('📝 Profile Action - Updating profile for authenticated user')
+    }
     console.log('📝 Profile Action - AI Processing Result:', aiProcessingResult ? 'Present' : 'Not available')
     
     if (aiProcessingResult && aiProcessingResult.fieldsUpdated) {
-      console.log('📝 Profile Action - AI previously updated fields:', aiProcessingResult.fieldsUpdated)
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('📝 Profile Action - AI updated fields count:', aiProcessingResult.fieldsUpdated?.length || 0)
+      }
     }
 
-    const { error: usersUpdateError, data: updateResult } = await supabase
+    const { error: usersUpdateError } = await supabase
       .from('users')
       .update(updateData)
       .eq('id', user.id)
@@ -216,7 +236,9 @@ export async function updateJobSeekerProfile(formData: FormData) {
       return { error: `Failed to update profile: ${usersUpdateError.message}` }
     }
 
-    console.log('✅ Profile Action - Database update successful:', updateResult)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('✅ Profile Action - Database update successful')
+    }
 
     // All profile data now stored in users table - simplified single-table approach
 
@@ -268,8 +290,7 @@ export async function addJobSeekerExperience(formData: FormData) {
     // Validate data
     const validatedData = jobSeekerExperienceSchema.parse(data)
 
-    // Get current experiences array and add new experience
-    const currentExperiences = (userData.experiences as any[]) || []
+    // Atomically append the new experience via RPC to avoid race conditions
     const newExperience = {
       id: crypto.randomUUID(),
       position: validatedData.position,
@@ -279,14 +300,12 @@ export async function addJobSeekerExperience(formData: FormData) {
       description: validatedData.description || undefined,
       isCurrent: validatedData.isCurrent,
     }
-    
-    const updatedExperiences = [...currentExperiences, newExperience]
 
-    // Update experiences JSON array in users table
     const { error: updateError } = await supabase
-      .from('users')
-      .update({ experiences: updatedExperiences })
-      .eq('id', user.id)
+      .rpc('append_user_experience', {
+        p_user_id: user.id,
+        p_experience: newExperience as any,
+      })
 
     if (updateError) {
       console.error('Error adding experience:', updateError)
@@ -313,10 +332,10 @@ export async function addJobSeekerEducation(formData: FormData) {
       return { error: 'Authentication required' }
     }
 
-    // Verify job seeker role and get current educations
+    // Verify job seeker role
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role, educations')
+      .select('role')
       .eq('id', user.id)
       .single()
 
@@ -335,8 +354,7 @@ export async function addJobSeekerEducation(formData: FormData) {
     // Validate data
     const validatedData = jobSeekerEducationSchema.parse(data)
 
-    // Get current educations array and add new education
-    const currentEducations = (userData.educations as any[]) || []
+    // Build the new education object (id server-generated for uniqueness)
     const newEducation = {
       id: crypto.randomUUID(),
       institution: validatedData.institution,
@@ -345,21 +363,20 @@ export async function addJobSeekerEducation(formData: FormData) {
       graduationYear: validatedData.graduationYear,
     }
     
-    const updatedEducations = [...currentEducations, newEducation]
+    // Atomic append via RPC to avoid race conditions on JSONB arrays
+    const { data: updatedUser, error: rpcError } = await supabase
+      .rpc('append_user_education', {
+        p_user_id: user.id,
+        p_education: newEducation as any,
+      })
 
-    // Update educations JSON array in users table
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ educations: updatedEducations })
-      .eq('id', user.id)
-
-    if (updateError) {
-      console.error('Error adding education:', updateError)
+    if (rpcError) {
+      console.error('Error adding education via RPC:', rpcError)
       return { error: 'Failed to add education' }
     }
 
     revalidatePath('/job-seeker/profile')
-    return { success: true }
+    return { success: true, user: updatedUser, education: newEducation }
 
   } catch (error) {
     console.error('Error in addJobSeekerEducation:', error)

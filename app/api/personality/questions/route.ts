@@ -125,17 +125,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if questions already exist
-    const { data: existingQuestions } = await supabase
+    // Check if questions already exist and get exact count
+    const { count: existingCount, error: existingCountError } = await supabase
       .from('questionnaires')
-      .select('id')
-      .limit(1)
+      .select('id', { count: 'exact', head: true })
 
-    if (existingQuestions && existingQuestions.length > 0) {
+    if (existingCountError) {
+      console.error('Database error checking questions count:', existingCountError)
+      return NextResponse.json(
+        { success: false, error: 'Failed to check existing questions' },
+        { status: 500 }
+      )
+    }
+
+    if ((existingCount ?? 0) > 0) {
       return NextResponse.json({
         success: true,
         message: 'Questions already exist in database',
-        count: existingQuestions.length
+        count: existingCount
       })
     }
 

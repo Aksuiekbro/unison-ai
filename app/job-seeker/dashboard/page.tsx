@@ -46,15 +46,20 @@ export default async function JobSeekerDashboard() {
   }
 
   if (user) {
-    const { data: userData } = await supabase
+    const { data: userData, error: userDataError } = await supabase
       .from('users')
       .select('full_name,email')
       .eq('id', user.id)
       .single()
-    displayName = userData?.full_name || (userData?.email ? userData.email.split('@')[0] : '')
+    if (userDataError || !userData) {
+      console.error('Error fetching user data for dashboard', userDataError)
+      displayName = user.email ? user.email.split('@')[0] : ''
+    } else {
+      displayName = userData.full_name || (userData.email ? userData.email.split('@')[0] : '')
+    }
 
     // Applications (latest 5)
-    const { data: apps } = await supabase
+    const { data: apps, error: appsError } = await supabase
       .from('applications')
       .select(`
         id,
@@ -70,8 +75,10 @@ export default async function JobSeekerDashboard() {
       .eq('applicant_id', user.id)
       .order('applied_at', { ascending: false })
       .limit(5)
-
-    applications = (apps as any[] | null || []).map((a: any) => ({
+    if (appsError) {
+      console.error('Error fetching applications for dashboard', appsError)
+    }
+    applications = ((apps as any[] | null) ?? []).map((a: any) => ({
       id: a.id,
       company: a.job?.company?.name || '—',
       position: a.job?.title || '—',
@@ -80,7 +87,7 @@ export default async function JobSeekerDashboard() {
     }))
 
     // Recommended jobs (latest published 3)
-    const { data: jobs } = await supabase
+    const { data: jobs, error: jobsError } = await supabase
       .from('jobs')
       .select(`
         id,
@@ -96,8 +103,10 @@ export default async function JobSeekerDashboard() {
       .eq('status', 'published')
       .order('posted_at', { ascending: false })
       .limit(3)
-
-    recommendations = (jobs as any[] | null || []).map((j: any) => ({
+    if (jobsError) {
+      console.error('Error fetching jobs for dashboard', jobsError)
+    }
+    recommendations = ((jobs as any[] | null) ?? []).map((j: any) => ({
       id: j.id,
       company: j.company?.name || '—',
       position: j.title,
@@ -106,12 +115,14 @@ export default async function JobSeekerDashboard() {
     }))
 
     // Profile progress (simple heuristic)
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('users')
       .select('full_name,current_job_title,bio,skills,experiences,educations,location,linkedin_url,github_url,portfolio_url,resume_url')
       .eq('id', user.id)
       .single()
-
+    if (profileError) {
+      console.error('Error fetching profile for dashboard', profileError)
+    }
     if (profile) {
       const items: boolean[] = [
         !!profile.full_name && !!profile.current_job_title,

@@ -118,9 +118,19 @@ CREATE TABLE IF NOT EXISTS public.saved_jobs (
     UNIQUE(job_id, candidate_id)
 );
 
+-- RLS
+ALTER TABLE public.saved_jobs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Candidates can select their saved jobs" ON public.saved_jobs
+  FOR SELECT USING (auth.uid() = candidate_id);
+CREATE POLICY "Candidates can insert their saved jobs" ON public.saved_jobs
+  FOR INSERT WITH CHECK (auth.uid() = candidate_id);
+CREATE POLICY "Candidates can update their saved jobs" ON public.saved_jobs
+  FOR UPDATE USING (auth.uid() = candidate_id) WITH CHECK (auth.uid() = candidate_id);
+CREATE POLICY "Candidates can delete their saved jobs" ON public.saved_jobs
+  FOR DELETE USING (auth.uid() = candidate_id);
+
 CREATE INDEX IF NOT EXISTS idx_saved_jobs_candidate_id ON public.saved_jobs(candidate_id);
 CREATE INDEX IF NOT EXISTS idx_saved_jobs_job_id ON public.saved_jobs(job_id);
-
 -- Profiles table (unified extended profile data for both job seekers and employers)
 CREATE TABLE public.profiles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -523,6 +533,7 @@ ALTER TABLE public.test_responses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.personality_analysis ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.match_scores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.resume_parsing_results ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.saved_jobs ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for users table
 CREATE POLICY "Users can view their own profile" ON public.users
@@ -746,3 +757,16 @@ CREATE POLICY "System can create resume parsing results" ON public.resume_parsin
 
 CREATE POLICY "System can update resume parsing results" ON public.resume_parsing_results
     FOR UPDATE USING (auth.role() = 'service_role' OR auth.uid() = user_id);
+
+-- RLS Policies for saved_jobs table
+CREATE POLICY "Candidates can select their saved jobs" ON public.saved_jobs
+    FOR SELECT USING (auth.uid() = candidate_id);
+
+CREATE POLICY "Candidates can insert their saved jobs" ON public.saved_jobs
+    FOR INSERT WITH CHECK (auth.uid() = candidate_id);
+
+CREATE POLICY "Candidates can update their saved jobs" ON public.saved_jobs
+    FOR UPDATE USING (auth.uid() = candidate_id) WITH CHECK (auth.uid() = candidate_id);
+
+CREATE POLICY "Candidates can delete their saved jobs" ON public.saved_jobs
+    FOR DELETE USING (auth.uid() = candidate_id);

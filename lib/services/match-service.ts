@@ -191,10 +191,10 @@ async function calculateMatchScoreForJobUser(
 
     const matchResult = aiResult.data;
 
-    // Cache the result in the database
-    const { data: savedScore } = await supabase
+    // Cache the result in the database (upsert to handle duplicates)
+    const { data: savedScore, error: upsertError } = await supabase
       .from('match_scores')
-      .insert({
+      .upsert({
         job_id: jobId,
         candidate_id: userId,
         overall_score: matchResult.overall_score,
@@ -206,9 +206,15 @@ async function calculateMatchScoreForJobUser(
         strengths: matchResult.strengths,
         potential_concerns: matchResult.potential_concerns,
         ai_confidence_score: matchResult.confidence_score
+      }, {
+        onConflict: 'job_id,candidate_id'
       })
       .select()
       .single();
+
+    if (upsertError) {
+      throw new Error(`Failed to save match score: ${upsertError.message}`);
+    }
 
     return {
       overall_score: matchResult.overall_score,

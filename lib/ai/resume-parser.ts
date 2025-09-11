@@ -15,7 +15,7 @@ export interface ResumeParsingResult {
     job_title: string;
     company_name: string;
     start_date: string; // YYYY-MM format
-    end_date?: string; // YYYY-MM format, null if current
+    end_date?: string; // YYYY-MM format, optional/undefined if current
     is_current: boolean;
     description: string;
     achievements: string[];
@@ -79,7 +79,7 @@ const resumeParsingSchema = {
       job_title: "string",
       company_name: "string",
       start_date: "string (YYYY-MM format)",
-      end_date: "string (YYYY-MM format, null if current)",
+      end_date: "string (YYYY-MM format, optional/undefined if current)",
       is_current: "boolean",
       description: "string",
       achievements: ["array of strings"]
@@ -91,7 +91,7 @@ const resumeParsingSchema = {
       degree: "string", 
       field_of_study: "string",
       start_date: "string (YYYY-MM format)",
-      end_date: "string (YYYY-MM format, null if current)",
+      end_date: "string (YYYY-MM format, optional/undefined if current)",
       is_current: "boolean",
       gpa: "string (optional)",
       achievements: ["array of strings"]
@@ -159,12 +159,18 @@ Guidelines:
 - Be conservative with confidence scores - only high scores for very clear data
 
 URL FORMATTING RULES:
-- ALWAYS format URLs with proper https:// prefix
-- For LinkedIn URLs: convert "linkedin.com/in/..." to "https://linkedin.com/in/..."
-- For GitHub URLs: convert "github.com/..." to "https://github.com/..."
-- For portfolio/website URLs: convert "domain.com" to "https://domain.com"
-- Never leave URLs without protocol prefixes
-- If a URL already has http:// or https://, keep it as is
+- Parse URLs carefully to avoid breaking valid links
+- If URL already contains a valid scheme (http://, https://, ftp://, mailto:, etc.), leave it unchanged
+- For host-only patterns (linkedin.com/in/..., github.com/user, domain.com), prepend "https://" only if no scheme is present
+- Preserve existing paths, query parameters, and fragments
+- Accept common schemes: https, http, ftp, mailto, tel
+- For malformed or suspicious URLs, return them as-is rather than breaking them
+- Examples:
+  * "linkedin.com/in/john" → "https://linkedin.com/in/john"
+  * "https://github.com/user/repo" → "https://github.com/user/repo" (unchanged)
+  * "http://example.com/path?query=1" → "http://example.com/path?query=1" (unchanged)
+  * "ftp://files.example.com" → "ftp://files.example.com" (unchanged)
+  * "mailto:user@domain.com" → "mailto:user@domain.com" (unchanged)
 
 Focus on accuracy over completeness.
 `;
