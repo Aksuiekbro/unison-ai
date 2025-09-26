@@ -1,9 +1,8 @@
 "use server"
 
 import { z } from "zod"
-import { createServerActionClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
 import type { Database } from '@/lib/database.types'
+import { createClient } from '@/lib/supabase-server'
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -23,8 +22,7 @@ export async function loginAction(prevState: any, formData: FormData) {
   }
 
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerActionClient<Database>({ cookies: () => cookieStore })
+    const supabase = await createClient()
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: parsed.data.email,
       password: parsed.data.password,

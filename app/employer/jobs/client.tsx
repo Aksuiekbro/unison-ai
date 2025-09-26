@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Briefcase,
   Building2,
+  Settings,
   Plus,
   Search,
   Users,
@@ -112,7 +113,7 @@ export default function EmployerJobsClient({ userId }: EmployerJobsClientProps) 
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="flex">
+      <div className="flex min-h-screen">
         {/* Sidebar */}
         <div className="w-64 bg-white shadow-sm border-r">
           <div className="p-6">
@@ -142,6 +143,13 @@ export default function EmployerJobsClient({ userId }: EmployerJobsClientProps) 
             >
               <Building2 className="w-5 h-5 mr-3" />
               Профиль компании
+            </Link>
+            <Link
+              href="/employer/settings"
+              className="flex items-center px-4 py-3 text-[#333333] hover:bg-gray-100 rounded-lg"
+            >
+              <Settings className="w-5 h-5 mr-3" />
+              Настройки
             </Link>
           </nav>
         </div>

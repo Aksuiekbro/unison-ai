@@ -1,12 +1,46 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 import type { Database } from '@/lib/database.types'
 
 export async function middleware(req: NextRequest) {
   const response = NextResponse.next()
 
-  const supabase = createMiddlewareClient<Database>({ req, res: response })
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return req.cookies.get(name)?.value
+        },
+        set(name: string, value: string, options: any) {
+          req.cookies.set({
+            name,
+            value,
+            ...options,
+          })
+          response.cookies.set({
+            name,
+            value,
+            ...options,
+          })
+        },
+        remove(name: string, options: any) {
+          req.cookies.set({
+            name,
+            value: '',
+            ...options,
+          })
+          response.cookies.set({
+            name,
+            value: '',
+            ...options,
+          })
+        },
+      },
+    }
+  )
 
   // Validate user via access token; refresh if needed
   const {
@@ -84,7 +118,7 @@ export async function middleware(req: NextRequest) {
     try {
       const { data: userData } = await supabase
         .from('users')
-        .select('role')
+        .select('role, productivity_assessment_completed')
         .eq('id', user.id)
         .single()
 
@@ -100,9 +134,26 @@ export async function middleware(req: NextRequest) {
       if (pathname.startsWith('/employer') && normalizedRole !== 'employer') {
         return NextResponse.redirect(new URL('/job-seeker/dashboard', req.url))
       }
-      
+
       if (pathname.startsWith('/job-seeker') && normalizedRole !== 'job_seeker') {
         return NextResponse.redirect(new URL('/employer/dashboard', req.url))
+      }
+
+      // Mandatory productivity assessment for job seekers
+      if (normalizedRole === 'job_seeker') {
+        const assessmentCompleted = userData?.productivity_assessment_completed || false
+        const isTestPage = pathname === '/job-seeker/test'
+        const isResultsPage = pathname === '/job-seeker/results'
+
+        // If assessment not completed and not on test page, redirect to test
+        if (!assessmentCompleted && !isTestPage && !isResultsPage) {
+          return NextResponse.redirect(new URL('/job-seeker/test', req.url))
+        }
+
+        // If assessment completed and trying to access test page, redirect to results
+        if (assessmentCompleted && isTestPage) {
+          return NextResponse.redirect(new URL('/job-seeker/results', req.url))
+        }
       }
     } catch (error) {
       // If database query fails, fall back to user metadata
@@ -117,7 +168,7 @@ export async function middleware(req: NextRequest) {
       if (pathname.startsWith('/employer') && normalizedRole !== 'employer') {
         return NextResponse.redirect(new URL('/job-seeker/dashboard', req.url))
       }
-      
+
       if (pathname.startsWith('/job-seeker') && normalizedRole !== 'job_seeker') {
         return NextResponse.redirect(new URL('/employer/dashboard', req.url))
       }

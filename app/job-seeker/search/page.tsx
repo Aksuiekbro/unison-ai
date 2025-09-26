@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,39 +14,27 @@ import Link from "next/link"
 import { searchJobsWithMatchScores, JobWithMatchScore } from "@/lib/services/match-service"
 import { JobFilters } from "@/lib/types"
 import { JobApplicationDialog } from "@/components/job-application-dialog"
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createBrowserClient } from '@supabase/ssr'
 import type { Database } from '@/lib/database.types'
+import type { User as AuthUser } from '@supabase/supabase-js'
 
 export default function JobSearch() {
   const [jobs, setJobs] = useState<JobWithMatchScore[]>([])
   const [loading, setLoading] = useState(true)
   const [applying, setApplying] = useState<string | null>(null)
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<AuthUser | null>(null)
   const [filters, setFilters] = useState<JobFilters>({})
   const [selectedJob, setSelectedJob] = useState<JobWithMatchScore | null>(null)
   const [showApplicationDialog, setShowApplicationDialog] = useState(false)
 
-  const supabase = useMemo(() => createClientComponentClient<Database>(), [])
+  const supabase = useMemo(() => createBrowserClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  ), [])
 
-  useEffect(() => {
-    // Get current user
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-      // Reload jobs when user changes to recalculate match scores
-      loadJobs()
-    }
-    getUser()
-  }, [])
+  const filtersKey = useMemo(() => JSON.stringify(filters), [filters])
 
-  // Reload jobs when user changes (login/logout) 
-  useEffect(() => {
-    if (user !== null) { // Only reload if user state has been initialized
-      loadJobs(filters)
-    }
-  }, [user?.id])
-
-  const loadJobs = async (searchFilters: JobFilters = {}) => {
+  const loadJobs = useCallback(async (searchFilters: JobFilters = {}) => {
     try {
       setLoading(true)
       const jobData = await searchJobsWithMatchScores(user?.id || null, searchFilters)
@@ -57,7 +45,27 @@ export default function JobSearch() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user?.id])
+
+  useEffect(() => {
+    // Get current user
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+      // Reload jobs when user changes to recalculate match scores
+      loadJobs()
+    }
+    getUser()
+  }, [supabase, loadJobs])
+
+  // Load or reload jobs when authenticated user identity (id) or filters change
+  useEffect(() => {
+    if (user?.id !== undefined) {
+      loadJobs(JSON.parse(filtersKey) as JobFilters)
+    }
+  }, [user?.id, filtersKey, loadJobs])
+
+  
 
   const handleApply = async (job: JobWithMatchScore) => {
     if (!user) {
@@ -238,7 +246,11 @@ export default function JobSearch() {
                         <Checkbox 
                           id="remote" 
                           checked={filters.remote_allowed || false}
-                          onCheckedChange={(checked) => handleFilterChange('remote_allowed', checked || undefined)}
+                          onCheckedChange={(checked) => {
+                            if (checked === true) return handleFilterChange('remote_allowed', true)
+                            if (checked === false) return handleFilterChange('remote_allowed', false)
+                            return handleFilterChange('remote_allowed', undefined)
+                          }}
                         />
                         <Label htmlFor="remote" className="text-sm">
                           Удаленная работа
@@ -328,14 +340,14 @@ export default function JobSearch() {
                               <div className="flex items-center justify-between">
                                 <div className="flex flex-wrap gap-2">
                                   {/* Display job skills */}
-                                  {job.job_skills?.slice(0, 3).map((jobSkill) => (
-                                    <Badge key={jobSkill.id} variant={jobSkill.required ? "default" : "secondary"} className="text-xs">
-                                      {jobSkill.skills.name}
+                                  {job.job_skills?.filter(Boolean)?.slice(0, 3)?.map((jobSkill) => (
+                                    <Badge key={jobSkill?.id} variant={jobSkill?.required ? "default" : "secondary"} className="text-xs">
+                                      {jobSkill?.skills?.name}
                                     </Badge>
                                   ))}
-                                  {job.job_skills && job.job_skills.length > 3 && (
+                                  {(job.job_skills?.length ?? 0) > 3 && (
                                     <Badge variant="outline" className="text-xs">
-                                      +{job.job_skills.length - 3} more
+                                      +{(job.job_skills?.length ?? 0) - 3} more
                                     </Badge>
                                   )}
                                   {job.remote_allowed && <Badge className="bg-[#00C49A] text-white text-xs">Удаленно</Badge>}

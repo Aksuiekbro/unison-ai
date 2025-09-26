@@ -1,14 +1,12 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { LayoutDashboard, User, Search, Settings, Heart } from "lucide-react"
 import Link from "next/link"
 import type { Database } from '@/lib/database.types'
 import JobSeekerProfileForm from '@/components/profile/job-seeker-profile-form'
+import { createClient } from '@/lib/supabase-server'
 
 export default async function JobSeekerProfile() {
-  const cookieStore = await cookies()
-  const supabase = createServerComponentClient<Database>({ cookies: () => cookieStore })
+  const supabase = await createClient()
   
   try {
     // Middleware handles authentication - just get user data

@@ -2,20 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { updateJobSeekerProfile, addJobSeekerExperience, addJobSeekerEducation } from '@/app/actions/profile'
 
 // Mock Supabase
-vi.mock('@supabase/auth-helpers-nextjs', () => ({
-  createServerActionClient: vi.fn()
-}))
-
-vi.mock('next/headers', () => ({
-  cookies: vi.fn()
+vi.mock('@/lib/supabase-server', () => ({
+  createClient: vi.fn()
 }))
 
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn()
 }))
 
-import { createServerActionClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase-server'
 import { revalidatePath } from 'next/cache'
 
 describe('Profile Actions with Storage', () => {
@@ -50,8 +45,7 @@ describe('Profile Actions with Storage', () => {
       }
     }
 
-    vi.mocked(createServerActionClient).mockReturnValue(mockSupabase)
-    vi.mocked(cookies).mockResolvedValue(new Map())
+    vi.mocked(createClient).mockResolvedValue(mockSupabase)
   })
 
   describe('updateJobSeekerProfile', () => {

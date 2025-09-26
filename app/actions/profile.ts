@@ -1,9 +1,8 @@
 'use server'
 
-import { createServerActionClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase-server'
 // Using untyped client to avoid friction with partially generated DB types
 import { 
   jobSeekerProfileSchema,
@@ -56,8 +55,7 @@ function normalizeAndValidateUrl(raw: string, allowedHosts?: string[]): string |
 
 // Job Seeker Actions
 export async function updateJobSeekerProfile(formData: FormData) {
-  const cookieStore = await cookies()
-  const supabase = createServerActionClient({ cookies: async () => cookieStore })
+  const supabase = await createClient()
   
   try {
     let aiProcessingResult = null
@@ -229,7 +227,6 @@ export async function updateJobSeekerProfile(formData: FormData) {
       .from('users')
       .update(updateData)
       .eq('id', user.id)
-      .select()
 
     if (usersUpdateError) {
       console.error('❌ Error updating user profile:', usersUpdateError)
@@ -256,8 +253,7 @@ export async function updateJobSeekerProfile(formData: FormData) {
 }
 
 export async function addJobSeekerExperience(formData: FormData) {
-  const cookieStore = await cookies()
-  const supabase = createServerActionClient({ cookies: async () => cookieStore })
+  const supabase = await createClient()
   
   try {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -290,7 +286,6 @@ export async function addJobSeekerExperience(formData: FormData) {
     // Validate data
     const validatedData = jobSeekerExperienceSchema.parse(data)
 
-    // Atomically append the new experience via RPC to avoid race conditions
     const newExperience = {
       id: crypto.randomUUID(),
       position: validatedData.position,
@@ -300,12 +295,12 @@ export async function addJobSeekerExperience(formData: FormData) {
       description: validatedData.description || undefined,
       isCurrent: validatedData.isCurrent,
     }
-
+    const existingExperiences = (userData.experiences as any[]) || []
+    const updatedExperiences = [...existingExperiences, newExperience]
     const { error: updateError } = await supabase
-      .rpc('append_user_experience', {
-        p_user_id: user.id,
-        p_experience: newExperience as any,
-      })
+      .from('users')
+      .update({ experiences: updatedExperiences })
+      .eq('id', user.id)
 
     if (updateError) {
       console.error('Error adding experience:', updateError)
@@ -322,8 +317,7 @@ export async function addJobSeekerExperience(formData: FormData) {
 }
 
 export async function addJobSeekerEducation(formData: FormData) {
-  const cookieStore = await cookies()
-  const supabase = createServerActionClient({ cookies: async () => cookieStore })
+  const supabase = await createClient()
   
   try {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -332,10 +326,10 @@ export async function addJobSeekerEducation(formData: FormData) {
       return { error: 'Authentication required' }
     }
 
-    // Verify job seeker role
+    // Verify job seeker role and get existing educations
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select('role, educations')
       .eq('id', user.id)
       .single()
 
@@ -363,20 +357,20 @@ export async function addJobSeekerEducation(formData: FormData) {
       graduationYear: validatedData.graduationYear,
     }
     
-    // Atomic append via RPC to avoid race conditions on JSONB arrays
-    const { data: updatedUser, error: rpcError } = await supabase
-      .rpc('append_user_education', {
-        p_user_id: user.id,
-        p_education: newEducation as any,
-      })
+    const existingEducations = (userData.educations as any[]) || []
+    const updatedEducations = [...existingEducations, newEducation]
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ educations: updatedEducations })
+      .eq('id', user.id)
 
-    if (rpcError) {
-      console.error('Error adding education via RPC:', rpcError)
+    if (updateError) {
+      console.error('Error adding education:', updateError)
       return { error: 'Failed to add education' }
     }
 
     revalidatePath('/job-seeker/profile')
-    return { success: true, user: updatedUser, education: newEducation }
+    return { success: true }
 
   } catch (error) {
     console.error('Error in addJobSeekerEducation:', error)
@@ -386,8 +380,7 @@ export async function addJobSeekerEducation(formData: FormData) {
 
 // Employer Actions
 export async function updateEmployerProfile(formData: FormData) {
-  const cookieStore = await cookies()
-  const supabase = createServerActionClient({ cookies: async () => cookieStore })
+  const supabase = await createClient()
   
   try {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -477,8 +470,7 @@ export async function updateEmployerProfile(formData: FormData) {
 
 // Basic account info (first/last name) for profiles table
 export async function updateBasicProfile(formData: FormData) {
-  const cookieStore = await cookies()
-  const supabase = createServerActionClient({ cookies: async () => cookieStore })
+  const supabase = await createClient()
 
   try {
     const { data: { user }, error: authError } = await supabase.auth.getUser()

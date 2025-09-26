@@ -3,8 +3,7 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 
 // Mock all external dependencies
-vi.mock('@supabase/auth-helpers-nextjs')
-vi.mock('next/headers')
+vi.mock('@/lib/supabase-server')
 vi.mock('@/lib/ai/resume-parser')
 
 // Integration test for the complete resume upload flow

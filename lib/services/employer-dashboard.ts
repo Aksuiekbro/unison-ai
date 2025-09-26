@@ -1,6 +1,5 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
 import type { Database } from '@/lib/database.types'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 export interface DashboardStats {
   activeJobs: number
@@ -27,10 +26,10 @@ export interface DashboardData {
 }
 
 export class EmployerDashboardService {
-  private supabase: any
+  private supabase: SupabaseClient<Database>
 
-  constructor() {
-    this.supabase = createServerComponentClient<Database>({ cookies })
+  constructor(supabaseClient: SupabaseClient<Database>) {
+    this.supabase = supabaseClient
   }
 
   async getDashboardData(employerId: string): Promise<DashboardData> {
@@ -158,4 +157,3 @@ export class EmployerDashboardService {
   }
 }
 
-export const employerDashboardService = new EmployerDashboardService()

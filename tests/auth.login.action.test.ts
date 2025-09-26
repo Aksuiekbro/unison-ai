@@ -24,9 +24,9 @@ vi.mock('next/headers', () => {
   }
 })
 
-vi.mock('@supabase/auth-helpers-nextjs', () => {
+vi.mock('@/lib/supabase-server', () => {
   return {
-    createServerActionClient: () => ({
+    createClient: async () => ({
       auth: {
         signInWithPassword: async () => ({
           data: { user: { id: 'user-1', user_metadata: { role: mockRole, full_name: 'Test User' } } },

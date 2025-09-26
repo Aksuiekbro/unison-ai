@@ -15,6 +15,24 @@ export interface PersonalityAnalysisResult {
   leadership_score: number;
   teamwork_score: number;
   
+  // Expanded trait scores (0-100)
+  trait_scores: {
+    motivation: number;
+    discipline: number;
+    friendliness: number;
+    adaptability: number;
+    resilience: number;
+    communication: number;
+    empathy: number;
+    responsibility: number;
+    time_management: number;
+    stress_tolerance: number;
+    openness_to_feedback: number;
+    proactivity: number;
+    learning_agility: number;
+    attention_to_detail: number;
+  };
+  
   // Overall assessment
   personality_summary: string;
   strengths: string[];
@@ -46,6 +64,24 @@ const personalityAnalysisSchema = {
   creative_score: "number 0-100 - quantified creative problem-solving ability", 
   leadership_score: "number 0-100 - quantified leadership potential",
   teamwork_score: "number 0-100 - quantified collaboration and teamwork skills",
+  
+  // Expanded trait scores collection
+  trait_scores: {
+    motivation: "number 0-100 - intrinsic and extrinsic drive to achieve goals",
+    discipline: "number 0-100 - consistency, reliability, and habit adherence",
+    friendliness: "number 0-100 - warmth and approachability in interactions",
+    adaptability: "number 0-100 - flexibility in changing environments",
+    resilience: "number 0-100 - ability to recover from setbacks",
+    communication: "number 0-100 - clarity and effectiveness of communication",
+    empathy: "number 0-100 - understanding and consideration for others",
+    responsibility: "number 0-100 - accountability and ownership",
+    time_management: "number 0-100 - planning and prioritization effectiveness",
+    stress_tolerance: "number 0-100 - stability under pressure",
+    openness_to_feedback: "number 0-100 - receptiveness to critique and learning",
+    proactivity: "number 0-100 - initiative and self-starting behavior",
+    learning_agility: "number 0-100 - speed of learning and applying insights",
+    attention_to_detail: "number 0-100 - thoroughness and precision"
+  },
   
   personality_summary: "string - comprehensive 2-3 sentence personality overview",
   strengths: ["array of strings - key personality strengths"],
@@ -89,6 +125,22 @@ Scoring Guidelines:
 - Creative Score: Signs of innovative thinking, creative problem-solving, novel approaches
 - Leadership Score: Initiative-taking, influence on others, decision-making confidence
 - Teamwork Score: Collaboration mentions, team-oriented thinking, interpersonal skills
+
+Expanded Trait Scoring (1-100 for each):
+- Motivation: intrinsic/extrinsic drive to achieve goals
+- Discipline: consistency, reliability, habit adherence
+- Friendliness: warmth and approachability in interactions
+- Adaptability: flexibility in changing environments
+- Resilience: ability to recover from setbacks
+- Communication: clarity and effectiveness of expression
+- Empathy: understanding and consideration for others
+- Responsibility: accountability and ownership
+- Time Management: planning and prioritization effectiveness
+- Stress Tolerance: stability and composure under pressure
+- Openness to Feedback: receptiveness to critique and learning
+- Proactivity: initiative and self-starting behavior
+- Learning Agility: speed of learning and applying insights
+- Attention to Detail: thoroughness and precision
 
 Confidence Scoring:
 - High confidence (0.8-1.0): Multiple consistent responses with detailed examples
@@ -149,6 +201,21 @@ export async function validatePersonalityAnalysis(
     const value = result[score as keyof PersonalityAnalysisResult] as number;
     if (typeof value !== 'number' || value < 0 || value > 100) {
       errors.push(`Invalid ${score}: must be a number between 0-100`);
+    }
+  }
+
+  // Validate trait scores
+  if (!result.trait_scores || typeof result.trait_scores !== 'object') {
+    errors.push('Missing trait_scores object');
+  } else {
+    const traitEntries = Object.entries(result.trait_scores);
+    if (traitEntries.length === 0) {
+      errors.push('trait_scores must contain at least one trait');
+    }
+    for (const [trait, value] of traitEntries) {
+      if (typeof value !== 'number' || value < 0 || value > 100) {
+        errors.push(`Invalid trait_scores.${trait}: must be a number between 0-100`);
+      }
     }
   }
 

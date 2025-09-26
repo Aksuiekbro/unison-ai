@@ -4,13 +4,25 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { LayoutDashboard, User, Search, Settings, Eye, Calendar, MapPin, Clock, Heart } from "lucide-react"
 import Link from "next/link"
-import { createClient } from '@/lib/supabase-server'
+import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import type { Database } from "@/lib/types/database"
+import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 export default async function JobSeekerDashboard() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  let user: SupabaseUser | null = null
+  try {
+    const { data, error } = await supabase.auth.getUser()
+    if (error) {
+      console.error('Error getting user in job-seeker dashboard', error)
+      redirect('/auth/login?error=auth_error&redirectTo=/job-seeker/dashboard')
+    }
+    user = data?.user ?? null
+  } catch (err) {
+    console.error('Unexpected error calling auth.getUser in job-seeker dashboard', err)
+    redirect('/auth/login?error=auth_exception&redirectTo=/job-seeker/dashboard')
+  }
   if (!user) {
     redirect('/auth/login?redirectTo=/job-seeker/dashboard')
   }
@@ -43,6 +55,16 @@ export default async function JobSeekerDashboard() {
     const cur = currency || '₸'
     if (min && max) return `${min.toLocaleString()} - ${max.toLocaleString()} ${cur}`
     return `${(min || max || 0).toLocaleString()} ${cur}`
+  }
+
+  type JobListItem = {
+    id: string
+    title: string
+    location: string | null
+    salary_min: number | null
+    salary_max: number | null
+    currency: string | null
+    company?: { name?: string | null }[] | null
   }
 
   if (user) {
@@ -78,10 +100,10 @@ export default async function JobSeekerDashboard() {
     if (appsError) {
       console.error('Error fetching applications for dashboard', appsError)
     }
-    applications = ((apps as any[] | null) ?? []).map((a: any) => ({
+    applications = (apps ?? []).map((a) => ({
       id: a.id,
-      company: a.job?.company?.name || '—',
-      position: a.job?.title || '—',
+      company: a.job?.[0]?.company?.[0]?.name ?? '—',
+      position: a.job?.[0]?.title ?? '—',
       status: mapStatusToRu(a.status),
       date: formatDateRu(a.applied_at),
     }))
@@ -106,9 +128,9 @@ export default async function JobSeekerDashboard() {
     if (jobsError) {
       console.error('Error fetching jobs for dashboard', jobsError)
     }
-    recommendations = ((jobs as any[] | null) ?? []).map((j: any) => ({
+    recommendations = (Array.isArray(jobs) ? jobs : []).map((j: JobListItem) => ({
       id: j.id,
-      company: j.company?.name || '—',
+      company: j.company?.[0]?.name || '—',
       position: j.title,
       location: j.location || '—',
       salary: formatSalary(j.salary_min, j.salary_max, j.currency),

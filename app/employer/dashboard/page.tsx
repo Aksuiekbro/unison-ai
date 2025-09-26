@@ -1,17 +1,33 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { LayoutDashboard, Briefcase, Building2, Plus, Users, Calendar, TrendingUp } from "lucide-react"
+import { LayoutDashboard, Briefcase, Building2, Plus, Users, Calendar, TrendingUp, Settings } from "lucide-react"
 import Link from "next/link"
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { employerDashboardService, type DashboardData } from '@/lib/services/employer-dashboard'
+import { EmployerDashboardService, type DashboardData } from '@/lib/services/employer-dashboard'
 import type { Database } from '@/lib/database.types'
 
 export default async function EmployerDashboard() {
   // Middleware handles all authentication and role-based access
   // This component assumes user is authenticated and authorized
-  const supabase = createServerComponentClient<Database>({ cookies })
+  const cookieStore = await cookies()
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+          } catch {}
+        },
+      },
+    }
+  )
   
   // Get current user
   const { data: { user } } = await supabase.auth.getUser()
@@ -25,6 +41,7 @@ export default async function EmployerDashboard() {
   let error: string | null = null
 
   try {
+    const employerDashboardService = new EmployerDashboardService(supabase)
     dashboardData = await employerDashboardService.getDashboardData(user.id)
   } catch (e) {
     error = 'Failed to load dashboard data'
@@ -70,7 +87,7 @@ function EmployerDashboardContent({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="flex">
+      <div className="flex min-h-screen">
         {/* Sidebar */}
         <div className="w-64 bg-white shadow-sm border-r">
           <div className="p-6">
@@ -100,6 +117,13 @@ function EmployerDashboardContent({
             >
               <Building2 className="w-5 h-5 mr-3" />
               Профиль компании
+            </Link>
+            <Link
+              href="/employer/settings"
+              className="flex items-center px-4 py-3 text-[#333333] hover:bg-gray-100 rounded-lg"
+            >
+              <Settings className="w-5 h-5 mr-3" />
+              Настройки
             </Link>
           </nav>
         </div>

@@ -11,6 +11,7 @@ export interface Database {
           phone: string | null
           location: string | null
           bio: string | null
+          productivity_assessment_completed: boolean
           created_at: string
           updated_at: string
         }
@@ -23,6 +24,7 @@ export interface Database {
           phone?: string | null
           location?: string | null
           bio?: string | null
+          productivity_assessment_completed?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -35,6 +37,7 @@ export interface Database {
           phone?: string | null
           location?: string | null
           bio?: string | null
+          productivity_assessment_completed?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -381,30 +384,101 @@ export interface Database {
           created_at?: string
         }
       }
-      test_responses: {
+      work_experiences: {
         Row: {
           id: string
           user_id: string
-          question_id: string
-          response_text: string | null
-          response_rating: number | null
+          company_name: string
+          company_activities: string | null
+          position: string
+          start_date: string
+          end_date: string | null
+          is_current: boolean
+          work_duration: string | null
+          reason_for_leaving: string | null
+          functions_performed: string | null
+          work_products: string | null
+          result_measurement: string | null
+          product_timeline: string | null
+          team_comparison_score: number | null
+          workload_change_over_time: string | null
+          responsibility_evolution: string | null
+          key_achievements: string | null
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
           user_id: string
-          question_id: string
-          response_text?: string | null
-          response_rating?: number | null
+          company_name: string
+          company_activities?: string | null
+          position: string
+          start_date: string
+          end_date?: string | null
+          is_current?: boolean
+          work_duration?: string | null
+          reason_for_leaving?: string | null
+          functions_performed?: string | null
+          work_products?: string | null
+          result_measurement?: string | null
+          product_timeline?: string | null
+          team_comparison_score?: number | null
+          workload_change_over_time?: string | null
+          responsibility_evolution?: string | null
+          key_achievements?: string | null
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
           user_id?: string
-          question_id?: string
-          response_text?: string | null
-          response_rating?: number | null
+          company_name?: string
+          company_activities?: string | null
+          position?: string
+          start_date?: string
+          end_date?: string | null
+          is_current?: boolean
+          work_duration?: string | null
+          reason_for_leaving?: string | null
+          functions_performed?: string | null
+          work_products?: string | null
+          result_measurement?: string | null
+          product_timeline?: string | null
+          team_comparison_score?: number | null
+          workload_change_over_time?: string | null
+          responsibility_evolution?: string | null
+          key_achievements?: string | null
           created_at?: string
+          updated_at?: string
+        }
+      }
+      knowledge_assessments: {
+        Row: {
+          id: string
+          user_id: string
+          recent_learning_activities: string | null
+          professional_development: string | null
+          future_learning_goals: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          recent_learning_activities?: string | null
+          professional_development?: string | null
+          future_learning_goals?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          recent_learning_activities?: string | null
+          professional_development?: string | null
+          future_learning_goals?: string | null
+          created_at?: string
+          updated_at?: string
         }
       }
       personality_analysis: {
@@ -422,8 +496,9 @@ export interface Database {
           creative_score: number | null
           leadership_score: number | null
           teamwork_score: number | null
+          trait_scores: any | null
           ai_confidence_score: number | null
-          analysis_version: string
+          analysis_version: string | null
           created_at: string
           updated_at: string
         }
@@ -441,8 +516,9 @@ export interface Database {
           creative_score?: number | null
           leadership_score?: number | null
           teamwork_score?: number | null
+          trait_scores?: any | null
           ai_confidence_score?: number | null
-          analysis_version?: string
+          analysis_version?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -460,8 +536,92 @@ export interface Database {
           creative_score?: number | null
           leadership_score?: number | null
           teamwork_score?: number | null
+          trait_scores?: any | null
           ai_confidence_score?: number | null
-          analysis_version?: string
+          analysis_version?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      productivity_assessments: {
+        Row: {
+          id: string
+          user_id: string
+          citizenship: string | null
+          residence_location: string | null
+          family_status: string | null
+          has_children: boolean | null
+          living_situation: string | null
+          actual_address: string | null
+          financial_obligations: string | null
+          legal_issues: string | null
+          chronic_illnesses: string | null
+          minimum_salary_requirement: number | null
+          role_type: 'manager' | 'specialist' | null
+          motivation_level: number | null
+          iq_test_score: number | null
+          personality_test_score: number | null
+          leadership_test_score: number | null
+          overall_productivity_score: number | null
+          assessor_notes: string | null
+          probation_recommendation: 'yes' | 'no' | 'never_consider' | null
+          planned_start_date: string | null
+          assessment_version: string
+          completed_at: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          citizenship?: string | null
+          residence_location?: string | null
+          family_status?: string | null
+          has_children?: boolean | null
+          living_situation?: string | null
+          actual_address?: string | null
+          financial_obligations?: string | null
+          legal_issues?: string | null
+          chronic_illnesses?: string | null
+          minimum_salary_requirement?: number | null
+          role_type?: 'manager' | 'specialist' | null
+          motivation_level?: number | null
+          iq_test_score?: number | null
+          personality_test_score?: number | null
+          leadership_test_score?: number | null
+          overall_productivity_score?: number | null
+          assessor_notes?: string | null
+          probation_recommendation?: 'yes' | 'no' | 'never_consider' | null
+          planned_start_date?: string | null
+          assessment_version?: string
+          completed_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          citizenship?: string | null
+          residence_location?: string | null
+          family_status?: string | null
+          has_children?: boolean | null
+          living_situation?: string | null
+          actual_address?: string | null
+          financial_obligations?: string | null
+          legal_issues?: string | null
+          chronic_illnesses?: string | null
+          minimum_salary_requirement?: number | null
+          role_type?: 'manager' | 'specialist' | null
+          motivation_level?: number | null
+          iq_test_score?: number | null
+          personality_test_score?: number | null
+          leadership_test_score?: number | null
+          overall_productivity_score?: number | null
+          assessor_notes?: string | null
+          probation_recommendation?: 'yes' | 'no' | 'never_consider' | null
+          planned_start_date?: string | null
+          assessment_version?: string
+          completed_at?: string
           created_at?: string
           updated_at?: string
         }

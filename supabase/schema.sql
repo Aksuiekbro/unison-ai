@@ -235,6 +235,9 @@ CREATE TABLE public.personality_analysis (
     leadership_score INTEGER CHECK (leadership_score >= 0 AND leadership_score <= 100),
     teamwork_score INTEGER CHECK (teamwork_score >= 0 AND teamwork_score <= 100),
     
+    -- Expanded trait scores (JSONB: key -> number 0-100)
+    trait_scores JSONB,
+    
     -- AI metadata
     ai_confidence_score FLOAT CHECK (ai_confidence_score >= 0 AND ai_confidence_score <= 1),
     analysis_version TEXT DEFAULT '1.0',

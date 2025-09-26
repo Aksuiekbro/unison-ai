@@ -2,12 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/personality/analyze/route'
 
-vi.mock('@supabase/auth-helpers-nextjs', () => ({
-  createRouteHandlerClient: vi.fn()
-}))
-
-vi.mock('next/headers', () => ({
-  cookies: vi.fn()
+vi.mock('@/lib/supabase-server', () => ({
+  createClient: vi.fn()
 }))
 
 vi.mock('@/lib/ai/personality-analyzer', () => ({
@@ -15,8 +11,7 @@ vi.mock('@/lib/ai/personality-analyzer', () => ({
   validatePersonalityAnalysis: vi.fn()
 }))
 
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase-server'
 import { analyzePersonality, validatePersonalityAnalysis } from '@/lib/ai/personality-analyzer'
 
 describe('Personality Analyze API Route', () => {
@@ -58,8 +53,7 @@ describe('Personality Analyze API Route', () => {
       })
     }
 
-    vi.mocked(createRouteHandlerClient).mockReturnValue(mockSupabase)
-    vi.mocked(cookies).mockResolvedValue(new Map())
+    vi.mocked(createClient).mockResolvedValue(mockSupabase)
   })
 
   it('updates only personality flags without overwriting other profile fields', async () => {

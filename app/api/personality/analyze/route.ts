@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { analyzePersonality, validatePersonalityAnalysis } from '@/lib/ai/personality-analyzer'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase-server'
 import type { Database } from '@/lib/database.types'
 
 interface TestResponse {
@@ -13,8 +12,7 @@ interface TestResponse {
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createRouteHandlerClient<Database>({ cookies: async () => cookieStore })
+    const supabase = await createClient()
     
     // Verify user authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -164,6 +162,7 @@ export async function POST(request: NextRequest) {
           creative_score: analysis.creative_score,
           leadership_score: analysis.leadership_score,
           teamwork_score: analysis.teamwork_score,
+          trait_scores: analysis.trait_scores,
           ai_confidence_score: analysis.confidence_score,
           analysis_version: '1.0'
         })

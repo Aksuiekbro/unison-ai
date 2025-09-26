@@ -3,20 +3,15 @@ import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/resume/parse/route'
 
 // Mock dependencies
-vi.mock('@supabase/auth-helpers-nextjs', () => ({
-  createRouteHandlerClient: vi.fn()
-}))
-
-vi.mock('next/headers', () => ({
-  cookies: vi.fn()
+vi.mock('@/lib/supabase-server', () => ({
+  createClient: vi.fn()
 }))
 
 vi.mock('@/lib/ai/resume-parser', () => ({
   parseAndValidateResume: vi.fn()
 }))
 
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase-server'
 import { parseAndValidateResume } from '@/lib/ai/resume-parser'
 
 describe('Resume Parse API Route', () => {
@@ -47,8 +42,7 @@ describe('Resume Parse API Route', () => {
       })
     }
 
-    vi.mocked(createRouteHandlerClient).mockReturnValue(mockSupabase)
-    vi.mocked(cookies).mockResolvedValue(new Map())
+    vi.mocked(createClient).mockResolvedValue(mockSupabase)
   })
 
   it('should successfully process PDF resume', async () => {
