@@ -298,10 +298,11 @@ export async function POST(request: NextRequest) {
         }
 
         // For experiences and educations, merge instead of replacing for better UX
-        // Note: AI returns 'experience' but we store as 'experiences'
-        if (parsedData.experience && parsedData.experience.length > 0) {
+        // Support both 'experience' and 'experiences' keys
+        const parsedExperiences: any[] | undefined = (parsedData as any).experiences || (parsedData as any).experience
+        if (parsedExperiences && parsedExperiences.length > 0) {
           const existingExperiences = (existingUser?.experiences as any[]) || []
-          const formattedExperiences = (parsedData.experience as any[]).map(exp => ({
+          const formattedExperiences = (parsedExperiences as any[]).map(exp => ({
             id: crypto.randomUUID(),
             position: exp.job_title || exp.position,
             company: exp.company_name || exp.company,
@@ -324,10 +325,11 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Note: AI returns 'education' but we store as 'educations'  
-        if (parsedData.education && parsedData.education.length > 0) {
+        // Support both 'education' and 'educations' keys
+        const parsedEducations: any[] | undefined = (parsedData as any).educations || (parsedData as any).education
+        if (parsedEducations && parsedEducations.length > 0) {
           const existingEducations = (existingUser?.educations as any[]) || []
-          const formattedEducations = (parsedData.education as any[]).map(edu => ({
+          const formattedEducations = (parsedEducations as any[]).map(edu => ({
             id: crypto.randomUUID(),
             institution: edu.institution_name || edu.institution,
             degree: edu.degree,

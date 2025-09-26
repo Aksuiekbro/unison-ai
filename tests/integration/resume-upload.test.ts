@@ -5,6 +5,12 @@ import { join } from 'path'
 // Mock all external dependencies
 vi.mock('@/lib/supabase-server')
 vi.mock('@/lib/ai/resume-parser')
+vi.mock('@supabase/auth-helpers-nextjs', () => ({
+  createRouteHandlerClient: vi.fn()
+}))
+vi.mock('next/headers', () => ({
+  cookies: vi.fn()
+}))
 
 // Integration test for the complete resume upload flow
 describe('Resume Upload Integration', () => {
@@ -123,9 +129,11 @@ describe('Resume Upload Integration', () => {
     const { createRouteHandlerClient } = await import('@supabase/auth-helpers-nextjs')
     const { cookies } = await import('next/headers')
     const { parseAndValidateResume } = await import('@/lib/ai/resume-parser')
+    const { createClient } = await import('@/lib/supabase-server')
 
     vi.mocked(createRouteHandlerClient).mockReturnValue(mockSupabase)
     vi.mocked(cookies).mockResolvedValue(new Map())
+    vi.mocked(createClient).mockResolvedValue(mockSupabase as any)
     vi.mocked(parseAndValidateResume).mockResolvedValue({
       success: true,
       data: mockParsedData,
@@ -206,9 +214,11 @@ describe('Resume Upload Integration', () => {
     const { createRouteHandlerClient } = await import('@supabase/auth-helpers-nextjs')
     const { cookies } = await import('next/headers')
     const { parseAndValidateResume } = await import('@/lib/ai/resume-parser')
+    const { createClient } = await import('@/lib/supabase-server')
 
     vi.mocked(createRouteHandlerClient).mockReturnValue(mockSupabase)
     vi.mocked(cookies).mockResolvedValue(new Map())
+    vi.mocked(createClient).mockResolvedValue(mockSupabase as any)
     vi.mocked(parseAndValidateResume).mockResolvedValue({
       success: false,
       error: 'Unable to extract meaningful content from the resume'
@@ -244,9 +254,11 @@ describe('Resume Upload Integration', () => {
 
     const { createRouteHandlerClient } = await import('@supabase/auth-helpers-nextjs')
     const { cookies } = await import('next/headers')
+    const { createClient } = await import('@/lib/supabase-server')
 
     vi.mocked(createRouteHandlerClient).mockReturnValue(mockSupabase)
     vi.mocked(cookies).mockResolvedValue(new Map())
+    vi.mocked(createClient).mockResolvedValue(mockSupabase as any)
 
     const { POST } = await import('@/app/api/resume/parse/route')
 
@@ -278,9 +290,11 @@ describe('Resume Upload Integration', () => {
 
     const { createRouteHandlerClient } = await import('@supabase/auth-helpers-nextjs')
     const { cookies } = await import('next/headers')
+    const { createClient } = await import('@/lib/supabase-server')
 
     vi.mocked(createRouteHandlerClient).mockReturnValue(mockSupabase)
     vi.mocked(cookies).mockResolvedValue(new Map())
+    vi.mocked(createClient).mockResolvedValue(mockSupabase as any)
 
     const { POST } = await import('@/app/api/resume/parse/route')
 

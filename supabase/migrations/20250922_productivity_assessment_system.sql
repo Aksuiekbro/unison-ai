@@ -1,7 +1,6 @@
 -- Replace personality test system with productivity assessment system
 
 -- Update users table to use productivity assessment instead of personality test
-ALTER TABLE users DROP COLUMN IF EXISTS personality_test_completed;
 ALTER TABLE users ADD COLUMN productivity_assessment_completed boolean DEFAULT false;
 
 -- Create work experiences table
