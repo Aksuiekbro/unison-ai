@@ -34,25 +34,51 @@ export async function POST(request: NextRequest) {
 
     console.log('Processing personality analysis for user:', user.id)
 
-    // Get question details from database or default questions
-    const questionMap = {
-      'q1': { text: 'Опишите самую большую неудачу в вашей карьере и что она вас научила.', category: 'problem_solving' },
-      'q2': { text: 'Расскажите о ситуации, когда вам пришлось работать в команде с конфликтными людьми. Как вы решили эту проблему?', category: 'teamwork' },
-      'q3': { text: 'Опишите проект или инициативу, которую вы начали сами, без указания руководства.', category: 'initiative' },
-      'q4': { text: 'Как вы обычно принимаете важные решения? Опишите свой процесс на конкретном примере.', category: 'decision_making' },
-      'q5': { text: 'Расскажите о времени, когда вам пришлось изучить что-то совершенно новое для работы. Как вы подошли к обучению?', category: 'learning' },
-      'q6': { text: 'Опишите ситуацию, когда вы не согласились с решением руководства. Как вы отреагировали?', category: 'leadership' },
-      'q7': { text: 'Что вас мотивирует больше всего в работе? Приведите конкретные примеры.', category: 'motivation' }
+    // Get actual questions from database to ensure proper UUID mapping
+    const { data: questionsFromDB, error: questionsError } = await supabase
+      .from('questionnaires')
+      .select('id, question_text, category, order_index')
+      .eq('is_active', true)
+      .order('order_index')
+
+    if (questionsError) {
+      console.error('Error fetching questions from database:', questionsError)
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch questions from database' },
+        { status: 500 }
+      )
     }
 
-    // Transform responses for AI analysis
+    // Create mapping from frontend question IDs to database UUIDs
+    const questionMapping: Record<string, { uuid: string; text: string; category: string }> = {}
+    if (questionsFromDB) {
+      questionsFromDB.forEach((q, index) => {
+        const frontendId = (index + 1).toString() // Map '1' to first question, '2' to second, etc.
+        questionMapping[frontendId] = {
+          uuid: q.id,
+          text: q.question_text,
+          category: q.category || 'general'
+        }
+      })
+    }
+
+    // Transform responses for AI analysis using proper UUIDs
     const questionResponses = Object.entries(responses).map(([questionId, response]) => {
-      const questionInfo = questionMap[questionId as keyof typeof questionMap]
+      const questionInfo = questionMapping[questionId]
+      if (!questionInfo) {
+        console.warn(`Question ID ${questionId} not found in database`)
+        return {
+          question_id: questionId,
+          question_text: 'Question not found',
+          response_text: response as string,
+          category: 'general'
+        }
+      }
       return {
-        question_id: questionId,
-        question_text: questionInfo?.text || 'Question not found',
+        question_id: questionInfo.uuid, // Use actual database UUID
+        question_text: questionInfo.text,
         response_text: response as string,
-        category: questionInfo?.category || 'general'
+        category: questionInfo.category
       }
     })
 
@@ -83,7 +109,7 @@ export async function POST(request: NextRequest) {
       // Insert new responses
       const responseInserts = questionResponses.map(qr => ({
         user_id: user.id,
-        question_id: qr.question_id, // This will be a string ID, not UUID reference
+        question_id: qr.question_id, // Now properly using database UUID reference
         response_text: qr.response_text
       }))
 

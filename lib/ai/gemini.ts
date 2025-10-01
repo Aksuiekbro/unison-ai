@@ -8,7 +8,8 @@ try {
   const apiKey = process.env.GEMINI_API_KEY;
   if (apiKey && apiKey !== 'your-gemini-api-key-here' && apiKey.length > 10) {
     genAI = new GoogleGenerativeAI(apiKey);
-    model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const modelName = (process.env.GEMINI_MODEL || 'gemini-2.5-flash').trim();
+    model = genAI.getGenerativeModel({ model: modelName });
   }
 } catch (error) {
   console.warn('Gemini AI initialization failed:', error);

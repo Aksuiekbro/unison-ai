@@ -108,10 +108,17 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Return questions from database
+    // Transform database questions to match frontend expectations with numeric string IDs
+    const transformedQuestions = questions.map((question, index) => ({
+      id: (index + 1).toString(), // Use simple numeric string IDs that match backend mapping
+      question_text: question.question_text,
+      category: question.category,
+      order_index: question.order_index
+    }))
+
     return NextResponse.json({
       success: true,
-      questions
+      questions: transformedQuestions
     })
 
   } catch (error) {
