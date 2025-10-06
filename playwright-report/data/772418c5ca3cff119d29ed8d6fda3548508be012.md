@@ -1,0 +1,42 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - link "UnisonAI" [ref=e5] [cursor=pointer]:
+      - /url: /
+      - img [ref=e6] [cursor=pointer]
+      - generic [ref=e9] [cursor=pointer]: UnisonAI
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - generic [ref=e12]: Create an account
+        - generic [ref=e13]: Choose your role to get started with UnisonAI.
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - generic [ref=e16]:
+            - generic [ref=e17] [cursor=pointer]:
+              - img [ref=e18] [cursor=pointer]
+              - img [ref=e21] [cursor=pointer]
+              - paragraph [ref=e25] [cursor=pointer]: Employer
+            - generic [ref=e26] [cursor=pointer]:
+              - img [ref=e27] [cursor=pointer]
+              - paragraph [ref=e30] [cursor=pointer]: Job Seeker
+          - generic [ref=e31]:
+            - generic [ref=e32]: Company Name
+            - textbox "Company Name" [active] [ref=e33]
+          - generic [ref=e34]:
+            - generic [ref=e35]: Your Full Name
+            - textbox "Your Full Name" [ref=e36]: Jane Doe
+          - generic [ref=e37]:
+            - generic [ref=e38]: Email
+            - textbox "Email" [ref=e39]: jobseeker+1759753706958@example.com
+          - generic [ref=e40]:
+            - generic [ref=e41]: Password
+            - textbox "Password" [ref=e42]: password123
+          - button "Create Account" [ref=e43] [cursor=pointer]
+        - generic [ref=e44]:
+          - text: Already have an account?
+          - link "Login" [ref=e45] [cursor=pointer]:
+            - /url: /auth/login
+  - region "Notifications alt+T"
+```

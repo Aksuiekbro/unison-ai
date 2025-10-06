@@ -1,0 +1,74 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - link "UnisonAI" [ref=e5]:
+      - /url: /
+      - img [ref=e6]
+      - generic [ref=e9]: UnisonAI
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - generic [ref=e12]: Create an account
+        - generic [ref=e13]: Choose your role to get started with UnisonAI.
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - generic [ref=e16]:
+            - generic [ref=e17] [cursor=pointer]:
+              - img [ref=e18] [cursor=pointer]
+              - paragraph [ref=e22] [cursor=pointer]: Employer
+            - generic [ref=e23] [cursor=pointer]:
+              - img [ref=e24] [cursor=pointer]
+              - img [ref=e27] [cursor=pointer]
+              - paragraph [ref=e30] [cursor=pointer]: Job Seeker
+          - generic [ref=e31]:
+            - generic [ref=e32]: Full Name
+            - textbox "Full Name" [ref=e33]
+          - generic [ref=e34]:
+            - generic [ref=e35]: Email
+            - textbox "Email" [ref=e36]: jobseeker+1759753710479@example.com
+          - generic [ref=e37]:
+            - generic [ref=e38]: Password
+            - textbox "Password" [ref=e39]
+          - generic [ref=e40]:
+            - img [ref=e41]
+            - paragraph [ref=e43]: Email address "jobseeker+1759753710479@example.com" is invalid
+          - button "Create Account" [ref=e44] [cursor=pointer]
+        - generic [ref=e45]:
+          - text: Already have an account?
+          - link "Login" [ref=e46]:
+            - /url: /auth/login
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e52] [cursor=pointer]:
+    - img [ref=e53] [cursor=pointer]
+  - alert [ref=e58]
+  - iframe [ref=e59]:
+    - generic [active]:
+      - button
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic [ref=f1e1]:
+                - button:
+                  - img
+                - generic [ref=f1e2]:
+                  - button [ref=f1e5] [cursor=pointer]:
+                    - img [ref=f1e6] [cursor=pointer]
+                  - button [ref=f1e13] [cursor=pointer]:
+                    - img [ref=f1e14] [cursor=pointer]
+              - generic [ref=f1e16]:
+                - generic [ref=f1e17]:
+                  - heading "Select an agent to connect to" [level=3] [ref=f1e19]
+                  - img [ref=f1e20]
+                - generic [ref=f1e24]:
+                  - generic [ref=f1e25]: Agent
+                  - combobox "Agent" [ref=f1e27]:
+                    - option "Select an agent..." [disabled] [selected]
+                    - option "Cursor - Unison-AI - Port 5746"
+                    - option "Cursor - Unison-AI - Port 5747"
+                    - option "Cursor - WCity - Port 5748"
+                - button "Need help?" [ref=f1e30] [cursor=pointer]:
+                  - img [ref=f1e31] [cursor=pointer]
+                  - text: Need help?
+```

@@ -44,6 +44,21 @@ describe('Personality Analyze API Route', () => {
             insert: vi.fn().mockResolvedValue({ error: null })
           }
         }
+        if (table === 'questionnaires') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({
+                  data: [
+                    { id: 'uuid-1', question_text: 'Q1', category: 'general', order_index: 1 },
+                    { id: 'uuid-2', question_text: 'Q2', category: 'general', order_index: 2 },
+                  ],
+                  error: null
+                })
+              })
+            })
+          }
+        }
         if (table === 'profiles') {
           return {
             upsert: upsertMock
