@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Briefcase, Users, Building2, Search } from "lucide-react";
-import { createBrowserClient } from '@supabase/ssr';
+import { supabase } from '@/lib/supabase-client';
 import { useRouter } from "next/navigation";
 
 export default function SelectRolePage() {
@@ -13,10 +13,7 @@ export default function SelectRolePage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const router = useRouter();
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const client = supabase
 
   const roles = [
     {
@@ -50,7 +47,7 @@ export default function SelectRolePage() {
   const handleRoleUpdate = async (role: string) => {
     setIsUpdating(true);
     try {
-      const { error } = await supabase.auth.updateUser({
+      const { error } = await client.auth.updateUser({
         data: { role }
       });
 

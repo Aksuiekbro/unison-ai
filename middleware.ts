@@ -50,9 +50,14 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   // Protected routes that require authentication
+  // Keep public pages like job search accessible without login
   const protectedRoutes = [
     '/employer',
-    '/job-seeker',
+    '/job-seeker/dashboard',
+    '/job-seeker/profile',
+    '/job-seeker/settings',
+    '/job-seeker/applications',
+    '/job-seeker/saved',
   ]
 
   // Auth routes that should redirect if already authenticated

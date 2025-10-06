@@ -72,6 +72,7 @@ export function LoginForm() {
       </CardHeader>
       <CardContent>
         <form action={formAction} className="space-y-4">
+          {redirectTo && <input type="hidden" name="redirectTo" value={redirectTo} />}
           <div>
             <Label htmlFor="email">Email</Label>
             <Input id="email" name="email" type="email" placeholder="you@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />

@@ -68,8 +68,22 @@ export function RoleGuard({ allowedRoles, children, redirectPath }: RoleGuardPro
     checkAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
-        router.push('/auth/login');
+      switch (event) {
+        case 'SIGNED_OUT': {
+          setAuthorized(false);
+          router.push('/auth/login');
+          break;
+        }
+        case 'SIGNED_IN':
+        case 'TOKEN_REFRESHED':
+        case 'USER_UPDATED':
+        case 'INITIAL_SESSION': {
+          checkAuth();
+          break;
+        }
+        default: {
+          // no-op
+        }
       }
     });
 

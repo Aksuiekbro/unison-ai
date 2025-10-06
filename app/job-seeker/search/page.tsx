@@ -69,7 +69,7 @@ export default function JobSearch() {
 
   const handleApply = async (job: JobWithMatchScore) => {
     if (!user) {
-      toast.error('Please login to apply for jobs')
+      toast.error('Пожалуйста, войдите, чтобы откликаться на вакансии')
       return
     }
 

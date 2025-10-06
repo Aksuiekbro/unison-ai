@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { createBrowserClient } from '@supabase/ssr';
+import { supabase } from '@/lib/supabase-client';
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, Briefcase, Building2, User, Search, Settings, Heart, LogOut } from "lucide-react";
@@ -15,10 +15,8 @@ export function HeaderNavigation() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  // Use shared singleton client to avoid multiple GoTrue instances
+  const client = supabase
 
   useEffect(() => {
     const getUser = async () => {
@@ -37,10 +35,10 @@ export function HeaderNavigation() {
     });
 
     return () => subscription.unsubscribe();
-  }, [supabase.auth]);
+  }, [client]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await client.auth.signOut();
     router.push('/');
   };
 

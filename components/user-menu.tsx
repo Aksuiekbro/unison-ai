@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LogOut, User, Settings } from 'lucide-react';
-import { getUserRole } from '@/lib/auth';
+import { getUserRole } from '@/lib/auth-shared';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
