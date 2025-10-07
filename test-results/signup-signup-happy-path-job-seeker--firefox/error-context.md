@@ -1,7 +1,7 @@
 # Page snapshot
 
 ```yaml
-- generic [ref=e1]:
+- generic [active] [ref=e1]:
   - generic [ref=e3]:
     - link "UnisonAI" [ref=e5] [cursor=pointer]:
       - /url: /
@@ -16,27 +16,59 @@
           - generic [ref=e17]:
             - generic [ref=e18] [cursor=pointer]:
               - img [ref=e19] [cursor=pointer]
-              - img [ref=e22] [cursor=pointer]
-              - paragraph [ref=e30] [cursor=pointer]: Employer
-            - generic [ref=e31] [cursor=pointer]:
+              - paragraph [ref=e27] [cursor=pointer]: Employer
+            - generic [ref=e28] [cursor=pointer]:
+              - img [ref=e29] [cursor=pointer]
               - img [ref=e32] [cursor=pointer]
               - paragraph [ref=e35] [cursor=pointer]: Job Seeker
           - generic [ref=e36]:
-            - generic [ref=e37]: Company Name
-            - textbox "Company Name" [active] [ref=e38]
+            - generic [ref=e37]: Full Name
+            - textbox "Full Name" [ref=e38]
           - generic [ref=e39]:
-            - generic [ref=e40]: Your Full Name
-            - textbox "Your Full Name" [ref=e41]: Jane Doe
+            - generic [ref=e40]: Email
+            - textbox "Email" [ref=e41]: jobseeker+1759758600425@example.com
           - generic [ref=e42]:
-            - generic [ref=e43]: Email
-            - textbox "Email" [ref=e44]: jobseeker+1759753751662@example.com
+            - generic [ref=e43]: Password
+            - textbox "Password" [ref=e44]
           - generic [ref=e45]:
-            - generic [ref=e46]: Password
-            - textbox "Password" [ref=e47]: password123
-          - button "Create Account" [ref=e48] [cursor=pointer]
-        - generic [ref=e49]:
+            - img [ref=e46]
+            - paragraph [ref=e50]: Email address "jobseeker+1759758600425@example.com" is invalid
+          - button "Create Account" [ref=e51] [cursor=pointer]
+        - generic [ref=e52]:
           - text: Already have an account?
-          - link "Login" [ref=e50] [cursor=pointer]:
+          - link "Login" [ref=e53] [cursor=pointer]:
             - /url: /auth/login
   - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e59] [cursor=pointer]:
+    - img [ref=e60] [cursor=pointer]
+  - alert [ref=e64]
+  - iframe [ref=e65]:
+    - generic [active]:
+      - button
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic [ref=f1e1]:
+                - button:
+                  - img
+                - generic [ref=f1e2]:
+                  - button [ref=f1e5] [cursor=pointer]:
+                    - img [ref=f1e6] [cursor=pointer]
+                  - button [ref=f1e13] [cursor=pointer]:
+                    - img [ref=f1e14] [cursor=pointer]
+              - generic [ref=f1e16]:
+                - generic [ref=f1e17]:
+                  - heading "Select an agent to connect to" [level=3] [ref=f1e19]
+                  - img [ref=f1e20]
+                - generic [ref=f1e26]:
+                  - generic [ref=f1e27]: Agent
+                  - combobox "Agent" [ref=f1e29]:
+                    - option "Select an agent..." [disabled] [selected]
+                    - option "Cursor - Unison-AI - Port 5746"
+                    - option "Cursor - Unison-AI - Port 5747"
+                    - option "Cursor - WCity - Port 5748"
+                - button "Need help?" [ref=f1e32] [cursor=pointer]:
+                  - img [ref=f1e33] [cursor=pointer]
+                  - text: Need help?
 ```

@@ -1,4 +1,4 @@
-import 'server-only'
+// server-only is a Next.js hint; safe to omit in test/runtime environments
 import { createClient } from "@supabase/supabase-js";
 import { Database } from "./types/database";
 

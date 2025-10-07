@@ -23,52 +23,23 @@
               - paragraph [ref=e35] [cursor=pointer]: Job Seeker
           - generic [ref=e36]:
             - generic [ref=e37]: Company Name
-            - textbox "Company Name" [ref=e38]: E2E Test Co
+            - textbox "Company Name" [ref=e38]
           - generic [ref=e39]:
             - generic [ref=e40]: Your Full Name
-            - textbox "Your Full Name" [ref=e41]: John Employer
+            - textbox "Your Full Name" [ref=e41]
           - generic [ref=e42]:
             - generic [ref=e43]: Email
-            - textbox "Email" [ref=e44]: employer+1759753773052@example.com
+            - textbox "Email" [ref=e44]
           - generic [ref=e45]:
             - generic [ref=e46]: Password
-            - textbox "Password" [ref=e47]: password123
-          - button "Creating Account..." [disabled]
-        - generic [ref=e48]:
+            - textbox "Password" [ref=e47]
+          - generic [ref=e48]:
+            - img [ref=e49]
+            - paragraph [ref=e53]: Email address "employer+1759758627138@example.com" is invalid
+          - button "Create Account" [ref=e54] [cursor=pointer]
+        - generic [ref=e55]:
           - text: Already have an account?
-          - link "Login" [ref=e49] [cursor=pointer]:
+          - link "Login" [ref=e56] [cursor=pointer]:
             - /url: /auth/login
   - region "Notifications alt+T"
-  - button "Open Next.js Dev Tools" [ref=e55] [cursor=pointer]:
-    - img [ref=e56] [cursor=pointer]
-  - alert [ref=e60]
-  - iframe [ref=e61]:
-    - generic [active]:
-      - button
-      - generic:
-        - generic:
-          - generic:
-            - generic:
-              - generic [ref=f1e1]:
-                - button:
-                  - img
-                - generic [ref=f1e2]:
-                  - button [ref=f1e5] [cursor=pointer]:
-                    - img [ref=f1e6] [cursor=pointer]
-                  - button [ref=f1e13] [cursor=pointer]:
-                    - img [ref=f1e14] [cursor=pointer]
-              - generic [ref=f1e16]:
-                - generic [ref=f1e17]:
-                  - heading "Select an agent to connect to" [level=3] [ref=f1e19]
-                  - img [ref=f1e20]
-                - generic [ref=f1e26]:
-                  - generic [ref=f1e27]: Agent
-                  - combobox "Agent" [ref=f1e29]:
-                    - option "Select an agent..." [disabled] [selected]
-                    - option "Cursor - Unison-AI - Port 5746"
-                    - option "Cursor - Unison-AI - Port 5747"
-                    - option "Cursor - WCity - Port 5748"
-                - button "Need help?" [ref=f1e32] [cursor=pointer]:
-                  - img [ref=f1e33] [cursor=pointer]
-                  - text: Need help?
 ```

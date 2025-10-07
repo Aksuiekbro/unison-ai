@@ -11,6 +11,7 @@ export default defineConfig({
     alias: {
       '@supabase/auth-helpers-nextjs': path.resolve(rootDir, 'tests/mocks/auth-helpers-nextjs.ts'),
       'next/headers': path.resolve(rootDir, 'tests/mocks/next-headers.ts'),
+      'server-only': path.resolve(rootDir, 'tests/mocks/server-only.ts'),
     }
   },
   test: {
