@@ -53,11 +53,12 @@ export async function GET(request: Request) {
         .maybeSingle()
 
       if (!existingUser) {
-        const role = (user.user_metadata as any)?.role ?? 'job_seeker'
+        const rawRole = (user.user_metadata as any)?.role ?? 'job_seeker'
+        const role = (rawRole === 'employee' || rawRole === 'job-seeker') ? 'job_seeker' : rawRole
         const email = user.email ?? ''
-        const fullName = (user.user_metadata as any)?.full_name || ''
-        
-        // Create user record with role
+        const fullName = (user.user_metadata as any)?.full_name || (email?.split('@')[0] || 'User')
+
+        // Create user record with normalized role
         await supabaseAdmin.from('users').insert({
           id: user.id,
           email,
@@ -68,11 +69,20 @@ export async function GET(request: Request) {
         // Profile data now stored in users table (no separate profiles table needed)
       }
 
-      const role = (user.user_metadata as any)?.role
-      if (role === 'employer') {
+      // Determine role from DB first, then fall back to user metadata
+      const { data: dbRole } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      const rawRole = (dbRole as any)?.role ?? (user.user_metadata as any)?.role
+      const normalizedRole = rawRole === 'job-seeker' || rawRole === 'employee' ? 'job_seeker' : rawRole
+
+      if (normalizedRole === 'employer') {
         return NextResponse.redirect(new URL('/employer/dashboard', request.url))
       }
-      if (role === 'job_seeker') {
+      if (normalizedRole === 'job_seeker') {
         return NextResponse.redirect(new URL('/job-seeker/dashboard', request.url))
       }
     }

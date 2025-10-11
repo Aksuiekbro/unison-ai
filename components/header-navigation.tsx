@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { supabase } from '@/lib/supabase-client';
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button";
+import { UserMenu } from "@/components/user-menu";
 import { LayoutDashboard, Briefcase, Building2, User, Search, Settings, Heart, LogOut } from "lucide-react";
 
 export function HeaderNavigation() {
@@ -148,20 +149,7 @@ export function HeaderNavigation() {
 
         <div className="hidden md:flex items-center gap-4">
           {user ? (
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
-                {user.email} ({userRole})
-              </span>
-              <Button
-                onClick={handleSignOut}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                <LogOut className="w-4 h-4" />
-                Sign Out
-              </Button>
-            </div>
+            <UserMenu />
           ) : (
             <>
               <Link href="/auth/login" className="text-base font-medium text-gray-700 hover:text-black px-2 py-1">

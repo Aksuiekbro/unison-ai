@@ -94,7 +94,7 @@ export async function middleware(req: NextRequest) {
         .single()
 
       const role = (userData?.role || (user.user_metadata as any)?.role) as any
-      const normalizedRole = role === 'job-seeker' ? 'job_seeker' : role
+      const normalizedRole = (role === 'job-seeker' || role === 'employee') ? 'job_seeker' : role
 
       if (normalizedRole === 'employer') {
         return NextResponse.redirect(new URL('/employer/dashboard', req.url))
@@ -107,7 +107,7 @@ export async function middleware(req: NextRequest) {
       // If database query fails, fall back to user metadata or allow auth page
       console.warn('Middleware database query failed:', error)
       const role = (user?.user_metadata as any)?.role
-      const normalizedRole = role === 'job-seeker' ? 'job_seeker' : role
+      const normalizedRole = (role === 'job-seeker' || role === 'employee') ? 'job_seeker' : role
       
       if (normalizedRole === 'employer') {
         return NextResponse.redirect(new URL('/employer/dashboard', req.url))
@@ -128,7 +128,7 @@ export async function middleware(req: NextRequest) {
         .single()
 
       const role = (userData?.role || (user.user_metadata as any)?.role) as any
-      const normalizedRole = role === 'job-seeker' ? 'job_seeker' : role
+      const normalizedRole = (role === 'job-seeker' || role === 'employee') ? 'job_seeker' : role
 
       // If role is unknown, do not bounce between dashboards
       if (normalizedRole !== 'employer' && normalizedRole !== 'job_seeker') {
@@ -164,7 +164,7 @@ export async function middleware(req: NextRequest) {
       // If database query fails, fall back to user metadata
       console.warn('Middleware role protection query failed:', error)
       const role = (user?.user_metadata as any)?.role
-      const normalizedRole = role === 'job-seeker' ? 'job_seeker' : role
+      const normalizedRole = (role === 'job-seeker' || role === 'employee') ? 'job_seeker' : role
 
       if (normalizedRole !== 'employer' && normalizedRole !== 'job_seeker') {
         return response

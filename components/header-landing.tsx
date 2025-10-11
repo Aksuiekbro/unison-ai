@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export function Header() {
   const [open, setOpen] = useState(false);
-  const { user, userData } = useAuth();
+  const { user, userData, isLoading } = useAuth();
 
   const displayName = userData?.full_name || (user?.user_metadata as any)?.full_name || user?.email || "";
   const avatarUrl = (user?.user_metadata as any)?.avatar_url as string | undefined;
@@ -59,7 +59,7 @@ export function Header() {
           <a href="#footer" className="text-gray-700 hover:text-black">Contacts</a>
         </nav>
         <div className="hidden md:flex items-center gap-4">
-          {user ? (
+          {isLoading ? null : user ? (
             <UserMenu />
           ) : (
             <>
@@ -83,7 +83,7 @@ export function Header() {
             <Link href="#tools" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>Tools</Link>
             <Link href="#pricing" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>Pricing</Link>
             <a href="#footer" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>Contacts</a>
-            {!user && (
+            {!isLoading && !user && (
               <div className="flex flex-col items-center gap-2 mt-2">
                 <Link href="/auth/login" className="text-base font-medium text-gray-700 hover:text-black px-2 py-1" onClick={() => setOpen(false)}>
                   Login

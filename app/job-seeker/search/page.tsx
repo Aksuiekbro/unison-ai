@@ -34,10 +34,13 @@ export default function JobSearch() {
 
   const filtersKey = useMemo(() => JSON.stringify(filters), [filters])
 
+  const latestRequestRef = useMemo(() => ({ id: 0 }), []) as { id: number }
   const loadJobs = useCallback(async (searchFilters: JobFilters = {}) => {
     try {
+      const requestId = ++latestRequestRef.id
       setLoading(true)
       const jobData = await searchJobsWithMatchScores(user?.id || null, searchFilters)
+      if (requestId !== latestRequestRef.id) return
       setJobs(jobData)
     } catch (error) {
       console.error('Error loading jobs:', error)
@@ -45,25 +48,23 @@ export default function JobSearch() {
     } finally {
       setLoading(false)
     }
-  }, [user?.id])
+  }, [user?.id, latestRequestRef])
 
   useEffect(() => {
     // Get current user
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
-      // Reload jobs when user changes to recalculate match scores
-      loadJobs()
     }
     getUser()
-  }, [supabase, loadJobs])
+  }, [supabase])
 
-  // Load or reload jobs when authenticated user identity (id) or filters change
+  // Load jobs when authenticated user identity becomes available
   useEffect(() => {
     if (user?.id !== undefined) {
-      loadJobs(JSON.parse(filtersKey) as JobFilters)
+      loadJobs(filters)
     }
-  }, [user?.id, filtersKey, loadJobs])
+  }, [user?.id, loadJobs])
 
   
 

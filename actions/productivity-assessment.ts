@@ -177,6 +177,30 @@ export async function submitProductivityAssessment(prevState: any, formData: For
       // Non-fatal: if AI fails, continue with provided data
     }
 
+    // Ensure a users row exists for FK constraints (self-insert allowed by RLS)
+    try {
+      const { data: existingUserRow, error: existingUserErr } = await supabase
+        .from('users')
+        .select('id, email, full_name, role')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (!existingUserRow) {
+        const rawRole = (user.user_metadata as any)?.role
+        const role = (rawRole === 'employee' || rawRole === 'job-seeker') ? 'job_seeker' : (rawRole || 'job_seeker')
+        const email = user.email || ''
+        const fullName = (user.user_metadata as any)?.full_name || (email.split('@')[0] || 'User')
+        const { error: insertUserErr } = await supabase
+          .from('users')
+          .insert({ id: user.id, email, full_name: fullName, role })
+        if (insertUserErr) {
+          console.error('Error ensuring users row exists:', insertUserErr)
+        }
+      }
+    } catch (ensureErr) {
+      console.warn('Non-fatal: failed to ensure users row exists', ensureErr)
+    }
+
     // Start transaction to save all data
     // Save work experiences
     const { error: workExpError } = await supabase
@@ -293,7 +317,7 @@ export async function checkProductivityAssessmentStatus() {
       .eq('id', user.id)
       .single()
 
-    if (error) {
+    if (error && error.code !== 'PGRST116') {
       console.error('Error checking assessment status:', error)
       return {
         success: false,

@@ -1,6 +1,6 @@
-'use client'
+"use client"
 
-import { useState, useActionState, useEffect } from 'react'
+import { useState, useActionState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +15,7 @@ import { Plus, Minus, Building, GraduationCap, User, FileText, Loader2 } from "l
 import Link from "next/link"
 import { submitProductivityAssessment } from '@/actions/productivity-assessment'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase-client'
 
 interface WorkExperience {
   id: string
@@ -62,6 +63,44 @@ export default function ProductivityAssessmentClient() {
 
   const router = useRouter()
 
+  // Draft state for non-work tabs
+  const [knowledge, setKnowledge] = useState({
+    recent_learning_activities: "",
+    professional_development: "",
+    future_learning_goals: "",
+  })
+
+  const [personal, setPersonal] = useState({
+    citizenship: "",
+    residence_location: "",
+    family_status: "",
+    has_children: "",
+    living_situation: "",
+    actual_address: "",
+    financial_obligations: "",
+    minimum_salary_requirement: "",
+    chronic_illnesses: "",
+    legal_issues: "",
+  })
+
+  const [assessmentState, setAssessmentState] = useState({
+    role_type: "",
+    motivation_level: "",
+    overall_productivity_score: "",
+    iq_test_score: "",
+    personality_test_score: "",
+    leadership_test_score: "",
+    assessor_notes: "",
+    probation_recommendation: "",
+    planned_start_date: "",
+  })
+
+  const [knowledgeId, setKnowledgeId] = useState<string | null>(null)
+  const [assessmentId, setAssessmentId] = useState<string | null>(null)
+  const isInitializingRef = useRef(true)
+  const knowledgeSaveTimer = useRef<NodeJS.Timeout | null>(null)
+  const assessmentSaveTimer = useRef<NodeJS.Timeout | null>(null)
+
   const [state, formAction, isPending] = useActionState(submitProductivityAssessment, {
     success: false,
     message: "",
@@ -73,6 +112,136 @@ export default function ProductivityAssessmentClient() {
       router.push('/job-seeker/results')
     }
   }, [state.success, router])
+
+  // Load existing draft data
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        // Load knowledge draft (latest)
+        const { data: knowledgeRows } = await supabase
+          .from('knowledge_assessments')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+
+        if (knowledgeRows && knowledgeRows.length > 0) {
+          const k = knowledgeRows[0] as any
+          setKnowledgeId(k.id)
+          setKnowledge({
+            recent_learning_activities: k.recent_learning_activities || "",
+            professional_development: k.professional_development || "",
+            future_learning_goals: k.future_learning_goals || "",
+          })
+        }
+
+        // Load productivity assessment draft (latest)
+        const { data: assessmentRows } = await supabase
+          .from('productivity_assessments')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+
+        if (assessmentRows && assessmentRows.length > 0) {
+          const a = assessmentRows[0] as any
+          setAssessmentId(a.id)
+          setPersonal({
+            citizenship: a.citizenship || "",
+            residence_location: a.residence_location || "",
+            family_status: a.family_status || "",
+            has_children: typeof a.has_children === 'boolean' ? String(a.has_children) : (a.has_children || ""),
+            living_situation: a.living_situation || "",
+            actual_address: a.actual_address || "",
+            financial_obligations: a.financial_obligations || "",
+            minimum_salary_requirement: typeof a.minimum_salary_requirement === 'number' ? String(a.minimum_salary_requirement) : (a.minimum_salary_requirement || ""),
+            chronic_illnesses: a.chronic_illnesses || "",
+            legal_issues: a.legal_issues || "",
+          })
+          setAssessmentState({
+            role_type: a.role_type || "",
+            motivation_level: typeof a.motivation_level === 'number' ? String(a.motivation_level) : (a.motivation_level || ""),
+            overall_productivity_score: typeof a.overall_productivity_score === 'number' ? String(a.overall_productivity_score) : (a.overall_productivity_score || ""),
+            iq_test_score: typeof a.iq_test_score === 'number' ? String(a.iq_test_score) : (a.iq_test_score || ""),
+            personality_test_score: typeof a.personality_test_score === 'number' ? String(a.personality_test_score) : (a.personality_test_score || ""),
+            leadership_test_score: typeof a.leadership_test_score === 'number' ? String(a.leadership_test_score) : (a.leadership_test_score || ""),
+            assessor_notes: a.assessor_notes || "",
+            probation_recommendation: a.probation_recommendation || "",
+            planned_start_date: a.planned_start_date || "",
+          })
+        }
+      } finally {
+        isInitializingRef.current = false
+      }
+    })()
+  }, [])
+
+  // Autosave knowledge
+  useEffect(() => {
+    if (isInitializingRef.current) return
+    if (knowledgeSaveTimer.current) clearTimeout(knowledgeSaveTimer.current)
+    knowledgeSaveTimer.current = setTimeout(async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const payload: any = {
+          user_id: user.id,
+          recent_learning_activities: knowledge.recent_learning_activities || null,
+          professional_development: knowledge.professional_development || null,
+          future_learning_goals: knowledge.future_learning_goals || null,
+        }
+        if (knowledgeId) {
+          await supabase.from('knowledge_assessments').update(payload).eq('id', knowledgeId)
+        } else {
+          const { data: inserted } = await supabase.from('knowledge_assessments').insert(payload).select('id').limit(1)
+          if (inserted && inserted[0]) setKnowledgeId((inserted[0] as any).id)
+        }
+      } catch (_) {}
+    }, 500)
+  }, [knowledge])
+
+  // Autosave personal + assessment
+  useEffect(() => {
+    if (isInitializingRef.current) return
+    if (assessmentSaveTimer.current) clearTimeout(assessmentSaveTimer.current)
+    assessmentSaveTimer.current = setTimeout(async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const payload: any = {
+          user_id: user.id,
+          citizenship: personal.citizenship || null,
+          residence_location: personal.residence_location || null,
+          family_status: personal.family_status || null,
+          has_children: personal.has_children === '' ? null : personal.has_children === 'true',
+          living_situation: personal.living_situation || null,
+          actual_address: personal.actual_address || null,
+          financial_obligations: personal.financial_obligations || null,
+          minimum_salary_requirement: personal.minimum_salary_requirement === '' ? null : Number(personal.minimum_salary_requirement),
+          chronic_illnesses: personal.chronic_illnesses || null,
+          legal_issues: personal.legal_issues || null,
+          role_type: assessmentState.role_type || null,
+          motivation_level: assessmentState.motivation_level === '' ? null : Number(assessmentState.motivation_level),
+          overall_productivity_score: assessmentState.overall_productivity_score === '' ? null : Number(assessmentState.overall_productivity_score),
+          iq_test_score: assessmentState.iq_test_score === '' ? null : Number(assessmentState.iq_test_score),
+          personality_test_score: assessmentState.personality_test_score === '' ? null : Number(assessmentState.personality_test_score),
+          leadership_test_score: assessmentState.leadership_test_score === '' ? null : Number(assessmentState.leadership_test_score),
+          assessor_notes: assessmentState.assessor_notes || null,
+          probation_recommendation: assessmentState.probation_recommendation || null,
+          planned_start_date: assessmentState.planned_start_date || null,
+        }
+        if (assessmentId) {
+          await supabase.from('productivity_assessments').update(payload).eq('id', assessmentId)
+        } else {
+          const { data: inserted } = await supabase.from('productivity_assessments').insert(payload).select('id').limit(1)
+          if (inserted && inserted[0]) setAssessmentId((inserted[0] as any).id)
+        }
+      } catch (_) {}
+    }, 600)
+  }, [personal, assessmentState])
 
   const addWorkExperience = () => {
     const newExp: WorkExperience = {
@@ -411,10 +580,12 @@ export default function ProductivityAssessmentClient() {
                           (онлайн, офлайн, тренинги, деловая литература, курсы, прочитанные книги)
                         </span>
                       </Label>
-                      <Textarea
+              <Textarea
                         id="recent_learning"
                         name="recent_learning_activities"
-                        placeholder="Опишите ваше недавнее обучение..."
+                placeholder="Опишите ваше недавнее обучение..."
+                value={knowledge.recent_learning_activities}
+                onChange={(e) => setKnowledge(v => ({ ...v, recent_learning_activities: e.target.value }))}
                         className="min-h-[120px]"
                       />
                     </div>
@@ -423,10 +594,12 @@ export default function ProductivityAssessmentClient() {
                       <Label htmlFor="professional_development">
                         Выявить компетентность в профессиональных вопросах/программах. (Умение работать в CRM системе, профессиональные программы, профессиональные умения и навыки)
                       </Label>
-                      <Textarea
+              <Textarea
                         id="professional_development"
                         name="professional_development"
-                        placeholder="Ваши профессиональные навыки и компетенции..."
+                placeholder="Ваши профессиональные навыки и компетенции..."
+                value={knowledge.professional_development}
+                onChange={(e) => setKnowledge(v => ({ ...v, professional_development: e.target.value }))}
                         className="min-h-[120px]"
                       />
                     </div>
@@ -435,10 +608,12 @@ export default function ProductivityAssessmentClient() {
                       <Label htmlFor="future_learning">
                         Чему бы Вы хотели обучиться в ближайшее время?
                       </Label>
-                      <Textarea
+              <Textarea
                         id="future_learning"
                         name="future_learning_goals"
-                        placeholder="Ваши планы по обучению..."
+                placeholder="Ваши планы по обучению..."
+                value={knowledge.future_learning_goals}
+                onChange={(e) => setKnowledge(v => ({ ...v, future_learning_goals: e.target.value }))}
                         className="min-h-[100px]"
                       />
                     </div>
@@ -458,6 +633,8 @@ export default function ProductivityAssessmentClient() {
                         id="citizenship"
                         name="citizenship"
                         placeholder="Ваше гражданство"
+                        value={personal.citizenship}
+                        onChange={(e) => setPersonal(v => ({ ...v, citizenship: e.target.value }))}
                       />
                     </div>
                     <div>
@@ -469,6 +646,8 @@ export default function ProductivityAssessmentClient() {
                         id="residence_location"
                         name="residence_location"
                         placeholder="Место прописки"
+                        value={personal.residence_location}
+                        onChange={(e) => setPersonal(v => ({ ...v, residence_location: e.target.value }))}
                       />
                     </div>
                     <div>
@@ -477,11 +656,13 @@ export default function ProductivityAssessmentClient() {
                         id="family_status"
                         name="family_status"
                         placeholder="Ваш семейный статус"
+                        value={personal.family_status}
+                        onChange={(e) => setPersonal(v => ({ ...v, family_status: e.target.value }))}
                       />
                     </div>
                     <div className="flex items-center space-x-4">
                       <Label>Дети:</Label>
-                      <RadioGroup name="has_children" className="flex space-x-4">
+                      <RadioGroup name="has_children" className="flex space-x-4" value={personal.has_children} onValueChange={(v) => setPersonal(p => ({ ...p, has_children: v }))}>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="true" id="children_yes" />
                           <Label htmlFor="children_yes">Есть</Label>
@@ -498,6 +679,8 @@ export default function ProductivityAssessmentClient() {
                         id="living_situation"
                         name="living_situation"
                         placeholder="С кем живете"
+                        value={personal.living_situation}
+                        onChange={(e) => setPersonal(v => ({ ...v, living_situation: e.target.value }))}
                       />
                     </div>
                     <div>
@@ -509,6 +692,8 @@ export default function ProductivityAssessmentClient() {
                         id="actual_address"
                         name="actual_address"
                         placeholder="Фактический адрес"
+                        value={personal.actual_address}
+                        onChange={(e) => setPersonal(v => ({ ...v, actual_address: e.target.value }))}
                       />
                     </div>
                     <div>
@@ -517,6 +702,8 @@ export default function ProductivityAssessmentClient() {
                         id="financial_obligations"
                         name="financial_obligations"
                         placeholder="Финансовые обязательства"
+                        value={personal.financial_obligations}
+                        onChange={(e) => setPersonal(v => ({ ...v, financial_obligations: e.target.value }))}
                       />
                     </div>
                     <div>
@@ -528,6 +715,8 @@ export default function ProductivityAssessmentClient() {
                         name="minimum_salary_requirement"
                         type="number"
                         placeholder="Минимальная зарплата"
+                        value={personal.minimum_salary_requirement}
+                        onChange={(e) => setPersonal(v => ({ ...v, minimum_salary_requirement: e.target.value }))}
                       />
                     </div>
                   </div>
@@ -539,6 +728,8 @@ export default function ProductivityAssessmentClient() {
                         id="chronic_illnesses"
                         name="chronic_illnesses"
                         placeholder="Если имеются"
+                        value={personal.chronic_illnesses}
+                        onChange={(e) => setPersonal(v => ({ ...v, chronic_illnesses: e.target.value }))}
                         className="min-h-[80px]"
                       />
                     </div>
@@ -548,6 +739,8 @@ export default function ProductivityAssessmentClient() {
                         id="legal_issues"
                         name="legal_issues"
                         placeholder="Есть ли какие-либо правовые вопросы или ограничения"
+                        value={personal.legal_issues}
+                        onChange={(e) => setPersonal(v => ({ ...v, legal_issues: e.target.value }))}
                         className="min-h-[80px]"
                       />
                     </div>
@@ -566,7 +759,7 @@ export default function ProductivityAssessmentClient() {
                       <p className="text-sm text-gray-500 mb-3">
                         Выберите тип позиции, на которую претендуете
                       </p>
-                      <RadioGroup name="role_type" className="flex space-x-6">
+                      <RadioGroup name="role_type" className="flex space-x-6" value={assessmentState.role_type} onValueChange={(v) => setAssessmentState(a => ({ ...a, role_type: v }))}>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="specialist" id="role_specialist" />
                           <Label htmlFor="role_specialist">Специалист</Label>
@@ -583,7 +776,7 @@ export default function ProductivityAssessmentClient() {
                       <p className="text-sm text-gray-500 mb-3">
                         Выберите основной мотивационный фактор
                       </p>
-                      <RadioGroup name="motivation_level" className="space-y-2">
+                      <RadioGroup name="motivation_level" className="space-y-2" value={assessmentState.motivation_level} onValueChange={(v) => setAssessmentState(a => ({ ...a, motivation_level: v }))}>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="1" id="motivation_money" />
                           <Label htmlFor="motivation_money">Деньги</Label>
@@ -613,6 +806,8 @@ export default function ProductivityAssessmentClient() {
                         max="100"
                         placeholder="0-100"
                         className="max-w-xs"
+                        value={assessmentState.overall_productivity_score}
+                        onChange={(e) => setAssessmentState(a => ({ ...a, overall_productivity_score: e.target.value }))}
                       />
                     </div>
 
@@ -624,6 +819,8 @@ export default function ProductivityAssessmentClient() {
                           name="iq_test_score"
                           type="number"
                           placeholder="Балл"
+                          value={assessmentState.iq_test_score}
+                          onChange={(e) => setAssessmentState(a => ({ ...a, iq_test_score: e.target.value }))}
                         />
                       </div>
                       <div>
@@ -633,6 +830,8 @@ export default function ProductivityAssessmentClient() {
                           name="personality_test_score"
                           type="number"
                           placeholder="Балл"
+                          value={assessmentState.personality_test_score}
+                          onChange={(e) => setAssessmentState(a => ({ ...a, personality_test_score: e.target.value }))}
                         />
                       </div>
                       <div>
@@ -642,6 +841,8 @@ export default function ProductivityAssessmentClient() {
                           name="leadership_test_score"
                           type="number"
                           placeholder="Балл"
+                          value={assessmentState.leadership_test_score}
+                          onChange={(e) => setAssessmentState(a => ({ ...a, leadership_test_score: e.target.value }))}
                         />
                       </div>
                     </div>
@@ -652,13 +853,15 @@ export default function ProductivityAssessmentClient() {
                         id="assessor_notes"
                         name="assessor_notes"
                         placeholder="Дополнительные заметки об оценке..."
+                        value={assessmentState.assessor_notes}
+                        onChange={(e) => setAssessmentState(a => ({ ...a, assessor_notes: e.target.value }))}
                         className="min-h-[120px]"
                       />
                     </div>
 
                     <div>
                       <Label>Приглашение на испытательный срок:</Label>
-                      <RadioGroup name="probation_recommendation" className="flex space-x-6 mt-2">
+                      <RadioGroup name="probation_recommendation" className="flex space-x-6 mt-2" value={assessmentState.probation_recommendation} onValueChange={(v) => setAssessmentState(a => ({ ...a, probation_recommendation: v }))}>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="yes" id="probation_yes" />
                           <Label htmlFor="probation_yes">Да</Label>
@@ -681,6 +884,8 @@ export default function ProductivityAssessmentClient() {
                         name="planned_start_date"
                         type="date"
                         className="max-w-xs"
+                        value={assessmentState.planned_start_date}
+                        onChange={(e) => setAssessmentState(a => ({ ...a, planned_start_date: e.target.value }))}
                       />
                     </div>
                   </div>

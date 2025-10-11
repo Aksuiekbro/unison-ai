@@ -65,7 +65,9 @@ export async function loginAction(prevState: any, formData: FormData) {
     redirect('/')
   } catch (error: any) {
     // Allow Next.js redirect() to bubble so navigation happens client-side
-    if (error?.digest === 'NEXT_REDIRECT') throw error
+    const digest: string | undefined = error?.digest
+    const isNextRedirect = typeof digest === 'string' ? digest.startsWith('NEXT_REDIRECT') : error?.message === 'NEXT_REDIRECT'
+    if (isNextRedirect) throw error
     console.error('Login error:', error)
     return {
       success: false,

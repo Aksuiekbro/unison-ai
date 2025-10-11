@@ -95,7 +95,9 @@ export default async function ProductivityResults() {
               <CardContent>
                 <div className="text-center mb-8">
                   <div className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-r from-[#00C49A] to-[#FF7A00] text-white text-4xl font-bold mb-4">
-                    {productivityAssessment?.overall_productivity_score || 'N/A'}%
+                    {productivityAssessment?.overall_productivity_score != null
+                      ? `${productivityAssessment.overall_productivity_score}%`
+                      : 'N/A'}
                   </div>
                   <p className="text-[#333333] text-lg">
                     Общий показатель продуктивности

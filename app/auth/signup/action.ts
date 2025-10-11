@@ -46,9 +46,18 @@ export async function signupAction(prevState: any, formData: FormData) {
     }
   } catch (error: any) {
     console.error('Signup error:', error)
+    const raw = String(error?.message || '')
+    const code = String(error?.code || '')
+    const isDuplicate =
+      code === 'user_already_exists' ||
+      /duplicate key|already exists/i.test(raw) ||
+      /users_id_fkey|foreign key/i.test(raw)
+
     return {
       success: false,
-      message: error.message || "Failed to create account. Please try again.",
+      message: isDuplicate
+        ? 'Email is already registered. Try logging in instead.'
+        : (error.message || 'Failed to create account. Please try again.'),
     }
   }
 }

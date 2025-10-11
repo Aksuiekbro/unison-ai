@@ -56,10 +56,12 @@ export async function searchJobs(filters: JobFilters = {}): Promise<Job[]> {
   }
 
   if (filters.keywords) {
-    query = query.or(`title.ilike.%${filters.keywords}%,description.ilike.%${filters.keywords}%,skills.cs.{${filters.keywords}}`)
+    const kw = filters.keywords.replace(/%/g, '')
+    query = query.or(`title.ilike.%${kw}%,description.ilike.%${kw}%`)
   }
 
-  const { data, error } = await query
+  // Limit results to avoid heavy payloads
+  const { data, error } = await query.limit(24)
 
   if (error) {
     console.error('Error fetching jobs:', error)

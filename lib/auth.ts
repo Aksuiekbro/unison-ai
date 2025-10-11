@@ -76,24 +76,6 @@ export async function signUp(
 
   if (error) throw error;
 
-  // Create user record in the database
-  if (data.user) {
-    // Use service role to bypass RLS during initial user creation
-    const { error: userError } = await supabaseAdmin
-      .from('users')
-      .insert({
-        id: data.user.id,
-        email: email,
-        full_name: metadata.full_name,
-        role: metadata.role,
-      });
-
-    if (userError) throw userError;
-
-    // Single-table approach - no separate profiles table needed
-    // All profile data is stored directly in the users table
-  }
-
   return data;
 }
 

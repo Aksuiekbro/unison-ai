@@ -1,5 +1,9 @@
 import Link from 'next/link'
 import { LayoutDashboard, Briefcase, Building2, Settings } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { deleteAccount } from "@/app/actions/account"
 
 export default function EmployerSettings() {
   return (
@@ -49,16 +53,50 @@ export default function EmployerSettings() {
           <div className="max-w-3xl">
             <h1 className="text-3xl font-bold text-[#0A2540] mb-4">Настройки</h1>
             <div className="space-y-6">
-              <div className="rounded-lg border bg-white p-6">
-                <h2 className="text-xl font-semibold text-[#0A2540] mb-2">Аккаунт</h2>
-                <p className="text-[#333333]">Управление параметрами аккаунта и компании.</p>
-                <ul className="list-disc pl-5 mt-3 text-[#333333] space-y-2">
-                  <li>
-                    Обновление данных компании выполняется на странице{' '}
-                    <Link href="/employer/company" className="text-[#FF7A00] underline">Профиль компании</Link>.
-                  </li>
-                </ul>
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl text-[#0A2540]">Аккаунт</CardTitle>
+                  <CardDescription className="text-[#333333]">Управление параметрами аккаунта и компании.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="list-disc pl-5 text-[#333333] space-y-2">
+                    <li>
+                      Обновление данных компании выполняется на странице{' '}
+                      <Link href="/employer/company" className="text-[#FF7A00] underline">Профиль компании</Link>.
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card className="border-red-200">
+                <CardHeader>
+                  <CardTitle className="text-[#0A2540]">Опасная зона</CardTitle>
+                  <CardDescription className="text-red-600">Удаление аккаунта необратимо. Все связанные данные (компания, вакансии, отклики) будут удалены.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive">Удалить аккаунт</Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Удалить аккаунт?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Это действие нельзя отменить. Ваш аккаунт и связанные данные будут удалены навсегда.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Отмена</AlertDialogCancel>
+                        <form action={deleteAccount}>
+                          <AlertDialogAction type="submit" className="bg-red-600 hover:bg-red-700">
+                            Подтвердить удаление
+                          </AlertDialogAction>
+                        </form>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
