@@ -159,23 +159,38 @@ async function calculateMatchScoreForJobUser(
       preferred_skills: job.job_skills?.filter(js => !js.required).map(js => js.skills.name) || []
     };
 
+    // Normalize candidate skills from relation and JSON fallback
+    const relationSkills = (user as any).user_skills?.map((us: any) => ({
+      name: us.skills.name as string,
+      proficiency_level: (us.proficiency_level as number) || 3,
+    })) || []
+    const jsonSkills = Array.isArray((user as any).skills)
+      ? ((user as any).skills as any[]).map((s: any) => ({
+          name: typeof s === 'string' ? s : (s?.name || ''),
+          proficiency_level: (s?.proficiency_level as number) || 3,
+        }))
+      : []
+    const mergedSkills = [...relationSkills]
+    const seen = new Set(relationSkills.map(s => s.name.toLowerCase()))
+    for (const s of jsonSkills) {
+      const key = s.name?.toLowerCase()
+      if (key && !seen.has(key)) mergedSkills.push(s)
+    }
+
     const candidateData: CandidateData = {
       full_name: user.full_name,
       experience_years: undefined, // Could be calculated from experiences JSON
       current_job_title: user.current_job_title || undefined,
-      skills: user.user_skills?.map(us => ({
-        name: us.skills.name,
-        proficiency_level: us.proficiency_level || 3
-      })) || [],
+      skills: mergedSkills,
       experience: (user.experiences as any[]) || [], // From JSON field
       education: (user.educations as any[]) || [], // From JSON field
-      personality_analysis: user.personality_analysis ? {
-        problem_solving_style: user.personality_analysis.problem_solving_style || '',
-        work_preference: user.personality_analysis.work_preference || '',
-        analytical_score: user.personality_analysis.analytical_score || 75,
-        creative_score: user.personality_analysis.creative_score || 75,
-        leadership_score: user.personality_analysis.leadership_score || 75,
-        teamwork_score: user.personality_analysis.teamwork_score || 75,
+      personality_analysis: (user as any).personality_analysis ? {
+        problem_solving_style: (user as any).personality_analysis.problem_solving_style || '',
+        work_preference: (user as any).personality_analysis.work_preference || '',
+        analytical_score: (user as any).personality_analysis.analytical_score || 75,
+        creative_score: (user as any).personality_analysis.creative_score || 75,
+        leadership_score: (user as any).personality_analysis.leadership_score || 75,
+        teamwork_score: (user as any).personality_analysis.teamwork_score || 75,
         strengths: []
       } : undefined,
       preferred_location: user.location || undefined, // From users table

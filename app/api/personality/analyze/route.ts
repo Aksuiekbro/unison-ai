@@ -148,34 +148,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Store personality analysis in database
+    // Store personality analysis in database (upsert by user_id)
     try {
-      // Delete existing analysis for this user
-      try {
-        const { error: deleteAnalysisError } = await supabase
-          .from('personality_analysis')
-          .delete()
-          .eq('user_id', user.id)
-
-        if (deleteAnalysisError) {
-          console.error('Error deleting existing personality analysis:', deleteAnalysisError)
-          return NextResponse.json(
-            { success: false, error: 'Failed to reset previous personality analysis' },
-            { status: 500 }
-          )
-        }
-      } catch (deleteAnalysisCaughtError) {
-        console.error('Unexpected error deleting existing personality analysis:', deleteAnalysisCaughtError)
-        return NextResponse.json(
-          { success: false, error: 'Failed to reset previous personality analysis' },
-          { status: 500 }
-        )
-      }
-
-      // Insert new analysis
-      const { error: analysisError } = await supabase
+      const { error: upsertErr } = await supabase
         .from('personality_analysis')
-        .insert({
+        .upsert({
           user_id: user.id,
           problem_solving_style: analysis.problem_solving_style,
           initiative_level: analysis.initiative_level,
@@ -191,33 +168,12 @@ export async function POST(request: NextRequest) {
           trait_scores: analysis.trait_scores,
           ai_confidence_score: analysis.confidence_score,
           analysis_version: '1.0'
-        })
+        }, { onConflict: 'user_id' })
 
-      if (analysisError) {
-        console.error('Error storing personality analysis:', analysisError)
+      if (upsertErr) {
+        console.error('Error upserting personality analysis:', upsertErr)
         // Continue anyway - we can still return the result
       }
-
-      // Update user profile to mark personality test as completed
-      // Use DB-native upsert with defaultToNull=false to avoid overwriting other columns
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert([
-          {
-            user_id: user.id,
-            personality_test_completed: true,
-            ai_analysis_completed: true
-          }
-        ], {
-          onConflict: 'user_id',
-          // Critical: do not set unspecified columns to null on conflict
-          defaultToNull: false
-        })
-
-      if (profileError) {
-        console.error('Error updating profile:', profileError)
-      }
-
     } catch (dbError) {
       console.error('Database error storing analysis:', dbError)
       // Don't fail the request - analysis was successful
