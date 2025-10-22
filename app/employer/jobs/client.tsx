@@ -68,14 +68,14 @@ export default function EmployerJobsClient({ userId }: EmployerJobsClientProps) 
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "active":
+      case "published":
         return "bg-green-500"
-      case "paused":
-        return "bg-yellow-500"
       case "draft":
         return "bg-gray-500"
       case "closed":
         return "bg-red-500"
+      case "cancelled":
+        return "bg-yellow-500"
       default:
         return "bg-gray-500"
     }
@@ -83,14 +83,14 @@ export default function EmployerJobsClient({ userId }: EmployerJobsClientProps) 
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case "active":
+      case "published":
         return "Активна"
-      case "paused":
-        return "На паузе"
       case "draft":
         return "Черновик"
       case "closed":
         return "Закрыта"
+      case "cancelled":
+        return "Отменена"
       default:
         return "Неизвестно"
     }
@@ -136,6 +136,13 @@ export default function EmployerJobsClient({ userId }: EmployerJobsClientProps) 
             >
               <Briefcase className="w-5 h-5 mr-3" />
               Вакансии
+            </Link>
+            <Link
+              href="/employer/employees"
+              className="flex items-center px-4 py-3 text-[#333333] hover:bg-gray-100 rounded-lg"
+            >
+              <Users className="w-5 h-5 mr-3" />
+              Сотрудники
             </Link>
             <Link
               href="/employer/company"
@@ -185,10 +192,10 @@ export default function EmployerJobsClient({ userId }: EmployerJobsClientProps) 
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Все статусы</SelectItem>
-                      <SelectItem value="active">Активные</SelectItem>
-                      <SelectItem value="paused">На паузе</SelectItem>
+                      <SelectItem value="published">Активные</SelectItem>
                       <SelectItem value="draft">Черновики</SelectItem>
                       <SelectItem value="closed">Закрытые</SelectItem>
+                      <SelectItem value="cancelled">Отмененные</SelectItem>
                     </SelectContent>
                   </Select>
                   <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
@@ -267,7 +274,7 @@ export default function EmployerJobsClient({ userId }: EmployerJobsClientProps) 
                           </div>
 
                           <div className="flex items-center space-x-3">
-                            {job.status === "active" && (
+                            {job.status === "published" && (
                               <Link href={`/employer/jobs/${job.id}/candidates`}>
                                 <Button className="bg-[#00C49A] hover:bg-[#00A085] text-white">
                                   <Users className="w-4 h-4 mr-2" />
@@ -287,18 +294,18 @@ export default function EmployerJobsClient({ userId }: EmployerJobsClientProps) 
                                   <Edit className="w-4 h-4 mr-2" />
                                   Редактировать
                                 </DropdownMenuItem>
-                                {job.status === "active" ? (
-                                  <DropdownMenuItem onClick={() => handleStatusChange(job.id, 'paused')}>
+                                {job.status === "published" ? (
+                                  <DropdownMenuItem onClick={() => handleStatusChange(job.id, 'cancelled')}>
                                     <Pause className="w-4 h-4 mr-2" />
-                                    Поставить на паузу
+                                    Снять с публикации
                                   </DropdownMenuItem>
-                                ) : job.status === "paused" ? (
-                                  <DropdownMenuItem onClick={() => handleStatusChange(job.id, 'active')}>
+                                ) : job.status === "cancelled" ? (
+                                  <DropdownMenuItem onClick={() => handleStatusChange(job.id, 'published')}>
                                     <Play className="w-4 h-4 mr-2" />
-                                    Активировать
+                                    Опубликовать
                                   </DropdownMenuItem>
                                 ) : job.status === "draft" ? (
-                                  <DropdownMenuItem onClick={() => handleStatusChange(job.id, 'active')}>
+                                  <DropdownMenuItem onClick={() => handleStatusChange(job.id, 'published')}>
                                     <Play className="w-4 h-4 mr-2" />
                                     Опубликовать
                                   </DropdownMenuItem>

@@ -50,13 +50,39 @@ export interface Application {
 
 // Validate user is employer and has access to company
 async function validateEmployerAccess(userId: string, companyId?: string) {
-  const { data: user, error } = await supabaseAdmin
+  // Try to read application-owned profile first
+  let { data: user, error } = await supabaseAdmin
     .from('users')
-    .select('id, role')
+    .select('id, role, email')
     .eq('id', userId)
     .single()
 
+  // If the app profile row is missing, attempt to recover from Auth and backfill
   if (error || !user) {
+    try {
+      const { data: authUserData, error: getAuthErr } = await supabaseAdmin.auth.admin.getUserById(userId)
+      if (!getAuthErr && authUserData?.user) {
+        const authUser = authUserData.user as any
+        const metaRole = authUser?.user_metadata?.role
+        const normalizedRole = metaRole === 'job-seeker' || metaRole === 'employee' ? 'job_seeker' : metaRole
+
+        // If Auth says employer, auto-provision minimal users row to keep single-table invariant
+        if (normalizedRole === 'employer') {
+          const email = authUser?.email as string | null
+          await supabaseAdmin
+            .from('users')
+            .insert({ id: userId, email: email || `${userId}@placeholder.local`, role: 'employer', full_name: authUser?.user_metadata?.full_name || email || null })
+            .select('id, role, email')
+            .single()
+            .then(({ data }) => { user = data as any })
+        }
+      }
+    } catch {
+      // ignore and let validation fail below
+    }
+  }
+
+  if (!user) {
     throw new Error('User not found')
   }
 

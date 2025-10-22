@@ -24,7 +24,7 @@ export default function RootLayout({
         <AuthProvider>
           <ToastProvider>
             {children}
-            {process.env.NODE_ENV === 'development' ? (
+            {process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_STAGEWISE_ENABLED === 'true' ? (
               <StagewiseToolbarClient config={stagewiseConfig} />
             ) : null}
             <Toaster position="top-right" />

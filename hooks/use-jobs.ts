@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import type { Job, JobStatus, Application } from '@/lib/actions/jobs'
+import type { Job, JobStatus, Application, JobType } from '@/lib/actions/jobs'
 
 export function useJobs(employerId: string) {
   const [jobs, setJobs] = useState<Job[]>([])
@@ -10,14 +10,14 @@ export function useJobs(employerId: string) {
 
   const fetchJobs = async (filters?: {
     status?: JobStatus
-    job_type?: string
+    job_type?: JobType
     search?: string
   }) => {
     setLoading(true)
     setError(null)
     try {
       const params = new URLSearchParams()
-      if (filters?.status) params.set('status', filters.status)
+      if (filters?.status && ['draft','published','closed','cancelled'].includes(filters.status)) params.set('status', filters.status)
       if (filters?.job_type) params.set('job_type', filters.job_type)
       if (filters?.search) params.set('search', filters.search)
 

@@ -112,6 +112,13 @@ function EmployerDashboardContent({
               Вакансии
             </Link>
             <Link
+              href="/employer/employees"
+              className="flex items-center px-4 py-3 text-[#333333] hover:bg-gray-100 rounded-lg"
+            >
+              <Users className="w-5 h-5 mr-3" />
+              Сотрудники
+            </Link>
+            <Link
               href="/employer/company"
               className="flex items-center px-4 py-3 text-[#333333] hover:bg-gray-100 rounded-lg"
             >

@@ -27,12 +27,16 @@ export async function GET(request: Request) {
     if (!user) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
 
     const url = new URL(request.url)
-    const status = url.searchParams.get('status') as any | null
+    let status = url.searchParams.get('status') as any | null
     const job_type = url.searchParams.get('job_type') as any | null
     const search = url.searchParams.get('search') || undefined
 
+    // Backward-compat mapping for legacy UI values
+    if (status === 'active') status = 'published'
+    if (status === 'paused') status = 'cancelled'
+
     const filters: any = {}
-    if (status) filters.status = status
+    if (status && ['draft','published','closed','cancelled'].includes(status)) filters.status = status
     if (job_type) filters.job_type = job_type
     if (search) filters.search = search
 

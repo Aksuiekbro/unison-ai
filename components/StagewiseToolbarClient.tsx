@@ -17,6 +17,8 @@ export function StagewiseToolbarClient({ config }: { config: StagewiseConfig }) 
   const isAuthRoute = pathname?.startsWith('/auth')
   // Avoid initializing toolbar on auth pages to prevent sandbox and local service errors
   if (isAuthRoute) return null
+  const enabled = process.env.NEXT_PUBLIC_STAGEWISE_ENABLED === 'true'
+  if (!enabled) return null
   return <StagewiseToolbar config={config} />
 }
 

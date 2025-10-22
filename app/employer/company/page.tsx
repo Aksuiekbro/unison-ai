@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { LayoutDashboard, Briefcase, Building2, Settings } from "lucide-react"
+import { LayoutDashboard, Briefcase, Building2, Settings, Users } from "lucide-react"
 import Link from "next/link"
 import type { Database } from '@/lib/database.types'
 import EmployerProfileForm from '@/components/profile/employer-profile-form'
@@ -99,6 +99,13 @@ export default async function CompanyProfile() {
             >
               <Briefcase className="w-5 h-5 mr-3" />
               Вакансии
+            </Link>
+            <Link
+              href="/employer/employees"
+              className="flex items-center px-4 py-3 text-[#333333] hover:bg-gray-100 rounded-lg"
+            >
+              <Users className="w-5 h-5 mr-3" />
+              Сотрудники
             </Link>
             <Link
               href="/employer/company"
