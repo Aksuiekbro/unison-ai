@@ -11,6 +11,9 @@ export interface Database {
           phone: string | null
           location: string | null
           bio: string | null
+          skills?: any | null
+          experiences?: any | null
+          educations?: any | null
           productivity_assessment_completed: boolean
           created_at: string
           updated_at: string
@@ -24,6 +27,9 @@ export interface Database {
           phone?: string | null
           location?: string | null
           bio?: string | null
+          skills?: any | null
+          experiences?: any | null
+          educations?: any | null
           productivity_assessment_completed?: boolean
           created_at?: string
           updated_at?: string
@@ -37,6 +43,9 @@ export interface Database {
           phone?: string | null
           location?: string | null
           bio?: string | null
+          skills?: any | null
+          experiences?: any | null
+          educations?: any | null
           productivity_assessment_completed?: boolean
           created_at?: string
           updated_at?: string
@@ -715,6 +724,32 @@ export interface Database {
           completed_at?: string
           created_at?: string
           updated_at?: string
+        }
+      }
+      shared_reports: {
+        Row: {
+          id: string
+          user_id: string
+          assessment_id: string
+          token: string
+          expires_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          assessment_id: string
+          token: string
+          expires_at: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          assessment_id?: string
+          token?: string
+          expires_at?: string
+          created_at?: string
         }
       }
       match_scores: {

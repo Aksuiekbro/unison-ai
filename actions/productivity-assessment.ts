@@ -261,6 +261,7 @@ export async function submitProductivityAssessment(prevState: any, formData: For
         probation_recommendation: enriched.probation_recommendation,
         planned_start_date: enriched.planned_start_date,
         assessment_version: 'v1.0',
+        completed_at: new Date().toISOString(),
       })
 
     if (assessmentError) {

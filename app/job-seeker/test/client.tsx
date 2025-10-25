@@ -16,6 +16,8 @@ import Link from "next/link"
 import { submitProductivityAssessment } from '@/actions/productivity-assessment'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase-client'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { toast } from 'sonner'
 
 interface WorkExperience {
   id: string
@@ -100,6 +102,8 @@ export default function ProductivityAssessmentClient() {
   const isInitializingRef = useRef(true)
   const knowledgeSaveTimer = useRef<NodeJS.Timeout | null>(null)
   const assessmentSaveTimer = useRef<NodeJS.Timeout | null>(null)
+  const formRef = useRef<HTMLFormElement | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const [state, formAction, isPending] = useActionState(submitProductivityAssessment, {
     success: false,
@@ -333,7 +337,21 @@ export default function ProductivityAssessmentClient() {
           </CardHeader>
 
           <CardContent>
-            <form action={handleFormSubmit}>
+            <form
+              ref={formRef}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const target = e.target as HTMLElement
+                  const tag = target?.tagName
+                  const isTextarea = tag === 'TEXTAREA'
+                  // Prevent accidental submit via Enter outside textarea on non-final tabs
+                  if (!isTextarea && currentTab !== 'assessment') {
+                    e.preventDefault()
+                  }
+                }
+              }}
+              action={handleFormSubmit}
+            >
               <Tabs value={currentTab} onValueChange={setCurrentTab}>
                 <TabsList className="grid w-full grid-cols-4 mb-8">
                   {tabData.map((tab) => {
@@ -915,20 +933,57 @@ export default function ProductivityAssessmentClient() {
                   </Button>
 
                   {currentTab === "assessment" ? (
-                    <Button
-                      type="submit"
-                      className="bg-[#00C49A] hover:bg-[#00A085]"
-                      disabled={isPending}
-                    >
-                      {isPending ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Сохранение...
-                        </>
-                      ) : (
-                        "Завершить оценку"
-                      )}
-                    </Button>
+                    <>
+                      <Button
+                        type="button"
+                        onClick={() => setConfirmOpen(true)}
+                        className="bg-[#00C49A] hover:bg-[#00A085]"
+                        disabled={isPending}
+                      >
+                        {isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Сохранение...
+                          </>
+                        ) : (
+                          "Завершить оценку"
+                        )}
+                      </Button>
+                      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Подтвердите завершение</DialogTitle>
+                          </DialogHeader>
+                          <p className="text-sm text-[#333333]">
+                            Проверьте, что заполнили все разделы. Вы уверены, что хотите завершить оценку?
+                          </p>
+                          <DialogFooter>
+                            <Button variant="outline" type="button" onClick={() => setConfirmOpen(false)}>Отмена</Button>
+                            <Button
+                              type="button"
+                              onClick={() => {
+                                const hasRequiredExperience = workExperiences.some(exp =>
+                                  (exp.company_name?.trim() || '') !== '' &&
+                                  (exp.position?.trim() || '') !== '' &&
+                                  (exp.start_date?.trim() || '') !== ''
+                                )
+                                if (!hasRequiredExperience) {
+                                  toast.error('Добавьте минимум одно место работы: Компания, Должность и Дата начала')
+                                  setCurrentTab('work-experience')
+                                  setConfirmOpen(false)
+                                  return
+                                }
+                                setConfirmOpen(false)
+                                formRef.current?.requestSubmit()
+                              }}
+                              className="bg-[#00C49A] hover:bg-[#00A085]"
+                            >
+                              Подтвердить
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </>
                   ) : (
                     <Button
                       type="button"

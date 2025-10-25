@@ -306,32 +306,41 @@ function JobSeekerDashboardContent({ displayName, applications, recommendations,
                     <CardDescription>Подобраны специально для вас</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      {recommendations.map((job) => (
-                        <div key={job.id} className="p-4 border rounded-lg hover:shadow-md transition-shadow">
-                          <h4 className="font-semibold text-[#0A2540] mb-2">{job.position}</h4>
-                          <p className="text-sm text-[#333333] mb-2">{job.company}</p>
-                          <div className="flex items-center text-xs text-gray-500 space-x-3 mb-3">
-                            <div className="flex items-center">
-                              <MapPin className="w-3 h-3 mr-1" />
-                              {job.location}
-                            </div>
-                            <div className="flex items-center">
-                              <Clock className="w-3 h-3 mr-1" />
-                              {job.salary}
-                            </div>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full border-[#00C49A] text-[#00C49A] hover:bg-[#00C49A] hover:text-white bg-transparent"
-                          >
-                            <Eye className="w-4 h-4 mr-1" />
-                            Подробнее
-                          </Button>
+              {recommendations.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 mb-3">Вакансии отсутствуют.</p>
+                  <Link href="/job-seeker/search">
+                    <Button variant="outline">Перейти к поиску</Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {recommendations.map((job) => (
+                    <div key={job.id} className="p-4 border rounded-lg hover:shadow-md transition-shadow">
+                      <h4 className="font-semibold text-[#0A2540] mb-2">{job.position}</h4>
+                      <p className="text-sm text-[#333333] mb-2">{job.company}</p>
+                      <div className="flex items-center text-xs text-gray-500 space-x-3 mb-3">
+                        <div className="flex items-center">
+                          <MapPin className="w-3 h-3 mr-1" />
+                          {job.location}
                         </div>
-                      ))}
+                        <div className="flex items-center">
+                          <Clock className="w-3 h-3 mr-1" />
+                          {job.salary}
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full border-[#00C49A] text-[#00C49A] hover:bg-[#00C49A] hover:text-white bg-transparent"
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        Подробнее
+                      </Button>
                     </div>
+                  ))}
+                </div>
+              )}
                   </CardContent>
                 </Card>
               </div>

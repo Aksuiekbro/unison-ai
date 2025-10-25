@@ -6,6 +6,7 @@ import Link from "next/link"
 import { createClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import { getProductivityAssessmentData } from '@/actions/productivity-assessment'
+import React from 'react'
 
 export default async function ProductivityResults() {
   const supabase = await createClient()
@@ -48,6 +49,14 @@ export default async function ProductivityResults() {
   }
 
   const { workExperiences, knowledgeAssessment, productivityAssessment } = assessmentData.data
+
+  async function createShareLink() {
+    'use server'
+    const res = await fetch('/api/productivity/share', { method: 'POST' })
+    if (!res.ok) return { success: false }
+    const data = await res.json()
+    return { success: data.success, url: data.url }
+  }
 
   // Fetch AI personality analysis trait scores (if available)
   const { data: personalityAnalysis } = await supabase
@@ -360,18 +369,8 @@ export default async function ProductivityResults() {
                 <CardTitle className="text-[#0A2540]">Действия</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button className="w-full bg-[#00C49A] hover:bg-[#00A085]" disabled>
-                  <Download className="w-4 h-4 mr-2" />
-                  Скачать отчет
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full border-[#FF7A00] text-[#FF7A00] hover:bg-[#FF7A00] hover:text-white bg-transparent"
-                  disabled
-                >
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Поделиться
-                </Button>
+                <DownloadReportButton />
+                <ShareReportButton action={createShareLink} />
                 <Link href="/job-seeker/search" className="block">
                   <Button variant="outline" className="w-full bg-transparent">
                     Найти подходящие вакансии
@@ -383,5 +382,75 @@ export default async function ProductivityResults() {
         </div>
       </div>
     </div>
+  )
+}
+
+function DownloadReportButton() {
+  'use client'
+  const [downloading, setDownloading] = React.useState(false)
+  const handleDownload = async () => {
+    setDownloading(true)
+    try {
+      const { default: html2canvas } = await import('html2canvas')
+      const { jsPDF } = await import('jspdf')
+      const container = document.getElementById('report-root') || document.body
+      const canvas = await html2canvas(container as HTMLElement, { scale: 2, useCORS: true })
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' })
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+      const imgWidth = pageWidth
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      let y = 0
+      let remaining = imgHeight
+      while (remaining > 0) {
+        pdf.addImage(imgData, 'PNG', 0, y ? 0 : 0, imgWidth, imgHeight)
+        remaining -= pageHeight
+        if (remaining > 0) pdf.addPage()
+        y += pageHeight
+      }
+      pdf.save('productivity-report.pdf')
+    } catch (_) {
+      // no-op
+    } finally {
+      setDownloading(false)
+    }
+  }
+  return (
+    <Button onClick={handleDownload} className="w-full bg-[#00C49A] hover:bg-[#00A085]" disabled={downloading}>
+      <Download className="w-4 h-4 mr-2" />
+      {downloading ? 'Подготовка...' : 'Скачать отчет'}
+    </Button>
+  )
+}
+
+function ShareReportButton({ action }: { action: () => Promise<{ success: boolean; url?: string }> }) {
+  'use client'
+  const [sharing, setSharing] = React.useState(false)
+  const onShare = async () => {
+    setSharing(true)
+    try {
+      const res = await action()
+      if (res.success && res.url) {
+        await navigator.clipboard.writeText(res.url)
+        // Optional toast could be used if available
+        alert('Ссылка скопирована: ' + res.url)
+      } else {
+        alert('Не удалось создать ссылку для общего доступа')
+      }
+    } finally {
+      setSharing(false)
+    }
+  }
+  return (
+    <Button
+      onClick={onShare}
+      variant="outline"
+      className="w-full border-[#FF7A00] text-[#FF7A00] hover:bg-[#FF7A00] hover:text-white bg-transparent"
+      disabled={sharing}
+    >
+      <Share2 className="w-4 h-4 mr-2" />
+      {sharing ? 'Создание ссылки...' : 'Поделиться'}
+    </Button>
   )
 }
