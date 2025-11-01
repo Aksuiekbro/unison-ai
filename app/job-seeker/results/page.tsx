@@ -1,12 +1,14 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Building, GraduationCap, User, FileText, Download, Share2, AlertCircle, Star } from "lucide-react"
+import { Building, GraduationCap, User, FileText, AlertCircle, Star } from "lucide-react"
 import Link from "next/link"
 import { createClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import { getProductivityAssessmentData } from '@/actions/productivity-assessment'
 import React from 'react'
+import DownloadReportButton from './DownloadReportButton'
+import ShareReportButton from './ShareReportButton'
 
 export default async function ProductivityResults() {
   const supabase = await createClient()
@@ -382,75 +384,5 @@ export default async function ProductivityResults() {
         </div>
       </div>
     </div>
-  )
-}
-
-function DownloadReportButton() {
-  'use client'
-  const [downloading, setDownloading] = React.useState(false)
-  const handleDownload = async () => {
-    setDownloading(true)
-    try {
-      const { default: html2canvas } = await import('html2canvas')
-      const { jsPDF } = await import('jspdf')
-      const container = document.getElementById('report-root') || document.body
-      const canvas = await html2canvas(container as HTMLElement, { scale: 2, useCORS: true })
-      const imgData = canvas.toDataURL('image/png')
-      const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' })
-      const pageWidth = pdf.internal.pageSize.getWidth()
-      const pageHeight = pdf.internal.pageSize.getHeight()
-      const imgWidth = pageWidth
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
-      let y = 0
-      let remaining = imgHeight
-      while (remaining > 0) {
-        pdf.addImage(imgData, 'PNG', 0, y ? 0 : 0, imgWidth, imgHeight)
-        remaining -= pageHeight
-        if (remaining > 0) pdf.addPage()
-        y += pageHeight
-      }
-      pdf.save('productivity-report.pdf')
-    } catch (_) {
-      // no-op
-    } finally {
-      setDownloading(false)
-    }
-  }
-  return (
-    <Button onClick={handleDownload} className="w-full bg-[#00C49A] hover:bg-[#00A085]" disabled={downloading}>
-      <Download className="w-4 h-4 mr-2" />
-      {downloading ? 'Подготовка...' : 'Скачать отчет'}
-    </Button>
-  )
-}
-
-function ShareReportButton({ action }: { action: () => Promise<{ success: boolean; url?: string }> }) {
-  'use client'
-  const [sharing, setSharing] = React.useState(false)
-  const onShare = async () => {
-    setSharing(true)
-    try {
-      const res = await action()
-      if (res.success && res.url) {
-        await navigator.clipboard.writeText(res.url)
-        // Optional toast could be used if available
-        alert('Ссылка скопирована: ' + res.url)
-      } else {
-        alert('Не удалось создать ссылку для общего доступа')
-      }
-    } finally {
-      setSharing(false)
-    }
-  }
-  return (
-    <Button
-      onClick={onShare}
-      variant="outline"
-      className="w-full border-[#FF7A00] text-[#FF7A00] hover:bg-[#FF7A00] hover:text-white bg-transparent"
-      disabled={sharing}
-    >
-      <Share2 className="w-4 h-4 mr-2" />
-      {sharing ? 'Создание ссылки...' : 'Поделиться'}
-    </Button>
   )
 }

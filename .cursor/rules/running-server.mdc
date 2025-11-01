@@ -4,4 +4,4 @@ globs:
 alwaysApply: true
 ---
 
-when you want to start running a server, you should not do that and ask the user to run it.
+when you want to start running a server, you should not do that and ask the user to run it. When you are doubting about migrations or related with database, you can run the supabase mcp command to get the latest information about the database.
