@@ -422,15 +422,18 @@ export async function updateEmployerProfile(formData: FormData) {
     // Validate data
     const validatedData = employerProfileSchema.parse(data)
 
+    // Compose a human-readable location string
+    const composedLocation = [validatedData.address, validatedData.city, validatedData.country]
+      .filter((v) => !!v && String(v).trim().length > 0)
+      .join(', ')
+
     // Update employer info in users table (single-table approach)
     const { error: updateError } = await supabase
       .from('users')
       .update({
         full_name: validatedData.hrContactName || null,
         phone: validatedData.phone || null,
-        location: `${validatedData.city || ''}, ${validatedData.country || ''}`.trim().replace(/^,\s*|,\s*$/g, '') || null,
-        company_culture: validatedData.companyCulture || null,
-        hiring_preferences: null, // Can be extended later if needed
+        location: composedLocation || null,
       })
       .eq('id', user.id)
 
@@ -444,7 +447,10 @@ export async function updateEmployerProfile(formData: FormData) {
         industry: validatedData.industry || null,
         size: validatedData.companySize || null,
         website: validatedData.websiteUrl || null,
-        location: `${validatedData.city || ''}, ${validatedData.country || ''}`.trim().replace(/^,\s*|,\s*$/g, '') || null,
+        location: composedLocation || null,
+        company_culture: validatedData.companyCulture || null,
+        benefits: validatedData.benefits || [],
+        technologies: validatedData.technologies || [],
       }, {
         onConflict: 'owner_id'
       })

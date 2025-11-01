@@ -67,9 +67,9 @@ export default async function CompanyProfile() {
     hrEmail: userData.email || '',
     phone: userData.phone || '',
     hrContactName: userData.full_name || '',
-    companyCulture: userData.company_culture || '',
-    benefits: [], // Not in current schema
-    technologies: [], // Not in current schema
+    companyCulture: companyData?.company_culture || '',
+    benefits: companyData?.benefits || [],
+    technologies: companyData?.technologies || [],
   }
 
   return (

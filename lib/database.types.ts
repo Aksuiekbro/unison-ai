@@ -61,6 +61,9 @@ export interface Database {
           industry: string | null
           size: string | null
           location: string | null
+          company_culture: string | null
+          benefits: string[] | null
+          technologies: string[] | null
           owner_id: string
           created_at: string
           updated_at: string
@@ -74,6 +77,9 @@ export interface Database {
           industry?: string | null
           size?: string | null
           location?: string | null
+          company_culture?: string | null
+          benefits?: string[] | null
+          technologies?: string[] | null
           owner_id: string
           created_at?: string
           updated_at?: string
@@ -87,6 +93,9 @@ export interface Database {
           industry?: string | null
           size?: string | null
           location?: string | null
+          company_culture?: string | null
+          benefits?: string[] | null
+          technologies?: string[] | null
           owner_id?: string
           created_at?: string
           updated_at?: string
