@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import { getProductivityAssessmentData } from '@/actions/productivity-assessment'
 import React from 'react'
+import { headers, cookies } from 'next/headers'
 import DownloadReportButton from './DownloadReportButton'
 import RetakeTestButton from './RetakeTestButton'
 import ShareReportButton from './ShareReportButton'
@@ -55,7 +56,15 @@ export default async function ProductivityResults() {
 
   async function createShareLink() {
     'use server'
-    const res = await fetch('/api/productivity/share', { method: 'POST' })
+    const hdrs = headers()
+    const origin = hdrs.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const cookie = cookies().toString()
+    const url = new URL('/api/productivity/share', origin).toString()
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { cookie },
+      cache: 'no-store',
+    })
     if (!res.ok) return { success: false }
     const data = await res.json()
     return { success: data.success, url: data.url }
