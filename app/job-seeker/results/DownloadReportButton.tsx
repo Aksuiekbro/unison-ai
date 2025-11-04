@@ -10,7 +10,7 @@ export default function DownloadReportButton() {
   const handleDownload = async () => {
     setDownloading(true)
     try {
-      const res = await fetch('/api/productivity/report/pdf', { method: 'GET' })
+      const res = await fetch('/api/productivity/report/pdf', { method: 'GET', credentials: 'include' })
       if (!res.ok) throw new Error('Failed to generate report')
       const buf = await res.arrayBuffer()
       const blob = new Blob([buf], { type: 'application/pdf' })
@@ -22,8 +22,13 @@ export default function DownloadReportButton() {
       a.click()
       a.remove()
       URL.revokeObjectURL(url)
-    } catch (_) {
-      // noop
+    } catch (err) {
+      try {
+        // Fallback to opening a new tab (lets browser handle download/view)
+        window.open('/api/productivity/report/pdf', '_blank', 'noopener')
+      } catch (_) {
+        alert('Не удалось скачать PDF-отчет. Пожалуйста, попробуйте еще раз.')
+      }
     } finally {
       setDownloading(false)
     }
