@@ -8,6 +8,7 @@ import { redirect } from 'next/navigation'
 import { getProductivityAssessmentData } from '@/actions/productivity-assessment'
 import React from 'react'
 import DownloadReportButton from './DownloadReportButton'
+import RetakeTestButton from './RetakeTestButton'
 import ShareReportButton from './ShareReportButton'
 
 export default async function ProductivityResults() {
@@ -373,6 +374,7 @@ export default async function ProductivityResults() {
               <CardContent className="space-y-3">
                 <DownloadReportButton />
                 <ShareReportButton action={createShareLink} />
+                <RetakeTestButton />
                 <Link href="/job-seeker/search" className="block">
                   <Button variant="outline" className="w-full bg-transparent">
                     Найти подходящие вакансии
