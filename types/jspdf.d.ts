@@ -19,6 +19,8 @@ declare module 'jspdf' {
     splitTextToSize(text: string, size: number): string[]
     output(type?: 'arraybuffer' | 'blob' | string): any
     internal: any
+    addFileToVFS(filename: string, data: string): this
+    addFont(postScriptNameOrFile: string, fontName?: string, fontStyle?: string, encoding?: string): this
   }
 }
 
