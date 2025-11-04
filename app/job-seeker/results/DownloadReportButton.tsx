@@ -10,27 +10,20 @@ export default function DownloadReportButton() {
   const handleDownload = async () => {
     setDownloading(true)
     try {
-      const { default: html2canvas } = await import('html2canvas')
-      const { jsPDF } = await import('jspdf')
-      const container = document.getElementById('report-root') || document.body
-      const canvas = await html2canvas(container as HTMLElement, { scale: 2, useCORS: true })
-      const imgData = canvas.toDataURL('image/png')
-      const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' })
-      const pageWidth = pdf.internal.pageSize.getWidth()
-      const pageHeight = pdf.internal.pageSize.getHeight()
-      const imgWidth = pageWidth
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
-      let y = 0
-      let remaining = imgHeight
-      while (remaining > 0) {
-        pdf.addImage(imgData, 'PNG', 0, y ? 0 : 0, imgWidth, imgHeight)
-        remaining -= pageHeight
-        if (remaining > 0) pdf.addPage()
-        y += pageHeight
-      }
-      pdf.save('productivity-report.pdf')
+      const res = await fetch('/api/productivity/report/pdf', { method: 'GET' })
+      if (!res.ok) throw new Error('Failed to generate report')
+      const buf = await res.arrayBuffer()
+      const blob = new Blob([buf], { type: 'application/pdf' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'productivity-report.pdf'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
     } catch (_) {
-      // no-op
+      // noop
     } finally {
       setDownloading(false)
     }
