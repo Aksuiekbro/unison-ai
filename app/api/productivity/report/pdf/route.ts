@@ -110,8 +110,8 @@ export async function GET(req: NextRequest) {
       loadFontBase64('bold', origin),
     ])
     // jsPDF expects binary (latin1) string for VFS contents. Convert from base64.
-    const regularBinary = Buffer.from(regularB64, 'base64').toString('binary')
-    const boldBinary = Buffer.from(boldB64, 'base64').toString('binary')
+    const regularBinary = Buffer.from(regularB64, 'base64').toString('latin1')
+    const boldBinary = Buffer.from(boldB64, 'base64').toString('latin1')
     pdf.addFileToVFS('NotoSans-Regular.ttf', regularBinary)
     pdf.addFont('NotoSans-Regular.ttf', 'NotoSans', 'normal')
     pdf.addFileToVFS('NotoSans-Bold.ttf', boldBinary)

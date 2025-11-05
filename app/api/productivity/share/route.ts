@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import crypto from 'crypto'
 
+export const runtime = 'nodejs'
+
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient()
@@ -33,7 +35,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Failed to create share link' }, { status: 500 })
     }
 
-    const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin
     const url = `${origin}/share/${token}`
     return NextResponse.json({ success: true, url })
   } catch (e) {
