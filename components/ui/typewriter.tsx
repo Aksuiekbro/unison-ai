@@ -31,6 +31,13 @@ export function Typewriter({
   const [displayText, setDisplayText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const timeoutRef = useRef<number | null>(null);
+  const longestPhrase = useMemo(
+    () =>
+      safePhrases.reduce((longest, current) =>
+        current.length >= longest.length ? current : longest
+      , ""),
+    [safePhrases]
+  );
 
   useEffect(() => {
     if (safePhrases.length === 0) return;
@@ -107,12 +114,12 @@ export function Typewriter({
   const currentFullPhrase = safePhrases[phraseIndex % safePhrases.length];
 
   return (
-    <span
-      className={clsx("whitespace-pre-wrap", className)}
-      aria-live="polite"
-      aria-label={currentFullPhrase}
-    >
-      <span>{displayText}</span>
+    <span className={clsx("relative inline-block align-baseline", className)} aria-live="polite" aria-label={currentFullPhrase}>
+      <span className="invisible whitespace-pre-wrap" aria-hidden="true">
+        {longestPhrase}
+      </span>
+      <span className="absolute inset-0 whitespace-pre-wrap pointer-events-none">
+        <span>{displayText}</span>
       <span
         className={clsx(
           "inline-block w-[1ch] text-current",
@@ -122,6 +129,7 @@ export function Typewriter({
         aria-hidden="true"
       >
         |
+      </span>
       </span>
     </span>
   );
