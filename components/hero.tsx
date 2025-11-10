@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowRight, PlayCircle } from "lucide-react"
 import Image from "next/image"
 import { motion } from "framer-motion"
+import { Typewriter } from "@/components/ui/typewriter"
 
 export function Hero() {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -32,7 +33,21 @@ export function Hero() {
       >
         <div className="mx-auto max-w-3xl">
           <h1 className="text-5xl font-extrabold tracking-tighter sm:text-6xl md:text-7xl lg:text-6xl">
-            UnisonAI unifies recruiting, CRM & projects in one powerful platform
+            UnisonAI{" "}
+            <Typewriter
+              phrases={[
+                "unifies recruiting, CRM & projects in one powerful platform",
+                "automates candidate screening with AI",
+                "analyzes soft skills for cultural fit",
+                "ranks applicants by AI Match Score",
+                "built for Kazakhstan’s SMBs",
+              ]}
+              typingSpeedMs={40}
+              deletingSpeedMs={20}
+              pauseMs={1200}
+              loop
+              className="inline-block"
+            />
           </h1>
           <p className="mx-auto mt-8 max-w-2xl text-2xl md:text-3xl text-gray-600">
             Advance your entire organization with intelligent 
