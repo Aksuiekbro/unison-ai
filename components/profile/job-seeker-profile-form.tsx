@@ -18,6 +18,7 @@ import { jobSeekerProfileSchema, type JobSeekerProfileData } from '@/lib/validat
 import { updateJobSeekerProfile, addJobSeekerExperience, addJobSeekerEducation } from '@/app/actions/profile'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
+import ResumeUploadDialog from "@/components/profile/ResumeUploadDialog"
 
 interface JobSeekerProfileFormProps {
   initialData?: Partial<JobSeekerProfileData> & {
@@ -63,6 +64,8 @@ export default function JobSeekerProfileForm({
   const [expForm, setExpForm] = useState({ position: '', company: '', startDate: '', endDate: '', description: '', isCurrent: false })
   const [eduForm, setEduForm] = useState({ institution: '', degree: '', fieldOfStudy: '', graduationYear: '' })
   const [aiResponse, setAiResponse] = useState<any>(null)
+  const [resumeDialogOpen, setResumeDialogOpen] = useState(false)
+  const [latestResumeName, setLatestResumeName] = useState<string | null>(null)
 
   const form = useForm<JobSeekerProfileData>({
     resolver: zodResolver(jobSeekerProfileSchema),
@@ -349,57 +352,19 @@ export default function JobSeekerProfileForm({
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="text-[#0A2540]">Загрузить резюме</CardTitle>
-            <CardDescription>Поддерживаемые форматы: PDF, DOC, DOCX</CardDescription>
+            <CardDescription>Поддерживаемые форматы: PDF, DOCX (до 10MB)</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div
-              className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-[#00C49A] transition-colors cursor-pointer"
-              onClick={() => fileInputRef.current?.click()}
-              onDragOver={(e) => {
-                e.preventDefault()
-              }}
-              onDrop={(e) => {
-                e.preventDefault()
-                const file = e.dataTransfer.files?.[0]
-                if (file) setSelectedResume(file)
-              }}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  fileInputRef.current?.click()
-                }
-              }}
+          <CardContent className="flex items-center gap-3">
+            <Button
+              type="button"
+              className="bg-[#00C49A] hover:bg-[#00A085]"
+              onClick={() => setResumeDialogOpen(true)}
             >
-              <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-[#333333] mb-2">Drag and drop your file here or click to browse</p>
-              {selectedResume && (
-                <p className="text-sm text-gray-600 mb-2">Selected: {selectedResume.name}</p>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                name="resume"
-                accept=".pdf,.doc,.docx"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  setSelectedResume(file || null)
-                }}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                className="border-[#00C49A] text-[#00C49A] bg-transparent"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  fileInputRef.current?.click()
-                }}
-              >
-                Выбрать файл
-              </Button>
-            </div>
+              Загрузить резюме
+            </Button>
+            {latestResumeName && (
+              <span className="text-sm text-gray-600">Загружено: {latestResumeName}</span>
+            )}
           </CardContent>
         </Card>
       )}
@@ -658,6 +623,22 @@ export default function JobSeekerProfileForm({
           </form>
         </Form>
       )}
+      
+      <ResumeUploadDialog
+        open={resumeDialogOpen}
+        onOpenChange={setResumeDialogOpen}
+        onAdded={(payload) => {
+          setLatestResumeName(payload.file?.name || null)
+          if (payload.parsedData) {
+            setAiResponse(payload.parsedData)
+          }
+          toast({
+            title: "Резюме добавлено",
+            description: "Файл загружен и добавлен к вашему профилю",
+          })
+          router.refresh()
+        }}
+      />
 
       {/* Add Experience Dialog */}
       <Dialog open={expOpen} onOpenChange={setExpOpen}>
