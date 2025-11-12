@@ -47,6 +47,12 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded }: Resu
 
   const acceptAttr = useMemo(() => ACCEPTED.join(","), []);
 
+  const formatFileName = (name: string, maxLength: number = 20) => {
+    if (!name) return "";
+    if (name.length <= maxLength) return name;
+    return `${name.slice(0, Math.max(0, maxLength - 3))}...`;
+  };
+
   const validateFile = (f: File) => {
     const lower = f.name.toLowerCase();
     const isAccepted = ACCEPTED.some((ext) => lower.endsWith(ext));
@@ -213,7 +219,7 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded }: Resu
               <FileText className="w-8 h-8 text-[#00C49A]" />
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <p className="font-medium text-gray-900">{file.name}</p>
+                  <p className="font-medium text-gray-900">{formatFileName(file.name)}</p>
                   <p className="text-sm text-gray-500">
                     {Math.round((file.size / 1024 / 1024) * 10) / 10} MB
                   </p>

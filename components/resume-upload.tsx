@@ -252,6 +252,12 @@ export function ResumeUpload({ userId, onParsingComplete, className }: ResumeUpl
     return 'Low'
   }
 
+  const formatFileName = (name: string, maxLength: number = 20) => {
+    if (!name) return ''
+    if (name.length <= maxLength) return name
+    return `${name.slice(0, Math.max(0, maxLength - 3))}...`
+  }
+
   return (
     <div className={className}>
       <Card>
@@ -303,7 +309,7 @@ export function ResumeUpload({ userId, onParsingComplete, className }: ResumeUpl
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                 <FileText className="w-8 h-8 text-[#00C49A]" />
                 <div className="flex-1">
-                  <p className="font-medium text-gray-900">{uploadedFile.name}</p>
+                  <p className="font-medium text-gray-900">{formatFileName(uploadedFile.name)}</p>
                   <p className="text-sm text-gray-500">
                     {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
                   </p>

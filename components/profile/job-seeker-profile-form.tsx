@@ -160,6 +160,12 @@ export default function JobSeekerProfileForm({
     setSkills(skills.filter(skill => skill !== skillToRemove))
   }
 
+  const formatFileName = (name: string, maxLength: number = 20) => {
+    if (!name) return ''
+    if (name.length <= maxLength) return name
+    return `${name.slice(0, Math.max(0, maxLength - 3))}...`
+  }
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault()
@@ -363,7 +369,7 @@ export default function JobSeekerProfileForm({
               Загрузить резюме
             </Button>
             {latestResumeName && (
-              <span className="text-sm text-gray-600">Загружено: {latestResumeName}</span>
+              <span className="text-sm text-gray-600">Загружено: {formatFileName(latestResumeName)}</span>
             )}
           </CardContent>
         </Card>
