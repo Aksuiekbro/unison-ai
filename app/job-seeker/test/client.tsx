@@ -103,6 +103,7 @@ export default function ProductivityAssessmentClient() {
   const knowledgeSaveTimer = useRef<NodeJS.Timeout | null>(null)
   const assessmentSaveTimer = useRef<NodeJS.Timeout | null>(null)
   const formRef = useRef<HTMLFormElement | null>(null)
+  const cardTopRef = useRef<HTMLDivElement | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   const [state, formAction, isPending] = useActionState(submitProductivityAssessment, {
@@ -306,9 +307,45 @@ export default function ProductivityAssessmentClient() {
   const currentTabIndex = tabData.findIndex(tab => tab.id === currentTab)
   const progress = ((currentTabIndex + 1) / tabData.length) * 100
 
+  // Validation helper for required fields per tab
+  const validateTab = (tabId: string) => {
+    const missing: string[] = []
+    if (tabId === 'work-experience') {
+      const ok = workExperiences.some(exp =>
+        (exp.company_name?.trim() || '') !== '' &&
+        (exp.position?.trim() || '') !== '' &&
+        (exp.start_date?.trim() || '') !== '' &&
+        (exp.functions_performed?.trim() || '') !== ''
+      )
+      if (!ok) {
+        missing.push('Компания', 'Должность', 'Дата начала', 'Функции на должности')
+      }
+    }
+    if (tabId === 'knowledge') {
+      if ((knowledge.future_learning_goals?.trim() || '') === '') {
+        missing.push('Чему бы хотели обучиться (планы по обучению)')
+      }
+    }
+    if (tabId === 'assessment') {
+      if ((assessmentState.role_type?.trim() || '') === '') {
+        missing.push('Тип роли')
+      }
+      if ((assessmentState.motivation_level?.trim() || '') === '') {
+        missing.push('Уровень мотивации')
+      }
+    }
+    return { ok: missing.length === 0, missing }
+  }
+
+  // Scroll to top on tab change
+  useEffect(() => {
+    cardTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [currentTab])
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">
       <div className="max-w-6xl mx-auto">
+        <div ref={cardTopRef} />
         <div className="text-center mb-8">
           <Link href="/job-seeker/dashboard" className="text-2xl font-bold text-[#0A2540]">
             Unison AI
@@ -400,12 +437,14 @@ export default function ProductivityAssessmentClient() {
 
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor={`company_name_${exp.id}`}>Название компании, вид деятельности компании:</Label>
+                          <Label htmlFor={`company_name_${exp.id}`}>Название компании<span className="text-red-500">*</span>:</Label>
                           <Input
                             id={`company_name_${exp.id}`}
                             value={exp.company_name}
                             onChange={(e) => updateWorkExperience(exp.id, 'company_name', e.target.value)}
                             placeholder="Название компании"
+                            aria-required="true"
+                            required
                           />
                         </div>
                         <div>
@@ -418,12 +457,14 @@ export default function ProductivityAssessmentClient() {
                           />
                         </div>
                         <div>
-                          <Label htmlFor={`position_${exp.id}`}>Должность:</Label>
+                          <Label htmlFor={`position_${exp.id}`}>Должность<span className="text-red-500">*</span>:</Label>
                           <Input
                             id={`position_${exp.id}`}
                             value={exp.position}
                             onChange={(e) => updateWorkExperience(exp.id, 'position', e.target.value)}
                             placeholder="Ваша должность"
+                            aria-required="true"
+                            required
                           />
                         </div>
                         <div>
@@ -436,12 +477,14 @@ export default function ProductivityAssessmentClient() {
                           />
                         </div>
                         <div>
-                          <Label htmlFor={`start_date_${exp.id}`}>Дата начала:</Label>
+                          <Label htmlFor={`start_date_${exp.id}`}>Дата начала<span className="text-red-500">*</span>:</Label>
                           <Input
                             id={`start_date_${exp.id}`}
                             type="date"
                             value={exp.start_date}
                             onChange={(e) => updateWorkExperience(exp.id, 'start_date', e.target.value)}
+                            aria-required="true"
+                            required
                           />
                         </div>
                         <div>
@@ -457,13 +500,15 @@ export default function ProductivityAssessmentClient() {
 
                       <div className="mt-4 space-y-4">
                         <div>
-                          <Label htmlFor={`functions_${exp.id}`}>Какие функции Вы выполняли на этой должности?</Label>
+                          <Label htmlFor={`functions_${exp.id}`}>Какие функции Вы выполняли на этой должности?<span className="text-red-500">*</span></Label>
                           <Textarea
                             id={`functions_${exp.id}`}
                             value={exp.functions_performed}
                             onChange={(e) => updateWorkExperience(exp.id, 'functions_performed', e.target.value)}
                             placeholder="Подробно опишите ваши обязанности и функции"
                             className="min-h-[100px]"
+                            aria-required="true"
+                            required
                           />
                         </div>
 
@@ -624,7 +669,7 @@ export default function ProductivityAssessmentClient() {
 
                     <div>
                       <Label htmlFor="future_learning">
-                        Чему бы Вы хотели обучиться в ближайшее время?
+                        Чему бы Вы хотели обучиться в ближайшее время?<span className="text-red-500">*</span>
                       </Label>
               <Textarea
                         id="future_learning"
@@ -633,6 +678,8 @@ export default function ProductivityAssessmentClient() {
                 value={knowledge.future_learning_goals}
                 onChange={(e) => setKnowledge(v => ({ ...v, future_learning_goals: e.target.value }))}
                         className="min-h-[100px]"
+                        aria-required="true"
+                        required
                       />
                     </div>
                   </div>
@@ -773,7 +820,7 @@ export default function ProductivityAssessmentClient() {
 
                   <div className="space-y-6">
                     <div>
-                      <Label>Тип роли:</Label>
+                      <Label>Тип роли<span className="text-red-500">*</span>:</Label>
                       <p className="text-sm text-gray-500 mb-3">
                         Выберите тип позиции, на которую претендуете
                       </p>
@@ -790,7 +837,7 @@ export default function ProductivityAssessmentClient() {
                     </div>
 
                     <div>
-                      <Label>Уровень мотивации:</Label>
+                      <Label>Уровень мотивации<span className="text-red-500">*</span>:</Label>
                       <p className="text-sm text-gray-500 mb-3">
                         Выберите основной мотивационный фактор
                       </p>
@@ -965,11 +1012,27 @@ export default function ProductivityAssessmentClient() {
                                 const hasRequiredExperience = workExperiences.some(exp =>
                                   (exp.company_name?.trim() || '') !== '' &&
                                   (exp.position?.trim() || '') !== '' &&
-                                  (exp.start_date?.trim() || '') !== ''
+                                  (exp.start_date?.trim() || '') !== '' &&
+                                  (exp.functions_performed?.trim() || '') !== ''
                                 )
                                 if (!hasRequiredExperience) {
-                                  toast.error('Добавьте минимум одно место работы: Компания, Должность и Дата начала')
+                                  toast.error('Добавьте минимум одно место работы: Компания, Должность, Дата начала и Функции')
                                   setCurrentTab('work-experience')
+                                  setConfirmOpen(false)
+                                  return
+                                }
+                                if ((knowledge.future_learning_goals?.trim() || '') === '') {
+                                  toast.error('Заполните: Чему бы Вы хотели обучиться (планы по обучению)')
+                                  setCurrentTab('knowledge')
+                                  setConfirmOpen(false)
+                                  return
+                                }
+                                if ((assessmentState.role_type?.trim() || '') === '' || (assessmentState.motivation_level?.trim() || '') === '') {
+                                  const parts = []
+                                  if ((assessmentState.role_type?.trim() || '') === '') parts.push('Тип роли')
+                                  if ((assessmentState.motivation_level?.trim() || '') === '') parts.push('Уровень мотивации')
+                                  toast.error(`Заполните: ${parts.join(', ')}`)
+                                  setCurrentTab('assessment')
                                   setConfirmOpen(false)
                                   return
                                 }
@@ -988,6 +1051,11 @@ export default function ProductivityAssessmentClient() {
                     <Button
                       type="button"
                       onClick={() => {
+                        const { ok, missing } = validateTab(currentTab)
+                        if (!ok) {
+                          toast.error(`Заполните обязательные поля: ${missing.join(', ')}`)
+                          return
+                        }
                         const currentIndex = tabData.findIndex(tab => tab.id === currentTab)
                         if (currentIndex < tabData.length - 1) {
                           setCurrentTab(tabData[currentIndex + 1].id)
