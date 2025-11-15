@@ -212,14 +212,28 @@ export default function JobSearch() {
                         <Input 
                           placeholder="От" 
                           type="number"
+                          min={0}
+                          step={1000}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
                           value={filters.salary_min || ''}
-                          onChange={(e) => handleFilterChange('salary_min', parseInt(e.target.value) || undefined)}
+                          onChange={(e) => {
+                            const num = parseInt(e.target.value)
+                            handleFilterChange('salary_min', Number.isNaN(num) ? undefined : Math.max(0, num))
+                          }}
                         />
                         <Input 
                           placeholder="До" 
                           type="number"
+                          min={0}
+                          step={1000}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
                           value={filters.salary_max || ''}
-                          onChange={(e) => handleFilterChange('salary_max', parseInt(e.target.value) || undefined)}
+                          onChange={(e) => {
+                            const num = parseInt(e.target.value)
+                            handleFilterChange('salary_max', Number.isNaN(num) ? undefined : Math.max(0, num))
+                          }}
                         />
                       </div>
                     </div>

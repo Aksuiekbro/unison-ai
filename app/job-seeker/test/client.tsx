@@ -779,6 +779,10 @@ export default function ProductivityAssessmentClient() {
                         id="minimum_salary"
                         name="minimum_salary_requirement"
                         type="number"
+                        min={0}
+                        step={1000}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         placeholder="Минимальная зарплата"
                         value={personal.minimum_salary_requirement}
                         onChange={(e) => setPersonal(v => ({ ...v, minimum_salary_requirement: e.target.value }))}

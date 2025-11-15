@@ -207,9 +207,17 @@ export default function CreateJob() {
                     <Input 
                       id="salaryFrom" 
                       type="number"
+                      min={0}
+                      step={1000}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       placeholder="200000"
                       value={formData.salary_min || ''}
-                      onChange={(e) => setFormData({...formData, salary_min: parseInt(e.target.value) || 0})}
+                      onChange={(e) => {
+                        const num = parseInt(e.target.value)
+                        const clamped = Number.isNaN(num) ? 0 : Math.max(0, num)
+                        setFormData({ ...formData, salary_min: clamped })
+                      }}
                     />
                   </div>
                   <div className="space-y-2">
@@ -217,9 +225,17 @@ export default function CreateJob() {
                     <Input 
                       id="salaryTo" 
                       type="number"
+                      min={0}
+                      step={1000}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       placeholder="300000"
                       value={formData.salary_max || ''}
-                      onChange={(e) => setFormData({...formData, salary_max: parseInt(e.target.value) || 0})}
+                      onChange={(e) => {
+                        const num = parseInt(e.target.value)
+                        const clamped = Number.isNaN(num) ? 0 : Math.max(0, num)
+                        setFormData({ ...formData, salary_max: clamped })
+                      }}
                     />
                   </div>
                   <div className="space-y-2">
