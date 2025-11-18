@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useState } from "react"
+import { useActionState, useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,10 +12,21 @@ import { signupAction } from "@/app/auth/signup/action"
 
 type Role = "employer" | "employee"
 
-export function SignupForm() {
+interface SignupFormProps {
+  initialRole?: Role
+  locked?: boolean
+  title?: string
+  description?: string
+}
+
+export function SignupForm({ initialRole = "employer", locked = false, title = "Create an account", description = "Choose your role to get started with UnisonAI." }: SignupFormProps) {
   const [state, formAction, isPending] = useActionState(signupAction, null)
-  const [role, setRole] = useState<Role>("employer")
+  const [role, setRole] = useState<Role>(initialRole)
   const [email, setEmail] = useState("")
+
+  useEffect(() => {
+    setRole(initialRole)
+  }, [initialRole])
 
   const employerFields = (
     <>
@@ -64,35 +75,34 @@ export function SignupForm() {
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Create an account</CardTitle>
-        <CardDescription>Choose your role to get started with UnisonAI.</CardDescription>
+        <CardTitle className="text-2xl">{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
         <form action={formAction} className="space-y-4">
           <input type="hidden" name="role" value={role} />
           <div className="mb-6 grid grid-cols-2 gap-4">
-            <div
-              onClick={() => setRole("employer")}
-              className={cn(
-                "relative cursor-pointer rounded-lg border-2 p-4 text-center transition-all hover:bg-gray-50",
-                role === "employer" ? "border-purple-500 bg-purple-50" : "border-gray-200",
-              )}
-            >
-              {role === "employer" && <CheckCircle2 className="absolute right-2 top-2 h-5 w-5 text-purple-600" />}
-              <Building2 className="mx-auto mb-2 h-8 w-8 text-gray-600" />
-              <p className="font-semibold">Employer</p>
-            </div>
-            <div
-              onClick={() => setRole("employee")}
-              className={cn(
-                "relative cursor-pointer rounded-lg border-2 p-4 text-center transition-all hover:bg-gray-50",
-                role === "employee" ? "border-purple-500 bg-purple-50" : "border-gray-200",
-              )}
-            >
-              {role === "employee" && <CheckCircle2 className="absolute right-2 top-2 h-5 w-5 text-purple-600" />}
-              <User className="mx-auto mb-2 h-8 w-8 text-gray-600" />
-              <p className="font-semibold">Job Seeker</p>
-            </div>
+            {[{ id: "employer" as Role, label: "Employer", Icon: Building2 }, { id: "employee" as Role, label: "Job Seeker", Icon: User }].map(({ id, label, Icon }) => {
+              const isSelected = role === id
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => !locked && setRole(id)}
+                  disabled={locked}
+                  className={cn(
+                    "relative rounded-lg border-2 p-4 text-center transition-all",
+                    locked ? "cursor-not-allowed opacity-90" : "cursor-pointer hover:bg-gray-50",
+                    isSelected ? "border-purple-500 bg-purple-50" : "border-gray-200",
+                  )}
+                >
+                  {isSelected && <CheckCircle2 className="absolute right-2 top-2 h-5 w-5 text-purple-600" />}
+                  <Icon className="mx-auto mb-2 h-8 w-8 text-gray-600" />
+                  <p className="font-semibold">{label}</p>
+                  {locked && isSelected && <p className="mt-1 text-xs text-purple-600">Preselected</p>}
+                </button>
+              )
+            })}
           </div>
 
           {role === "employer" ? employerFields : employeeFields}
