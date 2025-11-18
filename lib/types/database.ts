@@ -1,6 +1,14 @@
 export type UserRole = 'employer' | 'job_seeker';
 export type JobStatus = 'draft' | 'published' | 'closed' | 'cancelled';
-export type ApplicationStatus = 'pending' | 'reviewing' | 'interview' | 'accepted' | 'rejected';
+export type ApplicationStatus =
+  | 'pending'
+  | 'reviewing'
+  | 'interview'
+  | 'interviewed'
+  | 'offered'
+  | 'hired'
+  | 'accepted'
+  | 'rejected';
 export type JobType = 'full_time' | 'part_time' | 'contract' | 'internship';
 export type ExperienceLevel = 'entry' | 'junior' | 'mid' | 'senior' | 'executive';
 

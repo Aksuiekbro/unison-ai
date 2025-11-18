@@ -860,7 +860,15 @@ export interface Database {
           id: string
           job_id: string
           applicant_id: string
-          status: 'pending' | 'reviewing' | 'interview' | 'accepted' | 'rejected'
+          status:
+            | 'pending'
+            | 'reviewing'
+            | 'interview'
+            | 'interviewed'
+            | 'offered'
+            | 'hired'
+            | 'accepted'
+            | 'rejected'
           cover_letter: string | null
           resume_url: string | null
           notes: string | null
@@ -872,7 +880,15 @@ export interface Database {
           id?: string
           job_id: string
           applicant_id: string
-          status?: 'pending' | 'reviewing' | 'interview' | 'accepted' | 'rejected'
+          status?:
+            | 'pending'
+            | 'reviewing'
+            | 'interview'
+            | 'interviewed'
+            | 'offered'
+            | 'hired'
+            | 'accepted'
+            | 'rejected'
           cover_letter?: string | null
           resume_url?: string | null
           notes?: string | null
@@ -884,7 +900,15 @@ export interface Database {
           id?: string
           job_id?: string
           applicant_id?: string
-          status?: 'pending' | 'reviewing' | 'interview' | 'accepted' | 'rejected'
+          status?:
+            | 'pending'
+            | 'reviewing'
+            | 'interview'
+            | 'interviewed'
+            | 'offered'
+            | 'hired'
+            | 'accepted'
+            | 'rejected'
           cover_letter?: string | null
           resume_url?: string | null
           notes?: string | null
@@ -903,7 +927,15 @@ export interface Database {
     Enums: {
       user_role: 'employer' | 'job_seeker'
       job_status: 'draft' | 'published' | 'closed' | 'cancelled'
-      application_status: 'pending' | 'reviewing' | 'interview' | 'accepted' | 'rejected'
+      application_status:
+        | 'pending'
+        | 'reviewing'
+        | 'interview'
+        | 'interviewed'
+        | 'offered'
+        | 'hired'
+        | 'accepted'
+        | 'rejected'
       job_type: 'full_time' | 'part_time' | 'contract' | 'internship'
       experience_level: 'entry' | 'junior' | 'mid' | 'senior' | 'executive'
     }

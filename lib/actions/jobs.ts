@@ -3,6 +3,7 @@
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import type { Database } from '@/lib/database.types'
 import { revalidatePath } from 'next/cache'
+import { notifyCandidateStatusChange } from '@/lib/notifications'
 
 export type JobStatus = 'draft' | 'published' | 'closed' | 'cancelled'
 export type JobType = 'full_time' | 'part_time' | 'contract' | 'internship'
@@ -31,6 +32,15 @@ export interface Job {
 
 type MatchScoreRow = Database['public']['Tables']['match_scores']['Row']
 type PersonalityAnalysisRow = Database['public']['Tables']['personality_analysis']['Row']
+type ApplicationRow = Database['public']['Tables']['applications']['Row']
+type ApplicantRow = Pick<Database['public']['Tables']['users']['Row'], 'id' | 'full_name' | 'email' | 'phone' | 'location' | 'bio'>
+type JobRow = Pick<Database['public']['Tables']['jobs']['Row'], 'id' | 'title'> & {
+  companies?: Pick<Database['public']['Tables']['companies']['Row'], 'id' | 'name'> | null
+}
+type ApplicationWithRelations = ApplicationRow & {
+  applicant: ApplicantRow | null
+  job?: JobRow | null
+}
 
 export interface Application {
   id: string
@@ -523,16 +533,38 @@ export async function updateApplicationStatus(
           phone,
           location,
           bio
+        ),
+        job:jobs!applications_job_id_fkey (
+          id,
+          title,
+          companies:companies!jobs_company_id_fkey (
+            id,
+            name
+          )
         )
       `)
-      .single()
+      .single<ApplicationWithRelations>()
 
     if (error) {
       throw new Error(`Failed to update application status: ${error.message}`)
     }
 
     revalidatePath(`/employer/jobs/${application.job_id}/candidates`)
-    return { success: true, data: updatedApplication }
+    let notification: Awaited<ReturnType<typeof notifyCandidateStatusChange>> | undefined
+
+    if (updatedApplication) {
+      notification = await notifyCandidateStatusChange({
+        applicationId,
+        status,
+        notes: notes ?? updatedApplication.notes ?? null,
+        candidateEmail: updatedApplication.applicant?.email ?? null,
+        candidateName: updatedApplication.applicant?.full_name ?? null,
+        jobTitle: updatedApplication.job?.title ?? null,
+        companyName: updatedApplication.job?.companies?.name ?? null,
+      })
+    }
+
+    return { success: true, data: updatedApplication, notification }
   } catch (error) {
     return { 
       success: false, 
