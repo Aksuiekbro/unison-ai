@@ -73,6 +73,26 @@ export async function getBatchJobMatchScores(
       };
     });
 
+    const missingJobIds = jobIds.filter(id => !scoreMap[id]);
+
+    if (missingJobIds.length > 0) {
+      if (typeof window === 'undefined') {
+        // On the server we can enqueue directly (e.g., server components)
+        missingJobIds.forEach(jobId => enqueueMatchScoreJob(jobId, userId));
+      } else {
+        // In the browser, call an API route that runs the server-side job
+        missingJobIds.forEach(jobId => {
+          fetch('/api/match-scores/queue', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jobId })
+          }).catch(error => {
+            console.error('Failed to enqueue match score via API for job', jobId, error);
+          });
+        });
+      }
+    }
+
     return scoreMap;
   } catch (error) {
     console.error('Error getting batch job match scores:', error);
