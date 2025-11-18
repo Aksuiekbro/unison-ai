@@ -44,6 +44,7 @@ export default function JobCandidates() {
   const { applications, stats, loading, error, updateStatus } = useJobApplications(jobId, employerId)
   const [statusFilter, setStatusFilter] = useState<Application['status'] | 'all'>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [sortMode, setSortMode] = useState<'match_score' | 'date'>('match_score')
 
   const handleStatusUpdate = async (applicationId: string, newStatus: Application['status']) => {
     const result = await updateStatus(applicationId, newStatus)
@@ -99,6 +100,18 @@ export default function JobCandidates() {
       app.applicant.email.toLowerCase().includes(searchQuery.toLowerCase())
     
     return matchesStatus && matchesSearch
+  })
+
+  const sortedApplications = [...filteredApplications].sort((a, b) => {
+    if (sortMode === 'match_score') {
+      const aScore = a.matchScore ?? a.matchScoreDetails?.overall_score ?? -1
+      const bScore = b.matchScore ?? b.matchScoreDetails?.overall_score ?? -1
+      if (aScore === bScore) {
+        return new Date(b.applied_at).getTime() - new Date(a.applied_at).getTime()
+      }
+      return bScore - aScore
+    }
+    return new Date(b.applied_at).getTime() - new Date(a.applied_at).getTime()
   })
 
   if (error) {
@@ -251,6 +264,15 @@ export default function JobCandidates() {
                       <SelectItem value="rejected">Отклонены</SelectItem>
                     </SelectContent>
                   </Select>
+                  <Select value={sortMode} onValueChange={(value: string) => setSortMode(value as 'match_score' | 'date')}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Сортировка" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="match_score">По совместимости</SelectItem>
+                      <SelectItem value="date">По дате отклика</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Button className="bg-[#00C49A] hover:bg-[#00A085]">
                     <Filter className="w-4 h-4 mr-2" />
                     Фильтр
@@ -291,7 +313,10 @@ export default function JobCandidates() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {filteredApplications.map((application) => (
+                    {sortedApplications.map((application) => {
+                      const resumeLink = application.resumeUrl || application.resume_url || application.applicant.resume_url || null
+                      const matchScoreValue = application.matchScore ?? application.matchScoreDetails?.overall_score ?? null
+                      return (
                       <div key={application.id} className="border rounded-lg p-6 hover:shadow-md transition-shadow">
                         <div className="flex items-start justify-between">
                           <div className="flex items-start space-x-4 flex-1">
@@ -310,6 +335,11 @@ export default function JobCandidates() {
                                 <Badge className={`${getStatusColor(application.status)} text-white`}>
                                   {getStatusText(application.status)}
                                 </Badge>
+                                {matchScoreValue != null && (
+                                  <Badge variant="outline" className="border-[#FF7A00] text-[#FF7A00]">
+                                    AI {matchScoreValue}%
+                                  </Badge>
+                                )}
                               </div>
                               
                               <div className="flex items-center space-x-6 text-sm text-[#333333] mb-3">
@@ -355,10 +385,12 @@ export default function JobCandidates() {
                           </div>
 
                           <div className="flex flex-col space-y-2 ml-4">
-                            {application.resume_url && (
-                              <Button variant="outline" size="sm">
-                                <FileText className="w-4 h-4 mr-2" />
-                                Резюме
+                            {resumeLink && (
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={resumeLink} target="_blank" rel="noreferrer" className="flex items-center">
+                                  <FileText className="w-4 h-4 mr-2" />
+                                  Резюме
+                                </a>
                               </Button>
                             )}
                             
@@ -369,13 +401,17 @@ export default function JobCandidates() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  <Eye className="w-4 h-4 mr-2" />
-                                  Просмотр профиля
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/employer/candidates/${application.id}`} className="flex items-center">
+                                    <Eye className="w-4 h-4 mr-2" />
+                                    Просмотр профиля
+                                  </Link>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Mail className="w-4 h-4 mr-2" />
-                                  Отправить письмо
+                                <DropdownMenuItem asChild>
+                                  <a href={`mailto:${application.applicant.email}`} className="flex items-center">
+                                    <Mail className="w-4 h-4 mr-2" />
+                                    Отправить письмо
+                                  </a>
                                 </DropdownMenuItem>
                                 {application.status === 'pending' && (
                                   <DropdownMenuItem onClick={() => handleStatusUpdate(application.id, 'reviewing')}>
@@ -424,7 +460,7 @@ export default function JobCandidates() {
                           </div>
                         </div>
                       </div>
-                    ))}
+                    )})}
                   </div>
                 )}
               </CardContent>

@@ -1,6 +1,7 @@
 'use server'
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import type { Database } from '@/lib/database.types'
 import { revalidatePath } from 'next/cache'
 
 export type JobStatus = 'draft' | 'published' | 'closed' | 'cancelled'
@@ -28,6 +29,9 @@ export interface Job {
   updated_at: string
 }
 
+type MatchScoreRow = Database['public']['Tables']['match_scores']['Row']
+type PersonalityAnalysisRow = Database['public']['Tables']['personality_analysis']['Row']
+
 export interface Application {
   id: string
   job_id: string
@@ -45,7 +49,25 @@ export interface Application {
     phone: string | null
     location: string | null
     bio: string | null
+    current_job_title?: string | null
+    linkedin_url?: string | null
+    github_url?: string | null
+    portfolio_url?: string | null
+    resume_url?: string | null
+    experiences?: any[] | null
+    educations?: any[] | null
+    skills?: any[] | null
   }
+  resumeUrl?: string | null
+  matchScore?: number | null
+  matchScoreDetails?: MatchScoreRow | null
+}
+
+export interface CandidateApplicationDetails {
+  application: Application
+  matchScoreDetails: MatchScoreRow | null
+  personalityAnalysis: PersonalityAnalysisRow | null
+  resumeUrl: string | null
 }
 
 // Validate user is employer and has access to company
@@ -392,13 +414,22 @@ export async function getJobApplications(jobId: string, employerId: string) {
         notes,
         applied_at,
         updated_at,
+        match_score_id,
         applicant:users!applications_applicant_id_fkey (
           id,
           full_name,
           email,
           phone,
           location,
-          bio
+          bio,
+          current_job_title,
+          linkedin_url,
+          github_url,
+          portfolio_url,
+          resume_url,
+          experiences,
+          educations,
+          skills
         )
       `)
       .eq('job_id', jobId)
@@ -408,7 +439,18 @@ export async function getJobApplications(jobId: string, employerId: string) {
       throw new Error(`Failed to fetch applications: ${error.message}`)
     }
 
-    return { success: true, data: applications || [] }
+    const { data: matchScores } = await supabaseAdmin
+      .from('match_scores')
+      .select('*')
+      .eq('job_id', jobId)
+
+    const matchScoreMap = buildMatchScoreMap(matchScores || [])
+    const enrichedApplications = (applications || []).map((application) => {
+      const matchScore = matchScoreMap.get(application.applicant_id) || null
+      return formatApplicationRow(application, matchScore)
+    })
+
+    return { success: true, data: enrichedApplications }
   } catch (error) {
     return { 
       success: false, 
@@ -491,6 +533,108 @@ export async function updateApplicationStatus(
   }
 }
 
+export async function getApplicationDetails(applicationId: string, employerId: string) {
+  try {
+    const { data: applicationRow, error } = await supabaseAdmin
+      .from('applications')
+      .select(`
+        id,
+        job_id,
+        applicant_id,
+        status,
+        cover_letter,
+        resume_url,
+        notes,
+        applied_at,
+        updated_at,
+        match_score_id,
+        jobs:applications_job_id_fkey (
+          id,
+          company_id,
+          companies!jobs_company_id_fkey (
+            owner_id,
+            name
+          )
+        ),
+        applicant:users!applications_applicant_id_fkey (
+          id,
+          full_name,
+          email,
+          phone,
+          location,
+          bio,
+          current_job_title,
+          linkedin_url,
+          github_url,
+          portfolio_url,
+          resume_url,
+          experiences,
+          educations,
+          skills
+        )
+      `)
+      .eq('id', applicationId)
+      .single()
+
+    if (error || !applicationRow) {
+      throw new Error('Application not found')
+    }
+
+    const ownerId = applicationRow.jobs?.companies?.owner_id
+    if (!ownerId || ownerId !== employerId) {
+      throw new Error('Access denied. You can only view applications for your company')
+    }
+
+    let matchScore: MatchScoreRow | null = null
+    if (applicationRow.match_score_id) {
+      const { data } = await supabaseAdmin
+        .from('match_scores')
+        .select('*')
+        .eq('id', applicationRow.match_score_id)
+        .maybeSingle()
+      if (data) {
+        matchScore = data
+      }
+    }
+
+    if (!matchScore) {
+      const { data } = await supabaseAdmin
+        .from('match_scores')
+        .select('*')
+        .eq('job_id', applicationRow.job_id)
+        .eq('candidate_id', applicationRow.applicant_id)
+        .maybeSingle()
+      if (data) {
+        matchScore = data
+      }
+    }
+
+    const { data: personalityAnalysis } = await supabaseAdmin
+      .from('personality_analysis')
+      .select('*')
+      .eq('user_id', applicationRow.applicant_id)
+      .maybeSingle()
+
+    const application = formatApplicationRow(applicationRow, matchScore)
+    const resumeUrl = application.resumeUrl || application.resume_url || null
+
+    return {
+      success: true,
+      data: {
+        application,
+        matchScoreDetails: matchScore,
+        personalityAnalysis: personalityAnalysis || null,
+        resumeUrl,
+      } as CandidateApplicationDetails,
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch application',
+    }
+  }
+}
+
 export async function getApplicationStats(jobId: string, employerId: string) {
   try {
     // First validate job ownership
@@ -523,6 +667,63 @@ export async function getApplicationStats(jobId: string, employerId: string) {
       success: false, 
       error: error instanceof Error ? error.message : 'Failed to fetch application stats' 
     }
+  }
+}
+
+function buildMatchScoreMap(scores: MatchScoreRow[]): Map<string, MatchScoreRow> {
+  const map = new Map<string, MatchScoreRow>()
+  scores.forEach((score) => {
+    const existing = map.get(score.candidate_id)
+    if (!existing) {
+      map.set(score.candidate_id, score)
+      return
+    }
+    const existingUpdated = existing.updated_at ? new Date(existing.updated_at).getTime() : 0
+    const incomingUpdated = score.updated_at ? new Date(score.updated_at).getTime() : 0
+    if (incomingUpdated >= existingUpdated) {
+      map.set(score.candidate_id, score)
+    }
+  })
+  return map
+}
+
+function formatApplicationRow(row: any, matchScore?: MatchScoreRow | null): Application {
+  const applicant = row.applicant || {}
+  const normalizeArray = (value: any) => (Array.isArray(value) ? value : null)
+
+  const normalizedApplicant = {
+    id: applicant.id || row.applicant_id,
+    full_name: applicant.full_name || 'Кандидат',
+    email: applicant.email || '',
+    phone: applicant.phone || null,
+    location: applicant.location || null,
+    bio: applicant.bio || null,
+    current_job_title: applicant.current_job_title || null,
+    linkedin_url: applicant.linkedin_url || null,
+    github_url: applicant.github_url || null,
+    portfolio_url: applicant.portfolio_url || null,
+    resume_url: applicant.resume_url || null,
+    experiences: normalizeArray(applicant.experiences),
+    educations: normalizeArray(applicant.educations),
+    skills: normalizeArray(applicant.skills),
+  }
+
+  const resumeUrl = row.resume_url || normalizedApplicant.resume_url || null
+
+  return {
+    id: row.id,
+    job_id: row.job_id,
+    applicant_id: row.applicant_id,
+    status: row.status,
+    cover_letter: row.cover_letter,
+    resume_url: row.resume_url,
+    notes: row.notes,
+    applied_at: row.applied_at,
+    updated_at: row.updated_at,
+    applicant: normalizedApplicant,
+    resumeUrl,
+    matchScore: matchScore?.overall_score ?? null,
+    matchScoreDetails: matchScore || null,
   }
 }
 
