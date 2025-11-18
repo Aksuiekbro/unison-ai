@@ -2,6 +2,7 @@
 
 import { z } from "zod"
 import { supabase } from "@/lib/supabase-client"
+import { enqueueMatchScoreJob } from "@/lib/services/match-service"
 import { getCurrentUser } from "./auth"
 
 // Types
@@ -129,6 +130,9 @@ export async function createApplication(formData: FormData) {
         message: "Failed to submit application. Please try again.",
       }
     }
+
+    // Trigger background AI scoring so employer and seeker see up-to-date data
+    enqueueMatchScoreJob(parsed.data.job_id, user.id)
 
     return {
       success: true,

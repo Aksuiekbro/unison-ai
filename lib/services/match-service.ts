@@ -56,17 +56,15 @@ export async function getBatchJobMatchScores(
   jobIds: string[],
   userId: string
 ): Promise<Record<string, { score: number; explanation?: string; confidence?: number }>> {
+  const scoreMap: Record<string, { score: number; explanation?: string; confidence?: number }> = {};
   try {
-    // Get existing cached scores
+    // Get existing cached scores only (AI runs server-side via background jobs)
     const { data: existingScores } = await supabase
       .from('match_scores')
       .select('job_id, overall_score, match_explanation, ai_confidence_score')
       .eq('candidate_id', userId)
       .in('job_id', jobIds);
 
-    const scoreMap: Record<string, { score: number; explanation?: string; confidence?: number }> = {};
-
-    // Map existing scores
     existingScores?.forEach(score => {
       scoreMap[score.job_id] = {
         score: score.overall_score,
@@ -75,39 +73,17 @@ export async function getBatchJobMatchScores(
       };
     });
 
-    // For missing scores, we could calculate them, but for performance reasons,
-    // let's return a default score for now
-    const missingJobIds = jobIds.filter(id => !scoreMap[id]);
-    for (const jobId of missingJobIds) {
-      // Return a default score of 75 for jobs without calculated scores
-      // In production, you might want to calculate these asynchronously
-      scoreMap[jobId] = {
-        score: 75,
-        explanation: 'Match score pending AI analysis',
-        confidence: 0.5
-      };
-    }
-
     return scoreMap;
   } catch (error) {
     console.error('Error getting batch job match scores:', error);
-    // Return default scores for all jobs
-    const defaultScores: Record<string, { score: number; explanation?: string; confidence?: number }> = {};
-    jobIds.forEach(jobId => {
-      defaultScores[jobId] = {
-        score: 75,
-        explanation: 'Unable to calculate match score',
-        confidence: 0.3
-      };
-    });
-    return defaultScores;
+    return scoreMap;
   }
 }
 
 /**
  * Calculate match score using AI and cache it
  */
-async function calculateMatchScoreForJobUser(
+export async function calculateMatchScoreForJobUser(
   jobId: string,
   userId: string
 ): Promise<{ overall_score: number; match_explanation?: string; ai_confidence_score?: number } | null> {
@@ -241,6 +217,21 @@ async function calculateMatchScoreForJobUser(
     console.error('Error calculating match score:', error);
     return null;
   }
+}
+
+/**
+ * Lightweight job runner that defers AI match score calculation so it does not block user actions
+ */
+export function enqueueMatchScoreJob(jobId: string, userId: string) {
+  // Ensure this only runs on the server
+  if (typeof window !== 'undefined') return
+
+  // Fire-and-forget the heavy AI computation
+  setTimeout(() => {
+    calculateMatchScoreForJobUser(jobId, userId).catch(error => {
+      console.error('Failed to calculate match score in background job:', error)
+    })
+  }, 0)
 }
 
 /**
