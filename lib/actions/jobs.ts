@@ -36,7 +36,15 @@ export interface Application {
   id: string
   job_id: string
   applicant_id: string
-  status: 'pending' | 'reviewing' | 'interview' | 'accepted' | 'rejected'
+  status:
+    | 'pending'
+    | 'reviewing'
+    | 'interview'
+    | 'interviewed'
+    | 'offered'
+    | 'hired'
+    | 'accepted'
+    | 'rejected'
   cover_letter: string | null
   resume_url: string | null
   notes: string | null
@@ -652,13 +660,33 @@ export async function getApplicationStats(jobId: string, employerId: string) {
       throw new Error(`Failed to fetch application stats: ${error.message}`)
     }
 
+    const statusCounts = {
+      pending: 0,
+      reviewing: 0,
+      interview: 0,
+      interviewed: 0,
+      offered: 0,
+      hired: 0,
+      accepted: 0,
+      rejected: 0,
+    }
+
+    stats?.forEach((app) => {
+      const statusKey = app.status as keyof typeof statusCounts
+      if (statusCounts[statusKey] !== undefined) {
+        statusCounts[statusKey] += 1
+      }
+    })
+
     const applicationStats = {
       total: stats?.length || 0,
-      pending: stats?.filter(app => app.status === 'pending').length || 0,
-      reviewing: stats?.filter(app => app.status === 'reviewing').length || 0,
-      interview: stats?.filter(app => app.status === 'interview').length || 0,
-      accepted: stats?.filter(app => app.status === 'accepted').length || 0,
-      rejected: stats?.filter(app => app.status === 'rejected').length || 0,
+      pending: statusCounts.pending,
+      reviewing: statusCounts.reviewing,
+      interviewed: statusCounts.interviewed || statusCounts.interview,
+      offered: statusCounts.offered,
+      hired: statusCounts.hired,
+      accepted: statusCounts.accepted,
+      rejected: statusCounts.rejected,
     }
 
     return { success: true, data: applicationStats }
