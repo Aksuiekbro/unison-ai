@@ -15,6 +15,7 @@ import { revalidatePath } from 'next/cache'
 
 const mockFetch = vi.fn()
 const originalInternalToken = process.env.INTERNAL_API_TOKEN
+const originalFetch = globalThis.fetch
 
 describe('Profile Actions with Storage', () => {
   let mockSupabase: any
@@ -61,6 +62,7 @@ describe('Profile Actions with Storage', () => {
 
   afterAll(() => {
     process.env.INTERNAL_API_TOKEN = originalInternalToken
+    globalThis.fetch = originalFetch
   })
 
   describe('updateJobSeekerProfile', () => {
