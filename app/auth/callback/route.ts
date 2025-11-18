@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 export async function GET(request: Request) {
   const url = new URL(request.url)
   const code = url.searchParams.get('code')
+  const type = url.searchParams.get('type')
 
   const cookieStore = await cookies()
   const supabase = createServerClient<Database>(
@@ -45,6 +46,10 @@ export async function GET(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (user) {
+      if (type === 'recovery') {
+        return NextResponse.redirect(new URL('/auth/reset-password/update', request.url))
+      }
+
       // Ensure user record exists in users table
       const { data: existingUser } = await supabase
         .from('users')

@@ -10,6 +10,7 @@ import { loginAction } from "@/app/auth/login/action"
 import { AlertCircle, CheckCircle2 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter, useSearchParams } from "next/navigation"
+import { ForgotPasswordDialog } from "@/components/forgot-password-dialog"
 
 export function LoginForm() {
   const [state, formAction, isPending] = useActionState(loginAction, null)
@@ -93,9 +94,7 @@ export function LoginForm() {
 
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">{/* Remember me checkbox can go here */}</div>
-            <Link href="#" className="text-sm font-medium text-purple-600 hover:underline">
-              Forgot password?
-            </Link>
+            <ForgotPasswordDialog />
           </div>
           <Button type="submit" className="w-full" disabled={isPending}>
             {isPending ? "Logging in..." : "Login"}
