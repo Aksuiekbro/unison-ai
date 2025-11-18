@@ -146,13 +146,17 @@ describe('Resume Upload Integration', () => {
     // Create a realistic PDF file mock with sufficient content
     const pdfContent = Buffer.from('%PDF-1.4\nJohn Smith\nSenior Software Engineer\njohn.smith@example.com\nPhone: +1-555-123-4567\nLocation: New York, NY\nExperience: 8 years in software development with expertise in React, Node.js, and cloud technologies. Led multiple high-impact projects and mentored junior developers.')
     const mockFile = new File([pdfContent], 'john_smith_resume.pdf', { type: 'application/pdf' })
-    
+
     const formData = new FormData()
     formData.append('resume', mockFile)
+    formData.append('auto_apply', 'true')
 
     const request = new Request('http://localhost/api/resume/parse', {
       method: 'POST',
-      body: formData
+      body: formData,
+      headers: {
+        'x-auto-apply': 'true'
+      }
     })
 
     // Execute the API

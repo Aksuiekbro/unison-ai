@@ -66,6 +66,11 @@ async function extractTextFromFile(file: File): Promise<string> {
 
 export async function POST(request: NextRequest) {
   let fieldsUpdated: string[] = []
+  // Allow callers to explicitly request auto-apply via header.
+  const autoApplyHeader = request.headers.get('x-auto-apply') || request.headers.get('X-Auto-Apply')
+  const autoApplyRequested =
+    autoApplyHeader === 'true' ? true : autoApplyHeader === 'false' ? false : undefined
+  let shouldAutoApply: boolean | undefined
   
   try {
     // Support two auth modes:
@@ -99,6 +104,8 @@ export async function POST(request: NextRequest) {
             )
           }
           supabase = supabaseAdmin
+          // Internal calls auto-apply by default unless explicitly disabled.
+          shouldAutoApply = autoApplyRequested ?? true
         }
       }
       if (!isInternal) {
@@ -121,6 +128,8 @@ export async function POST(request: NextRequest) {
       }
       targetUserId = user.id
       supabase = routeClient
+      // External calls only auto-apply when explicitly requested.
+      shouldAutoApply = autoApplyRequested ?? false
     }
 
     if (!supabase) {
@@ -132,6 +141,12 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData()
     const file = formData.get('resume') as File
+
+    // Allow form submissions to control auto-apply without custom headers.
+    const autoApplyForm = formData.get('auto_apply') || formData.get('auto-apply') || formData.get('autoApply')
+    if (typeof autoApplyForm === 'string') {
+      shouldAutoApply = autoApplyForm === 'true'
+    }
 
     if (!file) {
       return NextResponse.json(
@@ -227,7 +242,7 @@ export async function POST(request: NextRequest) {
       // Update user profile with parsed data - now more flexible
       const parsedData = parseResult.data!
       
-      if (parsedData.personal_info) {
+      if (shouldAutoApply && parsedData.personal_info) {
         // Get existing user data  
         const { data: existingUser, error: fetchError } = await supabase
           .from('users')
@@ -385,6 +400,8 @@ export async function POST(request: NextRequest) {
         } else {
           console.log('🤖 AI Processing - No fields to update (userUpdate is empty)')
         }
+      } else {
+        console.log('🤖 AI Processing - Auto-apply disabled, returning parsed data only')
       }
 
     } catch (dbError) {
