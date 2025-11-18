@@ -66,9 +66,10 @@ async function extractTextFromFile(file: File): Promise<string> {
 
 export async function POST(request: NextRequest) {
   let fieldsUpdated: string[] = []
-  // Default to auto-applying parsed resume data for standard user flows.
-  // Can be overridden by an explicit x-auto-apply header (useful for internal callers).
-  let shouldAutoApply = true
+  // Default to NOT auto-applying parsed resume data unless explicitly requested.
+  // Prevents unintended profile updates when callers (like the resume upload dialog)
+  // do not set the x-auto-apply header.
+  let shouldAutoApply = false
   
   try {
     // Support two auth modes:
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest) {
           }
           supabase = supabaseAdmin
           const autoApplyHeader = request.headers.get('x-auto-apply') || request.headers.get('X-Auto-Apply')
-          shouldAutoApply = autoApplyHeader ? autoApplyHeader === 'true' : true
+          shouldAutoApply = autoApplyHeader ? autoApplyHeader === 'true' : false
         }
       }
       if (!isInternal) {
