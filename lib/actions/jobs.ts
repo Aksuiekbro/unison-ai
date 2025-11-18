@@ -682,7 +682,7 @@ export async function getApplicationStats(jobId: string, employerId: string) {
       total: stats?.length || 0,
       pending: statusCounts.pending,
       reviewing: statusCounts.reviewing,
-      interviewed: statusCounts.interviewed || statusCounts.interview,
+      interviewed: statusCounts.interviewed + statusCounts.interview,
       offered: statusCounts.offered,
       hired: statusCounts.hired,
       accepted: statusCounts.accepted,
