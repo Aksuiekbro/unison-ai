@@ -366,7 +366,7 @@ export default function JobCandidates() {
                                   <Clock className="w-4 h-4 mr-1" />
                                   Подано: {new Date(application.applied_at).toLocaleDateString("ru-RU")}
                                 </div>
-                                {application.applicant.experience_years && (
+                                {application.applicant.experience_years != null && (
                                   <div className="flex items-center">
                                     <Briefcase className="w-4 h-4 mr-1" />
                                     Опыт: {application.applicant.experience_years} лет
