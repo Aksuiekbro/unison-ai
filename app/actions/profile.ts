@@ -125,6 +125,8 @@ export async function updateJobSeekerProfile(formData: FormData) {
               headers: {
                 Authorization: `Bearer ${internalToken}`,
                 'X-User-Id': user.id,
+                // Explicitly allow AI results to be applied when invoked from the profile action
+                'X-Auto-Apply': 'true',
               },
               // Do not include cookies or credentials; this is an internal call
               // and is authorized solely by the internal token

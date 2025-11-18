@@ -107,7 +107,10 @@ describe('Resume Parse API Route', () => {
 
     const request = new NextRequest('http://localhost/api/resume/parse', {
       method: 'POST',
-      body: formData
+      body: formData,
+      headers: {
+        'x-auto-apply': 'true'
+      }
     })
 
     const response = await POST(request)
@@ -343,6 +346,7 @@ describe('Resume Parse API Route', () => {
     const mockFile = new File([pdfContent], 'resume.pdf', { type: 'application/pdf' })
     const formData = new FormData()
     formData.append('resume', mockFile)
+    formData.append('auto_apply', 'true')
 
     const request = new NextRequest('http://localhost/api/resume/parse', {
       method: 'POST',

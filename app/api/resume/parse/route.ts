@@ -66,10 +66,11 @@ async function extractTextFromFile(file: File): Promise<string> {
 
 export async function POST(request: NextRequest) {
   let fieldsUpdated: string[] = []
-  // Default to NOT auto-applying parsed resume data unless explicitly requested.
-  // Prevents unintended profile updates when callers (like the resume upload dialog)
-  // do not set the x-auto-apply header.
-  let shouldAutoApply = false
+  // Allow callers to explicitly request auto-apply via header.
+  const autoApplyHeader = request.headers.get('x-auto-apply') || request.headers.get('X-Auto-Apply')
+  const autoApplyRequested =
+    autoApplyHeader === 'true' ? true : autoApplyHeader === 'false' ? false : undefined
+  let shouldAutoApply: boolean | undefined
   
   try {
     // Support two auth modes:
@@ -103,8 +104,8 @@ export async function POST(request: NextRequest) {
             )
           }
           supabase = supabaseAdmin
-          const autoApplyHeader = request.headers.get('x-auto-apply') || request.headers.get('X-Auto-Apply')
-          shouldAutoApply = autoApplyHeader ? autoApplyHeader === 'true' : false
+          // Internal calls auto-apply by default unless explicitly disabled.
+          shouldAutoApply = autoApplyRequested ?? true
         }
       }
       if (!isInternal) {
@@ -127,6 +128,8 @@ export async function POST(request: NextRequest) {
       }
       targetUserId = user.id
       supabase = routeClient
+      // External calls only auto-apply when explicitly requested.
+      shouldAutoApply = autoApplyRequested ?? false
     }
 
     if (!supabase) {
@@ -138,6 +141,12 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData()
     const file = formData.get('resume') as File
+
+    // Allow form submissions to control auto-apply without custom headers.
+    const autoApplyForm = formData.get('auto_apply') || formData.get('auto-apply') || formData.get('autoApply')
+    if (typeof autoApplyForm === 'string') {
+      shouldAutoApply = autoApplyForm === 'true'
+    }
 
     if (!file) {
       return NextResponse.json(
