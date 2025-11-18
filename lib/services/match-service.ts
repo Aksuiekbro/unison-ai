@@ -1,6 +1,10 @@
 import { supabase } from '../supabase-client';
 import { calculateMatchScore, JobData, CandidateData } from '../ai/match-scorer';
 import { Job } from '../types';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '../types/database';
+
+type DbClient = SupabaseClient<Database>;
 
 export interface JobWithMatchScore extends Job {
   matchScore?: number;
@@ -101,15 +105,18 @@ export async function getBatchJobMatchScores(
 }
 
 /**
- * Calculate match score using AI and cache it
+ * Core implementation that calculates a match score using AI and caches it
+ * using the provided Supabase client. This allows server callers to inject
+ * a service-role client to bypass RLS where appropriate.
  */
-export async function calculateMatchScoreForJobUser(
+export async function calculateMatchScoreForJobUserWithClient(
+  client: DbClient,
   jobId: string,
   userId: string
 ): Promise<{ overall_score: number; match_explanation?: string; ai_confidence_score?: number } | null> {
   try {
     // Get job data
-    const { data: job } = await supabase
+    const { data: job } = await client
       .from('jobs')
       .select(`
         *,
@@ -125,7 +132,7 @@ export async function calculateMatchScoreForJobUser(
     if (!job) return null;
 
     // Get candidate data (single-table approach)
-    const { data: user } = await supabase
+    const { data: user } = await client
       .from('users')
       .select(`
         *,
@@ -203,7 +210,7 @@ export async function calculateMatchScoreForJobUser(
     const matchResult = aiResult.data;
 
     // Cache the result in the database (upsert to handle duplicates)
-    const { data: savedScore, error: upsertError } = await supabase
+    const { data: savedScore, error: upsertError } = await client
       .from('match_scores')
       .upsert({
         job_id: jobId,
@@ -237,6 +244,18 @@ export async function calculateMatchScoreForJobUser(
     console.error('Error calculating match score:', error);
     return null;
   }
+}
+
+/**
+ * Calculate match score using AI and cache it with the default shared client.
+ * This is safe for browser usage where the client has an authenticated session.
+ * Server callers that need to bypass RLS should use calculateMatchScoreForJobUserWithClient.
+ */
+export async function calculateMatchScoreForJobUser(
+  jobId: string,
+  userId: string
+): Promise<{ overall_score: number; match_explanation?: string; ai_confidence_score?: number } | null> {
+  return calculateMatchScoreForJobUserWithClient(supabase, jobId, userId);
 }
 
 /**

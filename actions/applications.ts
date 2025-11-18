@@ -2,7 +2,7 @@
 
 import { z } from "zod"
 import { supabase } from "@/lib/supabase-client"
-import { enqueueMatchScoreJob } from "@/lib/services/match-service"
+import { enqueueMatchScoreJob } from "@/lib/services/match-score-job"
 import { getCurrentUser } from "./auth"
 
 // Types

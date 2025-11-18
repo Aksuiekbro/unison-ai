@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { enqueueMatchScoreJob } from '@/lib/services/match-service'
+import { enqueueMatchScoreJob } from '@/lib/services/match-score-job'
 import { createClient } from '@/lib/supabase-server'
 
 export async function POST(request: Request) {
