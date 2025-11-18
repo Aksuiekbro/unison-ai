@@ -365,6 +365,13 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
           }
         });
 
+        const normalizeUrl = (value?: string | null) => {
+          if (!value) return "";
+          const trimmed = value.trim();
+          if (!trimmed) return "";
+          return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+        };
+
         const fd = new FormData();
         fd.append("firstName", finalProfile.firstName ?? "");
         fd.append("lastName", finalProfile.lastName ?? "");
@@ -372,10 +379,11 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
         fd.append("summary", finalProfile.summary ?? "");
         fd.append("phone", finalProfile.phone ?? "");
         fd.append("location", finalProfile.location ?? "");
-        fd.append("linkedinUrl", finalProfile.linkedinUrl ?? "");
-        fd.append("githubUrl", finalProfile.githubUrl ?? "");
+        fd.append("linkedinUrl", normalizeUrl(finalProfile.linkedinUrl));
+        fd.append("githubUrl", normalizeUrl(finalProfile.githubUrl));
         fd.append("skills", JSON.stringify(finalProfile.skills ?? []));
         fd.append("resume", file);
+        fd.append("resumeAutoApply", "false");
 
         const result: any = await updateJobSeekerProfile(fd);
         if (result?.error) {

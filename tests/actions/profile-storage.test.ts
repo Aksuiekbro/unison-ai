@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest'
 import { updateJobSeekerProfile, addJobSeekerExperience, addJobSeekerEducation } from '@/app/actions/profile'
 
 // Mock Supabase
@@ -13,11 +13,22 @@ vi.mock('next/cache', () => ({
 import { createClient } from '@/lib/supabase-server'
 import { revalidatePath } from 'next/cache'
 
+const mockFetch = vi.fn()
+const originalInternalToken = process.env.INTERNAL_API_TOKEN
+
 describe('Profile Actions with Storage', () => {
   let mockSupabase: any
   
   beforeEach(() => {
     vi.clearAllMocks()
+    mockFetch.mockReset()
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ fieldsUpdated: [] }),
+      text: async () => ''
+    })
+    globalThis.fetch = mockFetch as any
+    process.env.INTERNAL_API_TOKEN = 'test-internal-token'
     
     mockSupabase = {
       auth: {
@@ -46,6 +57,10 @@ describe('Profile Actions with Storage', () => {
     }
 
     vi.mocked(createClient).mockResolvedValue(mockSupabase)
+  })
+
+  afterAll(() => {
+    process.env.INTERNAL_API_TOKEN = originalInternalToken
   })
 
   describe('updateJobSeekerProfile', () => {
@@ -106,6 +121,34 @@ describe('Profile Actions with Storage', () => {
           contentType: 'application/pdf'
         })
       )
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+    })
+
+    it('should respect manual resume field selections when auto-apply is disabled', async () => {
+      mockSupabase.auth.getUser.mockResolvedValue({
+        data: { user: { id: 'user-123' } },
+        error: null
+      })
+
+      const resumeFile = new File(['PDF content'], 'resume.pdf', { type: 'application/pdf' })
+
+      const formData = new FormData()
+      formData.append('firstName', 'John')
+      formData.append('lastName', 'Doe')
+      formData.append('title', 'Software Engineer')
+      formData.append('summary', 'Experienced developer')
+      formData.append('phone', '555-0123')
+      formData.append('location', 'San Francisco, CA')
+      formData.append('linkedinUrl', 'https://linkedin.com/in/johndoe')
+      formData.append('githubUrl', 'https://github.com/johndoe')
+      formData.append('skills', JSON.stringify(['JavaScript', 'React']))
+      formData.append('resume', resumeFile)
+      formData.append('resumeAutoApply', 'false')
+
+      const result = await updateJobSeekerProfile(formData)
+
+      expect(result.success).toBe(true)
+      expect(mockFetch).not.toHaveBeenCalled()
     })
 
     it('should handle storage upload failure gracefully', async () => {

@@ -92,6 +92,15 @@ export async function updateJobSeekerProfile(formData: FormData) {
     // Validate data
     const validatedData = jobSeekerProfileSchema.parse(data)
 
+    // Determine whether resume AI results should be auto-applied or if the caller already curated fields
+    const resumeAutoApplyPreference = formData.get('resumeAutoApply')
+    const normalizedResumePreference = typeof resumeAutoApplyPreference === 'string'
+      ? resumeAutoApplyPreference.trim().toLowerCase()
+      : null
+    const shouldAutoApplyResume = normalizedResumePreference === null
+      ? true
+      : !['false', '0', 'off', 'manual', 'disabled'].includes(normalizedResumePreference)
+
     // Optional: upload resume to storage if provided
     let resumeUrl: string | null = null
     const resumeFile = formData.get('resume') as File | null
@@ -109,48 +118,50 @@ export async function updateJobSeekerProfile(formData: FormData) {
         const { data: pub } = await supabase.storage.from('resumes').getPublicUrl(filePath)
         resumeUrl = pub?.publicUrl || null
         
-        // Process resume with AI after successful upload
-        try {
-          const parseFormData = new FormData()
-          parseFormData.append('resume', resumeFile)
+        // Process resume with AI after successful upload unless the caller requested manual application
+        if (shouldAutoApplyResume) {
+          try {
+            const parseFormData = new FormData()
+            parseFormData.append('resume', resumeFile)
 
-          // Use a server-side internal token instead of forwarding raw cookies
-          const internalToken = process.env.INTERNAL_API_TOKEN
-          if (!internalToken) {
-            console.warn('INTERNAL_API_TOKEN is not configured; skipping resume AI processing')
-          } else {
-            const parseResponse = await fetch('/api/resume/parse', {
-              method: 'POST',
-              body: parseFormData,
-              headers: {
-                Authorization: `Bearer ${internalToken}`,
-                'X-User-Id': user.id,
-                // Explicitly allow AI results to be applied when invoked from the profile action
-                'X-Auto-Apply': 'true',
-              },
-              // Do not include cookies or credentials; this is an internal call
-              // and is authorized solely by the internal token
-              cache: 'no-store',
-            })
-            
-            if (parseResponse.ok) {
-              const parseResult = await parseResponse.json()
-              if (process.env.NODE_ENV !== 'production') {
-                console.log('Resume AI processing result: success, fields updated:', parseResult?.fieldsUpdated?.length || 0)
-              }
-              aiProcessingResult = parseResult
-              if (parseResult.fieldsUpdated) {
-                if (process.env.NODE_ENV !== 'production') {
-                  console.log('AI updated fields count:', parseResult.fieldsUpdated?.length || 0)
-                }
-              }
+            // Use a server-side internal token instead of forwarding raw cookies
+            const internalToken = process.env.INTERNAL_API_TOKEN
+            if (!internalToken) {
+              console.warn('INTERNAL_API_TOKEN is not configured; skipping resume AI processing')
             } else {
-              console.error('Resume AI processing failed:', await parseResponse.text())
+              const parseResponse = await fetch('/api/resume/parse', {
+                method: 'POST',
+                body: parseFormData,
+                headers: {
+                  Authorization: `Bearer ${internalToken}`,
+                  'X-User-Id': user.id,
+                  // Explicitly allow AI results to be applied when invoked from the profile action
+                  'X-Auto-Apply': 'true',
+                },
+                // Do not include cookies or credentials; this is an internal call
+                // and is authorized solely by the internal token
+                cache: 'no-store',
+              })
+              
+              if (parseResponse.ok) {
+                const parseResult = await parseResponse.json()
+                if (process.env.NODE_ENV !== 'production') {
+                  console.log('Resume AI processing result: success, fields updated:', parseResult?.fieldsUpdated?.length || 0)
+                }
+                aiProcessingResult = parseResult
+                if (parseResult.fieldsUpdated) {
+                  if (process.env.NODE_ENV !== 'production') {
+                    console.log('AI updated fields count:', parseResult.fieldsUpdated?.length || 0)
+                  }
+                }
+              } else {
+                console.error('Resume AI processing failed:', await parseResponse.text())
+              }
             }
+          } catch (parseError) {
+            console.error('Failed to process resume with AI:', parseError)
+            // Non-fatal: continue with profile update
           }
-        } catch (parseError) {
-          console.error('Failed to process resume with AI:', parseError)
-          // Non-fatal: continue with profile update
         }
       }
     }

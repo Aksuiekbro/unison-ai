@@ -107,6 +107,7 @@ export default function JobSeekerProfileForm({
 
         if (selectedResume) {
           formData.append('resume', selectedResume)
+          formData.append('resumeAutoApply', 'true')
         }
 
         const result: any = await updateJobSeekerProfile(formData)
