@@ -126,6 +126,44 @@ describe('Profile Actions with Storage', () => {
       expect(mockFetch).toHaveBeenCalledTimes(1)
     })
 
+    it('should not overwrite AI-updated skills when resume is auto-applied', async () => {
+      mockSupabase.auth.getUser.mockResolvedValue({
+        data: { user: { id: 'user-123' } },
+        error: null
+      })
+
+      // Simulate AI processing reporting skills as updated using decorated label
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ fieldsUpdated: ['skills (+3)'] }),
+        text: async () => ''
+      } as any)
+
+      const resumeFile = new File(['PDF content'], 'resume.pdf', { type: 'application/pdf' })
+
+      const formData = new FormData()
+      formData.append('firstName', 'John')
+      formData.append('lastName', 'Doe')
+      formData.append('title', 'Software Engineer')
+      formData.append('summary', 'Experienced developer')
+      formData.append('phone', '555-0123')
+      formData.append('location', 'San Francisco, CA')
+      formData.append('linkedinUrl', 'https://linkedin.com/in/johndoe')
+      formData.append('githubUrl', 'https://github.com/johndoe')
+      // Form submits an empty skills array, but AI has already updated skills
+      formData.append('skills', JSON.stringify([]))
+      formData.append('resume', resumeFile)
+
+      const result = await updateJobSeekerProfile(formData)
+
+      expect(result.success).toBe(true)
+
+      // Ensure we did not send a skills property in the update payload,
+      // so AI-imported skills remain intact in the database
+      const updatePayload = mockSupabase.from().update.mock.calls[0][0]
+      expect(updatePayload).not.toHaveProperty('skills')
+    })
+
     it('should respect manual resume field selections when auto-apply is disabled', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: { id: 'user-123' } },

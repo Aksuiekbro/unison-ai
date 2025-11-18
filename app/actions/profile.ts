@@ -173,7 +173,14 @@ export async function updateJobSeekerProfile(formData: FormData) {
     }
 
     // Get list of fields that were updated by AI in this request
-    const aiUpdatedFields = (aiProcessingResult?.fieldsUpdated || []) as string[]
+    // Normalize values like "skills (+3)" to canonical field keys ("skills")
+    const aiUpdatedFields = ((aiProcessingResult?.fieldsUpdated || []) as string[])
+      .map(field => {
+        if (typeof field !== 'string') return ''
+        const base = field.split(' ')[0]?.trim() ?? ''
+        return base || field
+      })
+      .filter(Boolean)
     if (process.env.NODE_ENV !== 'production') {
       console.log('📝 Profile Action - AI protection: avoiding overwrite of', aiUpdatedFields.length, 'fields')
     }
