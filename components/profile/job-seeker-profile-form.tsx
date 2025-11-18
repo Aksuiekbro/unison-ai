@@ -65,6 +65,10 @@ export default function JobSeekerProfileForm({
   const [eduForm, setEduForm] = useState({ institution: '', degree: '', fieldOfStudy: '', graduationYear: '' })
   const [aiResponse, setAiResponse] = useState<any>(null)
   const [resumeDialogOpen, setResumeDialogOpen] = useState(false)
+  const [resumeProfileSnapshot, setResumeProfileSnapshot] = useState<Partial<JobSeekerProfileData> & { skills?: string[] }>(() => ({
+    ...(initialData || {}),
+    skills: initialData?.skills || [],
+  }))
   const [latestResumeName, setLatestResumeName] = useState<string | null>(null)
 
   const form = useForm<JobSeekerProfileData>({
@@ -364,7 +368,13 @@ export default function JobSeekerProfileForm({
             <Button
               type="button"
               className="bg-[#00C49A] hover:bg-[#00A085]"
-              onClick={() => setResumeDialogOpen(true)}
+              onClick={() => {
+                setResumeProfileSnapshot({
+                  ...form.getValues(),
+                  skills: [...skills],
+                })
+                setResumeDialogOpen(true)
+              }}
             >
               Загрузить резюме
             </Button>
@@ -633,6 +643,7 @@ export default function JobSeekerProfileForm({
       <ResumeUploadDialog
         open={resumeDialogOpen}
         onOpenChange={setResumeDialogOpen}
+        currentProfile={resumeProfileSnapshot}
         onAdded={(payload) => {
           setLatestResumeName(payload.file?.name || null)
           if (payload.parsedData) {

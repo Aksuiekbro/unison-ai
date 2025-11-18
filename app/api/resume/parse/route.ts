@@ -66,6 +66,7 @@ async function extractTextFromFile(file: File): Promise<string> {
 
 export async function POST(request: NextRequest) {
   let fieldsUpdated: string[] = []
+  let shouldAutoApply = false
   
   try {
     // Support two auth modes:
@@ -99,6 +100,7 @@ export async function POST(request: NextRequest) {
             )
           }
           supabase = supabaseAdmin
+          shouldAutoApply = request.headers.get('x-auto-apply') === 'true'
         }
       }
       if (!isInternal) {
@@ -227,7 +229,7 @@ export async function POST(request: NextRequest) {
       // Update user profile with parsed data - now more flexible
       const parsedData = parseResult.data!
       
-      if (parsedData.personal_info) {
+      if (shouldAutoApply && parsedData.personal_info) {
         // Get existing user data  
         const { data: existingUser, error: fetchError } = await supabase
           .from('users')
@@ -385,6 +387,8 @@ export async function POST(request: NextRequest) {
         } else {
           console.log('🤖 AI Processing - No fields to update (userUpdate is empty)')
         }
+      } else {
+        console.log('🤖 AI Processing - Auto-apply disabled, returning parsed data only')
       }
 
     } catch (dbError) {
