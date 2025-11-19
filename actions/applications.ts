@@ -10,7 +10,15 @@ interface Application {
   id: string
   job_id: string
   applicant_id: string
-  status: "pending" | "reviewing" | "interview" | "accepted" | "rejected"
+  status:
+    | "pending"
+    | "reviewing"
+    | "interview"
+    | "interviewed"
+    | "offered"
+    | "accepted"
+    | "rejected"
+    | "hired"
   cover_letter: string | null
   resume_url: string | null
   notes: string | null
@@ -43,7 +51,7 @@ const createApplicationSchema = z.object({
 })
 
 const updateApplicationStatusSchema = z.object({
-  status: z.enum(["reviewing", "interview", "accepted", "rejected"]),
+  status: z.enum(["reviewing", "interview", "interviewed", "offered", "accepted", "rejected", "hired"]),
   notes: z.string().optional(),
 })
 
@@ -524,20 +532,37 @@ export async function checkApplicationExists(jobId: string, applicantId?: string
   }
 }
 
-export async function getApplicationStats(employerId?: string): Promise<{
+type ApplicationStats = {
   total: number
   pending: number
   reviewing: number
   interview: number
+  interviewed: number
+  offered: number
   accepted: number
+  hired: number
   rejected: number
-}> {
+}
+
+const EMPTY_APPLICATION_STATS: ApplicationStats = {
+  total: 0,
+  pending: 0,
+  reviewing: 0,
+  interview: 0,
+  interviewed: 0,
+  offered: 0,
+  accepted: 0,
+  hired: 0,
+  rejected: 0,
+}
+
+export async function getApplicationStats(employerId?: string): Promise<ApplicationStats> {
   try {
     const user = await getCurrentUser()
     const targetEmployerId = employerId || user?.id
 
     if (!targetEmployerId || user?.role !== "employer") {
-      return { total: 0, pending: 0, reviewing: 0, interview: 0, accepted: 0, rejected: 0 }
+      return { ...EMPTY_APPLICATION_STATS }
     }
 
     // Get companies owned by the employer
@@ -547,7 +572,7 @@ export async function getApplicationStats(employerId?: string): Promise<{
       .eq('owner_id', targetEmployerId)
 
     if (companiesError || !companies || companies.length === 0) {
-      return { total: 0, pending: 0, reviewing: 0, interview: 0, accepted: 0, rejected: 0 }
+      return { ...EMPTY_APPLICATION_STATS }
     }
 
     const companyIds = companies.map(company => company.id)
@@ -561,21 +586,21 @@ export async function getApplicationStats(employerId?: string): Promise<{
       .in('job.company_id', companyIds)
 
     if (error || !data) {
-      return { total: 0, pending: 0, reviewing: 0, interview: 0, accepted: 0, rejected: 0 }
+      return { ...EMPTY_APPLICATION_STATS }
     }
 
     const stats = data.reduce((acc, app) => {
       acc.total++
-      if (app.status === 'pending') acc.pending++
-      if (app.status === 'reviewing') acc.reviewing++
-      if (app.status === 'interview') acc.interview++
-      if (app.status === 'accepted') acc.accepted++
-      if (app.status === 'rejected') acc.rejected++
+
+      if (app.status in acc) {
+        acc[app.status as keyof ApplicationStats]++
+      }
+
       return acc
-    }, { total: 0, pending: 0, reviewing: 0, interview: 0, accepted: 0, rejected: 0 })
+    }, { ...EMPTY_APPLICATION_STATS })
 
     return stats
   } catch (error) {
-    return { total: 0, pending: 0, reviewing: 0, interview: 0, accepted: 0, rejected: 0 }
+    return { ...EMPTY_APPLICATION_STATS }
   }
 }
