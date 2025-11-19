@@ -61,10 +61,14 @@ export default function JobCandidates() {
         return "bg-yellow-500"
       case "reviewing":
         return "bg-blue-500"
+      case "interview":
+        return "bg-indigo-500"
       case "interviewed":
         return "bg-purple-500"
       case "offered":
         return "bg-green-500"
+      case "accepted":
+        return "bg-teal-500"
       case "hired":
         return "bg-emerald-600"
       case "rejected":
@@ -80,10 +84,14 @@ export default function JobCandidates() {
         return "В ожидании"
       case "reviewing":
         return "На рассмотрении"
+      case "interview":
+        return "Назначено собеседование"
       case "interviewed":
         return "Собеседование"
       case "offered":
         return "Предложение"
+      case "accepted":
+        return "Предложение принято"
       case "hired":
         return "Принят"
       case "rejected":
