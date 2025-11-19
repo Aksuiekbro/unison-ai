@@ -1,4 +1,5 @@
-'use server'
+// This module only runs on the server (imported from server actions/routes),
+// so we don't need to mark it as a Next.js Server Action.
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -33,4 +34,3 @@ export function enqueueMatchScoreJob(jobId: string, userId: string) {
     })
   }, 0)
 }
-
