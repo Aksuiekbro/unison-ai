@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { analyzePersonality, validatePersonalityAnalysis } from '@/lib/ai/personality-analyzer'
 import { createClient } from '@/lib/supabase-server'
-import type { Database } from '@/lib/database.types'
-
-interface TestResponse {
-  questionId: string
-  questionText: string
-  response: string
-  category: string
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -177,6 +169,42 @@ export async function POST(request: NextRequest) {
     } catch (dbError) {
       console.error('Database error storing analysis:', dbError)
       // Don't fail the request - analysis was successful
+    }
+
+    // Mark related completion flags so the UI can unlock job search
+    try {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert(
+          {
+            user_id: user.id,
+            personality_test_completed: true,
+            ai_analysis_completed: true
+          },
+          {
+            onConflict: 'user_id',
+            defaultToNull: false
+          }
+        )
+
+      if (profileError) {
+        console.error('Error updating profile completion flags:', profileError)
+      }
+    } catch (profileUpdateError) {
+      console.error('Unexpected error updating profile completion flags:', profileUpdateError)
+    }
+
+    try {
+      const { error: userUpdateError } = await supabase
+        .from('users')
+        .update({ personality_assessment_completed: true })
+        .eq('id', user.id)
+
+      if (userUpdateError) {
+        console.error('Error updating user personality completion flag:', userUpdateError)
+      }
+    } catch (userUpdateCaughtError) {
+      console.error('Unexpected error updating user completion flag:', userUpdateCaughtError)
     }
 
     // Return successful analysis

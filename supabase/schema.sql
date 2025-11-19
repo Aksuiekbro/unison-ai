@@ -21,6 +21,7 @@ CREATE TABLE public.users (
     phone TEXT,
     location TEXT,
     bio TEXT,
+    personality_assessment_completed BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

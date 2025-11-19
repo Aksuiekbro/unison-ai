@@ -15,6 +15,7 @@ export interface Database {
           experiences?: any | null
           educations?: any | null
           productivity_assessment_completed: boolean
+          personality_assessment_completed: boolean
           created_at: string
           updated_at: string
         }
@@ -31,6 +32,7 @@ export interface Database {
           experiences?: any | null
           educations?: any | null
           productivity_assessment_completed?: boolean
+          personality_assessment_completed?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -47,6 +49,7 @@ export interface Database {
           experiences?: any | null
           educations?: any | null
           productivity_assessment_completed?: boolean
+          personality_assessment_completed?: boolean
           created_at?: string
           updated_at?: string
         }

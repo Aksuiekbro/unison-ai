@@ -58,6 +58,7 @@ export async function middleware(req: NextRequest) {
     '/job-seeker/settings',
     '/job-seeker/applications',
     '/job-seeker/saved',
+    '/job-seeker/search',
   ]
 
   // Auth routes that should redirect if already authenticated
@@ -123,7 +124,7 @@ export async function middleware(req: NextRequest) {
     try {
       const { data: userData } = await supabase
         .from('users')
-        .select('role, productivity_assessment_completed')
+        .select('role, personality_assessment_completed')
         .eq('id', user.id)
         .single()
 
@@ -146,7 +147,7 @@ export async function middleware(req: NextRequest) {
 
       // Mandatory productivity assessment for job seekers
       if (normalizedRole === 'job_seeker') {
-        const assessmentCompleted = userData?.productivity_assessment_completed || false
+        const assessmentCompleted = userData?.personality_assessment_completed || false
         const isTestPage = pathname === '/job-seeker/test'
         const isResultsPage = pathname === '/job-seeker/results'
 
