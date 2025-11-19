@@ -381,9 +381,25 @@ export default function JobSearch() {
                               <div className="mb-3">
                                 <div className="bg-gradient-to-r from-[#00C49A] to-[#00A085] text-white px-3 py-2 rounded-lg mb-2">
                                   <div className="text-sm font-medium">Совместимость</div>
-                                  <div className="text-2xl font-bold">
-                                    {job.matchScore ? `${job.matchScore}%` : 'N/A'}
+                                  <div className="text-2xl font-bold min-h-[2.5rem] flex items-center justify-center">
+                                    {loading ? (
+                                      <Loader2 className="w-5 h-5 animate-spin" />
+                                    ) : job.matchScore != null ? (
+                                      `${job.matchScore}%`
+                                    ) : (
+                                      '—'
+                                    )}
                                   </div>
+                                  {job.matchScore != null && job.matchConfidence != null && (
+                                    <div className="text-[11px] text-white/80 mt-1">
+                                      Уверенность AI: {(job.matchConfidence * 100).toFixed(0)}%
+                                    </div>
+                                  )}
+                                  {job.matchScore == null && !loading && (
+                                    <div className="text-[11px] text-white/80 mt-1">
+                                      Оценка появится после анализа AI
+                                    </div>
+                                  )}
                                 </div>
                                 <Badge variant="outline" className="text-xs">
                                   {getExperienceLabel(job.experience_level)}

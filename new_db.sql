@@ -10,7 +10,7 @@ ALTER DEFAULT PRIVILEGES REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
 -- Create custom types
 CREATE TYPE user_role AS ENUM ('employer', 'job_seeker');
 CREATE TYPE job_status AS ENUM ('draft', 'published', 'closed', 'cancelled');
-CREATE TYPE application_status AS ENUM ('pending', 'reviewing', 'interview', 'accepted', 'rejected');
+CREATE TYPE application_status AS ENUM ('pending', 'reviewing', 'interview', 'interviewed', 'offered', 'hired', 'accepted', 'rejected');
 CREATE TYPE job_type AS ENUM ('full_time', 'part_time', 'contract', 'internship');
 CREATE TYPE experience_level AS ENUM ('entry', 'junior', 'mid', 'senior', 'executive');
 

@@ -127,7 +127,15 @@ export interface JobSkill {
   skill?: Skill
 }
 
-export type ApplicationStatus = 'pending' | 'reviewing' | 'interview' | 'accepted' | 'rejected'
+export type ApplicationStatus =
+  | 'pending'
+  | 'reviewing'
+  | 'interview'
+  | 'interviewed'
+  | 'offered'
+  | 'hired'
+  | 'accepted'
+  | 'rejected'
 
 export interface Application {
   id: string

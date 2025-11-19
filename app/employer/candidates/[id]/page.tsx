@@ -1,17 +1,17 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Progress } from "@/components/ui/progress"
-import { Separator } from "@/components/ui/separator"
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import {
   ArrowLeft,
   Mail,
   Phone,
   MapPin,
   Calendar,
-  MessageSquare,
-  Download,
+  FileText,
+  Linkedin,
+  Github,
+  Globe,
   Briefcase,
   GraduationCap,
   Award,
@@ -19,316 +19,442 @@ import {
   Users,
   Brain,
   TrendingUp,
-} from "lucide-react"
-import Link from "next/link"
+} from 'lucide-react'
 
-export default function CandidateProfile() {
-  const candidate = {
-    name: "Алексей Петров",
-    avatar: "/placeholder.svg?height=80&width=80",
-    title: "Senior Frontend Developer",
-    location: "Москва",
-    email: "alexey.petrov@email.com",
-    phone: "+7 (999) 123-45-67",
-    experience: "5 лет",
-    matchScore: 92,
-    skills: ["React", "TypeScript", "Node.js", "GraphQL", "Docker", "AWS"],
-    summary:
-      "Опытный фронтенд-разработчик с 5-летним стажем в создании современных веб-приложений. Специализируюсь на React и TypeScript, имею опыт работы с микросервисной архитектурой и облачными технологиями.",
-    experience_details: [
-      {
-        position: "Senior Frontend Developer",
-        company: "TechStart",
-        period: "2022 - настоящее время",
-        description:
-          "Разработка и поддержка крупного SaaS-продукта на React/TypeScript. Руководство командой из 3 разработчиков, внедрение best practices и code review процессов.",
+import type { Database } from '@/lib/database.types'
+import { getApplicationDetails } from '@/lib/actions/jobs'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Progress } from '@/components/ui/progress'
+import { Separator } from '@/components/ui/separator'
+
+const statusText: Record<string, string> = {
+  pending: 'В ожидании',
+  reviewing: 'На рассмотрении',
+  interview: 'Собеседование',
+  interviewed: 'Собеседование',
+  offered: 'Предложение',
+  hired: 'Принят',
+  accepted: 'Принят',
+  rejected: 'Отклонен',
+}
+
+const statusColor: Record<string, string> = {
+  pending: 'bg-yellow-500',
+  reviewing: 'bg-blue-500',
+  interview: 'bg-purple-500',
+  interviewed: 'bg-purple-500',
+  offered: 'bg-green-500',
+  hired: 'bg-emerald-600',
+  accepted: 'bg-emerald-600',
+  rejected: 'bg-red-500',
+}
+
+const personalityLabels: { key: keyof Database['public']['Tables']['personality_analysis']['Row']; label: string }[] = [
+  { key: 'analytical_score', label: 'Аналитика' },
+  { key: 'creative_score', label: 'Креативность' },
+  { key: 'leadership_score', label: 'Лидерство' },
+  { key: 'teamwork_score', label: 'Командная работа' },
+]
+
+const matchComponents: { key: keyof Database['public']['Tables']['match_scores']['Row']; label: string }[] = [
+  { key: 'skills_match_score', label: 'Навыки' },
+  { key: 'experience_match_score', label: 'Опыт' },
+  { key: 'culture_fit_score', label: 'Культура' },
+  { key: 'personality_match_score', label: 'Личность' },
+]
+
+export default async function CandidateProfilePage({ params }: { params: { id: string } }) {
+  const cookieStore = await cookies()
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+          } catch {}
+        },
       },
-      {
-        position: "Frontend Developer",
-        company: "WebStudio",
-        period: "2020 - 2022",
-        description:
-          "Создание интерактивных веб-приложений для e-commerce. Оптимизация производительности, интеграция с REST API и GraphQL.",
-      },
-    ],
-    education: [
-      {
-        degree: "Бакалавр",
-        field: "Информатика и вычислительная техника",
-        institution: "МГУ им. М.В. Ломоносова",
-        year: "2019",
-      },
-    ],
-    aiAnalysis: {
-      problemSolving: 88,
-      initiative: 92,
-      teamwork: 85,
-      adaptability: 90,
-      culturalFit: 87,
-      summary:
-        "Кандидат демонстрирует высокий уровень технических навыков и лидерских качеств. Аналитический склад ума и проактивный подход к решению задач делают его идеальным для senior-позиций. Хорошо работает в команде, но также способен принимать самостоятельные решения.",
-    },
+    }
+  )
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect(`/auth/login?redirect=/employer/candidates/${params.id}`)
   }
 
+  const result = await getApplicationDetails(params.id, user.id)
+
+  if (!result.success || !result.data) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <CardTitle className="text-xl text-[#0A2540]">Не удалось загрузить кандидата</CardTitle>
+            <p className="text-[#333333]">{result.error || 'Попробуйте обновить страницу.'}</p>
+            <Link href="/employer/jobs">
+              <Button>Вернуться к вакансиям</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const { application, matchScoreDetails, personalityAnalysis, resumeUrl } = result.data
+  const applicant = application.applicant
+  const experiences = Array.isArray(applicant.experiences) ? applicant.experiences : []
+  const educations = Array.isArray(applicant.educations) ? applicant.educations : []
+  const skills = Array.isArray(applicant.skills) ? applicant.skills : []
+  const strengths = parseList(matchScoreDetails?.strengths)
+  const concerns = parseList(matchScoreDetails?.potential_concerns)
+  const matchScore = application.matchScore ?? matchScoreDetails?.overall_score ?? null
+  const statusBadge = application.status || 'pending'
+  const jobCandidatesLink = `/employer/jobs/${application.job_id}/candidates`
+  const appliedAt = formatDate(application.applied_at)
+  const availableResume = resumeUrl || application.resume_url || applicant.resume_url
+
+  const contactLinks = [
+    { label: 'LinkedIn', value: applicant.linkedin_url, icon: Linkedin },
+    { label: 'GitHub', value: applicant.github_url, icon: Github },
+    { label: 'Портфолио', value: applicant.portfolio_url, icon: Globe },
+  ].filter((link) => !!link.value)
+
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center space-x-4 mb-8">
-          <Link href="/employer/jobs/1/candidates">
+    <div className="min-h-screen bg-gray-50 p-6 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        <div className="flex items-center gap-4">
+          <Link href={jobCandidatesLink}>
             <Button variant="outline" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />К списку кандидатов
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              К списку кандидатов
             </Button>
           </Link>
           <div>
             <h1 className="text-3xl font-bold text-[#0A2540]">Профиль кандидата</h1>
-            <p className="text-[#333333] mt-1">Детальный анализ и резюме</p>
+            <p className="text-[#333333]">Детальная информация и анализ совместимости</p>
           </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Profile */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Header Card */}
             <Card>
-              <CardContent className="p-6">
-                <div className="flex items-start space-x-6">
+              <CardContent className="p-6 flex flex-col gap-6">
+                <div className="flex flex-col md:flex-row md:items-center md:gap-6">
                   <Avatar className="w-20 h-20">
-                    <AvatarImage src={candidate.avatar || "/placeholder.svg"} />
-                    <AvatarFallback>
-                      {candidate.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </AvatarFallback>
+                    <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${applicant.full_name || 'UA'}`} />
+                    <AvatarFallback>{getInitials(applicant.full_name)}</AvatarFallback>
                   </Avatar>
-                  <div className="flex-1">
-                    <h2 className="text-2xl font-bold text-[#0A2540] mb-2">{candidate.name}</h2>
-                    <p className="text-lg text-[#333333] mb-3">{candidate.title}</p>
-                    <div className="flex items-center space-x-6 text-sm text-[#333333]">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h2 className="text-2xl font-bold text-[#0A2540]">{applicant.full_name}</h2>
+                      <Badge className={`${statusColor[statusBadge] || 'bg-gray-500'} text-white`}>
+                        {statusText[statusBadge] || statusBadge}
+                      </Badge>
+                    </div>
+                    {applicant.current_job_title && <p className="text-lg text-[#333333]">{applicant.current_job_title}</p>}
+                    <div className="flex flex-wrap gap-4 text-sm text-[#333333]">
+                      {applicant.location && (
+                        <span className="flex items-center">
+                          <MapPin className="w-4 h-4 mr-1" /> {applicant.location}
+                        </span>
+                      )}
+                      {appliedAt && (
+                        <span className="flex items-center">
+                          <Calendar className="w-4 h-4 mr-1" /> Отклик: {appliedAt}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {availableResume && (
+                    <Button asChild className="self-start bg-[#FF7A00] hover:bg-[#E66A00]">
+                      <a href={availableResume} target="_blank" rel="noreferrer">
+                        <FileText className="w-4 h-4 mr-2" />
+                        Открыть резюме
+                      </a>
+                    </Button>
+                  )}
+                </div>
+                <Separator />
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-500">Контакты</p>
+                    <div className="space-y-2 text-sm text-[#333333]">
                       <div className="flex items-center">
-                        <MapPin className="w-4 h-4 mr-1" />
-                        {candidate.location}
+                        <Mail className="w-4 h-4 mr-2" /> {applicant.email || '—'}
                       </div>
                       <div className="flex items-center">
-                        <Mail className="w-4 h-4 mr-1" />
-                        {candidate.email}
-                      </div>
-                      <div className="flex items-center">
-                        <Phone className="w-4 h-4 mr-1" />
-                        {candidate.phone}
+                        <Phone className="w-4 h-4 mr-2" /> {applicant.phone || '—'}
                       </div>
                     </div>
                   </div>
-                  <div className="flex space-x-2">
-                    <Button className="bg-[#00C49A] hover:bg-[#00A085]">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Запланировать интервью
-                    </Button>
-                    <Button variant="outline" className="border-[#FF7A00] text-[#FF7A00] bg-transparent">
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      Написать
-                    </Button>
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-500">Ссылки</p>
+                    <div className="flex flex-wrap gap-2">
+                      {contactLinks.length === 0 && <span className="text-sm text-[#333333]">Нет ссылок</span>}
+                      {contactLinks.map((link) => (
+                        <Button key={link.label} variant="outline" size="sm" asChild>
+                          <a href={ensureProtocol(link.value!)} target="_blank" rel="noreferrer" className="flex items-center">
+                            <link.icon className="w-4 h-4 mr-2" />
+                            {link.label}
+                          </a>
+                        </Button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Summary */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-[#0A2540]">О кандидате</CardTitle>
+                <CardDescription>Краткое резюме и мотивация</CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-[#333333] leading-relaxed">{candidate.summary}</p>
+              <CardContent className="space-y-4">
+                <p className="text-[#333333] leading-relaxed">{applicant.bio || 'Кандидат пока не добавил описание.'}</p>
+                {application.cover_letter && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h4 className="font-semibold text-[#0A2540] mb-2">Сопроводительное письмо</h4>
+                      <p className="text-[#333333] whitespace-pre-line">{application.cover_letter}</p>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
-            {/* Experience */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#0A2540] flex items-center">
-                  <Briefcase className="w-5 h-5 mr-2" />
+                <CardTitle className="text-[#0A2540] flex items-center gap-2">
+                  <Briefcase className="w-5 h-5 text-[#FF7A00]" />
                   Опыт работы
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {candidate.experience_details.map((exp, index) => (
-                    <div key={index} className="relative">
-                      {index !== candidate.experience_details.length - 1 && (
-                        <div className="absolute left-4 top-8 w-px h-16 bg-gray-200"></div>
-                      )}
-                      <div className="flex items-start space-x-4">
-                        <div className="w-8 h-8 bg-[#FF7A00] rounded-full flex items-center justify-center flex-shrink-0">
-                          <div className="w-3 h-3 bg-white rounded-full"></div>
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-[#0A2540]">{exp.position}</h4>
-                          <p className="text-[#333333] font-medium">{exp.company}</p>
-                          <p className="text-sm text-gray-500 mb-2">{exp.period}</p>
-                          <p className="text-sm text-[#333333] leading-relaxed">{exp.description}</p>
-                        </div>
+              <CardContent className="space-y-4">
+                {experiences.length === 0 && <p className="text-[#333333]">Опыт работы не указан.</p>}
+                {experiences.map((exp: any, idx: number) => (
+                  <div key={idx} className="p-4 rounded-lg border bg-white space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="font-semibold text-[#0A2540]">{exp.position || exp.title || 'Должность не указана'}</p>
+                        <p className="text-sm text-[#333333]">{exp.company || exp.organization || exp.employer || 'Компания не указана'}</p>
                       </div>
+                      <span className="text-sm text-[#333333]">{formatPeriod(exp)}</span>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Education */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-[#0A2540] flex items-center">
-                  <GraduationCap className="w-5 h-5 mr-2" />
-                  Образование
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {candidate.education.map((edu, index) => (
-                  <div key={index} className="flex items-start space-x-4">
-                    <div className="w-8 h-8 bg-[#00C49A] rounded-full flex items-center justify-center flex-shrink-0">
-                      <Award className="w-4 h-4 text-white" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-[#0A2540]">{edu.degree}</h4>
-                      <p className="text-[#333333]">{edu.field}</p>
-                      <p className="text-sm text-gray-500">
-                        {edu.institution} • {edu.year}
-                      </p>
-                    </div>
+                    {exp.description && <p className="text-sm text-[#333333]">{exp.description}</p>}
                   </div>
                 ))}
               </CardContent>
             </Card>
 
-            {/* Skills */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#0A2540]">Навыки и технологии</CardTitle>
+                <CardTitle className="text-[#0A2540] flex items-center gap-2">
+                  <GraduationCap className="w-5 h-5 text-[#FF7A00]" />
+                  Образование и навыки
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {candidate.skills.map((skill) => (
-                    <Badge key={skill} variant="secondary" className="px-3 py-1">
-                      {skill}
-                    </Badge>
+              <CardContent className="space-y-6">
+                <div>
+                  <h4 className="font-semibold text-[#0A2540] mb-3">Образование</h4>
+                  {educations.length === 0 && <p className="text-[#333333]">Образование не указано.</p>}
+                  {educations.map((edu: any, idx: number) => (
+                    <div key={idx} className="mb-4">
+                      <p className="font-medium text-[#0A2540]">{edu.degree || edu.level || 'Учебное заведение'}</p>
+                      <p className="text-sm text-[#333333]">{edu.institution || edu.school || 'Название не указано'}</p>
+                      <p className="text-sm text-[#333333]">{edu.year || edu.period || formatPeriod(edu)}</p>
+                    </div>
                   ))}
+                </div>
+                <div>
+                  <h4 className="font-semibold text-[#0A2540] mb-3">Навыки</h4>
+                  {skills.length === 0 && <p className="text-[#333333]">Навыки не указаны.</p>}
+                  <div className="flex flex-wrap gap-2">
+                    {skills.slice(0, 12).map((skill, idx) => (
+                      <Badge key={idx} variant="secondary" className="text-xs">
+                        {typeof skill === 'string' ? skill : skill?.name || 'Навык'}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* AI Analysis Sidebar */}
           <div className="space-y-6">
-            {/* Match Score */}
             <Card>
-              <CardHeader className="text-center">
-                <CardTitle className="text-[#0A2540]">Match Score</CardTitle>
+              <CardHeader>
+                <CardTitle className="text-[#0A2540] flex items-center gap-2">
+                  <Target className="w-5 h-5 text-[#FF7A00]" />
+                  Match Score
+                </CardTitle>
+                <CardDescription>AI-совместимость с вакансией</CardDescription>
               </CardHeader>
-              <CardContent className="text-center">
-                <div className="relative w-32 h-32 mx-auto mb-4">
-                  <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 36 36">
-                    <path
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      fill="none"
-                      stroke="#e5e7eb"
-                      strokeWidth="2"
-                    />
-                    <path
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      fill="none"
-                      stroke="#FF7A00"
-                      strokeWidth="2"
-                      strokeDasharray={`${candidate.matchScore}, 100`}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-3xl font-bold text-[#FF7A00]">{candidate.matchScore}</span>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-[#333333] mb-1">Общий балл</p>
+                    <div className="text-4xl font-bold text-[#FF7A00]">{matchScore != null ? `${matchScore}%` : 'N/A'}</div>
                   </div>
+                  {matchScore != null && (
+                    <div className="relative w-24 h-24">
+                      <svg className="w-24 h-24">
+                        <circle cx="48" cy="48" r="40" stroke="#E5E7EB" strokeWidth="8" fill="transparent" />
+                        <circle
+                          cx="48"
+                          cy="48"
+                          r="40"
+                          stroke="#FF7A00"
+                          strokeWidth="8"
+                          fill="transparent"
+                          strokeDasharray={`${2 * Math.PI * 40}`}
+                          strokeDashoffset={`${((100 - matchScore) / 100) * 2 * Math.PI * 40}`}
+                          strokeLinecap="round"
+                          transform="rotate(-90 48 48)"
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center text-lg font-semibold text-[#0A2540]">
+                        {matchScore}%
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <p className="text-[#333333]">Отличное соответствие позиции</p>
+                <div className="space-y-3">
+                  {matchComponents.map(({ key, label }) => {
+                    const componentValue = matchScoreDetails?.[key] as number | null | undefined
+                    return (
+                      <div key={key}>
+                        <div className="flex justify-between text-sm text-[#333333]">
+                          <span>{label}</span>
+                          <span>{componentValue != null ? `${componentValue}%` : '—'}</span>
+                        </div>
+                        <Progress value={componentValue || 0} className="h-2" />
+                      </div>
+                    )
+                  })}
+                </div>
+                {matchScoreDetails?.match_explanation && (
+                  <div className="p-3 rounded-lg bg-gray-50 text-sm text-[#333333]">
+                    {matchScoreDetails.match_explanation}
+                  </div>
+                )}
+                {(strengths.length > 0 || concerns.length > 0) && (
+                  <div className="space-y-3">
+                    {strengths.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-[#0A2540] mb-2 flex items-center gap-2">
+                          <Award className="w-4 h-4 text-green-600" />
+                          Сильные стороны
+                        </h4>
+                        <ul className="list-disc list-inside text-sm text-[#333333] space-y-1">
+                          {strengths.map((item, idx) => (
+                            <li key={`strength-${idx}`}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {concerns.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-[#0A2540] mb-2 flex items-center gap-2">
+                          <TrendingUp className="w-4 h-4 text-amber-600" />
+                          Зоны роста
+                        </h4>
+                        <ul className="list-disc list-inside text-sm text-[#333333] space-y-1">
+                          {concerns.map((item, idx) => (
+                            <li key={`concern-${idx}`}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            {/* AI Analysis Details */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#0A2540]">ИИ-анализ личности</CardTitle>
+                <CardTitle className="text-[#0A2540] flex items-center gap-2">
+                  <Brain className="w-5 h-5 text-[#FF7A00]" />
+                  Профиль личности
+                </CardTitle>
+                <CardDescription>Результаты анализа Gemini</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Brain className="w-4 h-4 text-[#FF7A00]" />
-                      <span className="text-sm">Решение проблем</span>
+                {personalityAnalysis ? (
+                  <>
+                    {personalityLabels.map(({ key, label }) => {
+                      const score = personalityAnalysis[key] as number | null | undefined
+                      return (
+                        <div key={key}>
+                          <div className="flex justify-between text-sm text-[#333333]">
+                            <span>{label}</span>
+                            <span>{score != null ? `${score}%` : '—'}</span>
+                          </div>
+                          <Progress value={score || 0} className="h-2" />
+                        </div>
+                      )
+                    })}
+                    <Separator />
+                    <div className="space-y-2 text-sm text-[#333333]">
+                      {personalityAnalysis.problem_solving_style && (
+                        <p>
+                          <span className="font-semibold text-[#0A2540]">Стиль решения задач:</span> {personalityAnalysis.problem_solving_style}
+                        </p>
+                      )}
+                      {personalityAnalysis.work_preference && (
+                        <p>
+                          <span className="font-semibold text-[#0A2540]">Формат работы:</span> {personalityAnalysis.work_preference}
+                        </p>
+                      )}
+                      {personalityAnalysis.growth_areas && (
+                        <p>
+                          <span className="font-semibold text-[#0A2540]">Зоны развития:</span> {personalityAnalysis.growth_areas}
+                        </p>
+                      )}
                     </div>
-                    <span className="text-sm font-medium">{candidate.aiAnalysis.problemSolving}%</span>
-                  </div>
-                  <Progress value={candidate.aiAnalysis.problemSolving} className="h-2" />
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Target className="w-4 h-4 text-[#00C49A]" />
-                      <span className="text-sm">Инициативность</span>
-                    </div>
-                    <span className="text-sm font-medium">{candidate.aiAnalysis.initiative}%</span>
-                  </div>
-                  <Progress value={candidate.aiAnalysis.initiative} className="h-2" />
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Users className="w-4 h-4 text-[#0A2540]" />
-                      <span className="text-sm">Командная работа</span>
-                    </div>
-                    <span className="text-sm font-medium">{candidate.aiAnalysis.teamwork}%</span>
-                  </div>
-                  <Progress value={candidate.aiAnalysis.teamwork} className="h-2" />
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <TrendingUp className="w-4 h-4 text-[#FF7A00]" />
-                      <span className="text-sm">Адаптивность</span>
-                    </div>
-                    <span className="text-sm font-medium">{candidate.aiAnalysis.adaptability}%</span>
-                  </div>
-                  <Progress value={candidate.aiAnalysis.adaptability} className="h-2" />
-                </div>
-
-                <Separator />
-
-                <div className="bg-gradient-to-r from-[#00C49A]/10 to-[#FF7A00]/10 p-4 rounded-lg">
-                  <h4 className="font-semibold text-[#0A2540] mb-2">
-                    Культурное соответствие: {candidate.aiAnalysis.culturalFit}%
-                  </h4>
-                  <p className="text-sm text-[#333333] leading-relaxed">{candidate.aiAnalysis.summary}</p>
-                </div>
+                  </>
+                ) : (
+                  <p className="text-[#333333]">Анализ личности еще не выполнен.</p>
+                )}
               </CardContent>
             </Card>
 
-            {/* Actions */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#0A2540]">Действия</CardTitle>
+                <CardTitle className="text-[#0A2540] flex items-center gap-2">
+                  <Users className="w-5 h-5 text-[#FF7A00]" />
+                  Информация по заявке
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <Button className="w-full bg-[#00C49A] hover:bg-[#00A085]">Сделать предложение</Button>
-                <Button className="w-full bg-[#FF7A00] hover:bg-[#E66A00]">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Запланировать интервью
-                </Button>
-                <Button variant="outline" className="w-full bg-transparent">
-                  <Download className="w-4 h-4 mr-2" />
-                  Скачать резюме
-                </Button>
-                <Button variant="outline" className="w-full border-red-500 text-red-500 hover:bg-red-50 bg-transparent">
-                  Отклонить кандидата
-                </Button>
+              <CardContent className="space-y-4 text-sm text-[#333333]">
+                <div className="flex items-center justify-between">
+                  <span>Статус</span>
+                  <Badge className={`${statusColor[statusBadge] || 'bg-gray-500'} text-white`}>
+                    {statusText[statusBadge] || statusBadge}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Отклик</span>
+                  <span>{appliedAt || '—'}</span>
+                </div>
+                {application.notes && (
+                  <div>
+                    <p className="text-sm font-semibold text-[#0A2540] mb-1">Заметки</p>
+                    <p>{application.notes}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -336,4 +462,53 @@ export default function CandidateProfile() {
       </div>
     </div>
   )
+}
+
+function getInitials(name?: string) {
+  if (!name) return 'UA'
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
+}
+
+function formatPeriod(entry: any): string {
+  if (!entry) return ''
+  if (entry.period) return entry.period
+  const start = entry.start_date || entry.start || entry.from
+  const end = entry.end_date || entry.end || entry.to
+  if (start || end) {
+    return `${start || '…'} — ${end || 'по н.в.'}`
+  }
+  if (entry.year) return `${entry.year}`
+  return ''
+}
+
+function parseList(value?: string | null) {
+  if (!value) return []
+  return value
+    .split(/[\n,]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function ensureProtocol(url: string) {
+  if (!url) return ''
+  return url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`
+}
+
+function formatDate(dateString?: string | null) {
+  if (!dateString) return null
+  try {
+    return new Date(dateString).toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
+  } catch {
+    return dateString
+  }
 }

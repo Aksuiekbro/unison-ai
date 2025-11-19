@@ -56,7 +56,9 @@ CREATE TABLE IF NOT EXISTS applications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
   applicant_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'reviewing', 'interviewed', 'offered', 'hired', 'rejected')),
+  status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (
+    status IN ('pending', 'reviewing', 'interview', 'interviewed', 'offered', 'hired', 'accepted', 'rejected')
+  ),
   cover_letter TEXT,
   resume_url VARCHAR(500),
   applied_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
