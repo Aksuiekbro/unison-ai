@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse, unstable_after } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { analyzePersonality, validatePersonalityAnalysis, QuestionResponse } from '@/lib/ai/personality-analyzer'
 import { createClient } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
@@ -9,6 +9,16 @@ const STATUS_MESSAGES: Record<string, string> = {
   completed: 'Анализ готов к просмотру.',
   failed: 'Не удалось завершить анализ. Попробуйте позже.'
 }
+
+const FALLBACK_QUESTIONS: { id: string; question_text: string; category: string }[] = [
+  { id: '1', question_text: 'Опишите самую большую неудачу в вашей карьере и что она вас научила.', category: 'problem_solving' },
+  { id: '2', question_text: 'Расскажите о ситуации, когда вам пришлось работать в команде с конфликтными людьми. Как вы решили эту проблему?', category: 'teamwork' },
+  { id: '3', question_text: 'Опишите проект или инициативу, которую вы начали сами, без указания руководства.', category: 'initiative' },
+  { id: '4', question_text: 'Как вы обычно принимаете важные решения? Опишите свой процесс на конкретном примере.', category: 'decision_making' },
+  { id: '5', question_text: 'Расскажите о времени, когда вам пришлось изучить что-то совершенно новое для работы. Как вы подошли к обучению?', category: 'learning' },
+  { id: '6', question_text: 'Опишите ситуацию, когда вы не согласились с решением руководства. Как вы отреагировали?', category: 'leadership' },
+  { id: '7', question_text: 'Что вас мотивирует больше всего в работе? Приведите конкретные примеры.', category: 'motivation' },
+]
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,22 +40,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { data: questionsFromDB, error: questionsError } = await supabase
+    const { data: questionsFromDB } = await supabase
       .from('questionnaires')
       .select('id, question_text, category, order_index')
       .eq('is_active', true)
       .order('order_index')
 
-    if (questionsError) {
-      console.error('Error fetching questions from database:', questionsError)
-      return NextResponse.json(
-        { success: false, error: 'Failed to fetch questions from database' },
-        { status: 500 }
-      )
-    }
-
-    const questionMapping: Record<string, { uuid: string; text: string; category: string }> = {}
-    if (questionsFromDB) {
+    const questionMapping: Record<string, { uuid?: string; text: string; category: string }> = {}
+    if (questionsFromDB && questionsFromDB.length > 0) {
       questionsFromDB.forEach((q, index) => {
         const frontendId = (index + 1).toString()
         questionMapping[frontendId] = {
@@ -53,13 +55,25 @@ export async function POST(request: NextRequest) {
           text: q.question_text,
           category: q.category || 'general'
         }
+        // Also map q1 style IDs to be tolerant of old responses
+        questionMapping[`q${index + 1}`] = {
+          uuid: q.id,
+          text: q.question_text,
+          category: q.category || 'general'
+        }
+      })
+    } else {
+      // Fallback mapping to default questions
+      FALLBACK_QUESTIONS.forEach((q) => {
+        questionMapping[q.id] = { text: q.question_text, category: q.category }
+        questionMapping[`q${q.id}`] = { text: q.question_text, category: q.category }
       })
     }
 
     const questionResponses: QuestionResponse[] = Object.entries(responses).map(([questionId, response]) => {
       const questionInfo = questionMapping[questionId]
       if (!questionInfo) {
-        console.warn(`Question ID ${questionId} not found in database`)
+        console.warn(`Question ID ${questionId} not found; using fallback text`)
         return {
           question_id: questionId,
           question_text: 'Question not found',
@@ -68,7 +82,7 @@ export async function POST(request: NextRequest) {
         }
       }
       return {
-        question_id: questionInfo.uuid,
+        question_id: questionInfo.uuid || questionId,
         question_text: questionInfo.text,
         response_text: String(response),
         category: questionInfo.category
@@ -139,12 +153,14 @@ export async function POST(request: NextRequest) {
     const shouldProcessInline = process.env.PERSONALITY_ANALYSIS_INLINE === 'true'
     const isTestEnv = process.env.NODE_ENV === 'test'
 
-    if (shouldProcessInline) {
+    if (shouldProcessInline || isTestEnv) {
       await processPersonalityAnalysisInBackground(user.id, questionResponses)
-    } else if (!isTestEnv) {
-      unstable_after(async () => {
-        await processPersonalityAnalysisInBackground(user.id, questionResponses)
-      })
+    } else {
+      setTimeout(() => {
+        processPersonalityAnalysisInBackground(user.id, questionResponses).catch((err) =>
+          console.error('Background personality analysis failed (setTimeout):', err)
+        )
+      }, 0)
     }
 
     const status = 'queued'
