@@ -1,11 +1,16 @@
 "use client"
 
-import { useActionState, useEffect, useState } from "react"
-import { requestPasswordResetAction } from "@/app/auth/reset-password/action"
+import { FormEvent, useState } from "react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, CheckCircle2 } from "lucide-react"
+
+type ResetResponse = {
+  success: boolean
+  message: string
+  errors?: Record<string, string[]>
+}
 
 interface PasswordResetRequestFormProps {
   submitLabel?: string
@@ -13,17 +18,41 @@ interface PasswordResetRequestFormProps {
 }
 
 export function PasswordResetRequestForm({ submitLabel = "Send reset link", description = "Enter the email associated with your account and we'll send you reset instructions." }: PasswordResetRequestFormProps) {
-  const [state, formAction, isPending] = useActionState(requestPasswordResetAction, null)
+  const [state, setState] = useState<ResetResponse | null>(null)
   const [email, setEmail] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  useEffect(() => {
-    if (state?.success) {
-      setEmail("")
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setIsSubmitting(true)
+    setState(null)
+
+    try {
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      })
+
+      const data = (await response.json().catch(() => null)) as ResetResponse | null
+      if (data) {
+        setState(data)
+        if (data.success) {
+          setEmail("")
+        }
+      } else {
+        setState({ success: false, message: "Unexpected response. Please try again." })
+      }
+    } catch (error) {
+      console.error("Forgot password request failed", error)
+      setState({ success: false, message: "Unable to send reset instructions right now. Please try again." })
+    } finally {
+      setIsSubmitting(false)
     }
-  }, [state])
+  }
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <Label htmlFor="reset-email">Email</Label>
         <Input
@@ -51,8 +80,8 @@ export function PasswordResetRequestForm({ submitLabel = "Send reset link", desc
         </div>
       )}
 
-      <Button type="submit" className="w-full" disabled={isPending}>
-        {isPending ? "Sending..." : submitLabel}
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
+        {isSubmitting ? "Sending..." : submitLabel}
       </Button>
     </form>
   )

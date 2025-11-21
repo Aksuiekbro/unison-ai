@@ -5,10 +5,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, CheckCircle2 } from "lucide-react"
-import { supabase } from "@/lib/supabase-client"
 import { useRouter } from "next/navigation"
 
 type Status = { type: "idle" | "success" | "error"; message?: string }
+type ResetResponse = { success: boolean; message: string; errors?: Record<string, string[]> }
 
 export function UpdatePasswordForm() {
   const [password, setPassword] = useState("")
@@ -31,21 +31,34 @@ export function UpdatePasswordForm() {
     setIsSubmitting(true)
     setStatus({ type: "idle" })
 
-    const { error } = await supabase.auth.updateUser({ password })
+    try {
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ password, confirmPassword }),
+      })
 
-    if (error) {
-      console.error("Password update error", error)
-      setStatus({ type: "error", message: error.message || "Failed to update password. Please try again." })
-    } else {
-      setStatus({ type: "success", message: "Password updated. You can now log in with your new credentials." })
-      setPassword("")
-      setConfirmPassword("")
-      setTimeout(() => {
-        router.push("/auth/login")
-      }, 2500)
+      const data = (await response.json().catch(() => null)) as ResetResponse | null
+
+      if (!data) {
+        setStatus({ type: "error", message: "Unexpected response. Please try again." })
+      } else if (data.success) {
+        setStatus({ type: "success", message: data.message })
+        setPassword("")
+        setConfirmPassword("")
+        setTimeout(() => {
+          router.push("/auth/login")
+        }, 2500)
+      } else {
+        setStatus({ type: "error", message: data.message })
+      }
+    } catch (error) {
+      console.error("Password update request failed", error)
+      setStatus({ type: "error", message: "Unable to update password right now. Please try again." })
+    } finally {
+      setIsSubmitting(false)
     }
-
-    setIsSubmitting(false)
   }
 
   return (

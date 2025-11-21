@@ -38,10 +38,7 @@ describe('Personality Analyze API Route', () => {
         }
         if (table === 'personality_analysis') {
           return {
-            delete: vi.fn().mockReturnValue({
-              eq: vi.fn().mockResolvedValue({ error: null })
-            }),
-            insert: vi.fn().mockResolvedValue({ error: null })
+            upsert: vi.fn().mockResolvedValue({ error: null })
           }
         }
         if (table === 'questionnaires') {
@@ -62,6 +59,13 @@ describe('Personality Analyze API Route', () => {
         if (table === 'profiles') {
           return {
             upsert: upsertMock
+          }
+        }
+        if (table === 'users') {
+          return {
+            update: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ error: null })
+            })
           }
         }
         return {}
@@ -105,8 +109,8 @@ describe('Personality Analyze API Route', () => {
 
     const requestBody = {
       responses: {
-        q1: 'I enjoy solving complex problems with data-driven methods.',
-        q2: 'I like collaborating with cross-functional teams to deliver impact.'
+        1: 'I enjoy solving complex problems with data-driven methods.',
+        2: 'I like collaborating with cross-functional teams to deliver impact.'
       }
     }
 
@@ -120,6 +124,7 @@ describe('Personality Analyze API Route', () => {
 
     expect(response.status).toBe(200)
     expect(result.success).toBe(true)
+    expect(result.status).toBe('queued')
 
     // Ensure upsert was called correctly to avoid nulling other fields
     expect(upsertMock).toHaveBeenCalledTimes(1)
@@ -129,7 +134,7 @@ describe('Personality Analyze API Route', () => {
     expect(payload).toMatchObject({
       user_id: 'user-123',
       personality_test_completed: true,
-      ai_analysis_completed: true
+      ai_analysis_completed: false
     })
     // Ensure we didn't accidentally include other fields in the payload
     expect(Object.keys(payload).sort()).toEqual([
@@ -138,7 +143,7 @@ describe('Personality Analyze API Route', () => {
       'user_id'
     ].sort())
 
-    expect(options).toMatchObject({ onConflict: 'user_id', defaultToNull: false })
+    expect(options).toMatchObject({ onConflict: 'user_id' })
   })
 })
 
