@@ -24,6 +24,7 @@ A modern job portal platform built with Next.js, TypeScript, and Supabase, featu
 - **Skills Management**: Tag-based skill system
 - **Resume Upload**: File upload functionality (planned)
 - **Social Profiles**: LinkedIn and GitHub integration
+- **Async Personality Insights**: Open-ended AI assessment that queues instantly, shows queued/processing statuses, and notifies in-app when analysis is ready
 
 ### 🔍 Job Search & Filtering
 - **Advanced Search**: Find jobs by skills, technologies, or keywords
@@ -119,6 +120,7 @@ Copy `.env.example` to `.env.local` and fill in your Supabase credentials:
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+PERSONALITY_ANALYSIS_INLINE=false # set to true to force inline AI processing (useful for local tests)
 ```
 
 ### 2. Database Setup

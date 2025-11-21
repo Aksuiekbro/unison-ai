@@ -37,6 +37,24 @@ const NARRATIVE_SECTIONS: { label: string; key: keyof Pick<Database['public']['T
   { label: 'Зоны роста', key: 'growth_areas' },
 ]
 
+const STATUS_VIEW = {
+  queued: {
+    title: 'Анализ в очереди',
+    description: 'Мы сохраняем ваши ответы и передаем их ИИ. Это обычно занимает до минуты.',
+    tone: 'text-amber-600'
+  },
+  processing: {
+    title: 'ИИ анализирует ответы',
+    description: 'Почти готово! Можно заняться другими задачами — мы пришлем уведомление.',
+    tone: 'text-blue-600'
+  },
+  failed: {
+    title: 'Не удалось завершить анализ',
+    description: 'Попробуйте пройти тест еще раз. Если проблема повторяется, свяжитесь с поддержкой.',
+    tone: 'text-red-600'
+  }
+} as const
+
 
 export default async function PersonalityResultsPage() {
   const supabase = await createClient()
@@ -44,20 +62,6 @@ export default async function PersonalityResultsPage() {
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
     redirect('/auth/login?redirectTo=/job-seeker/results')
-  }
-
-  const { data: userRecord, error: userError } = await supabase
-    .from('users')
-    .select('personality_assessment_completed')
-    .eq('id', user.id)
-    .single()
-
-  if (userError) {
-    console.warn('Failed to load personality assessment completion flag', userError)
-  }
-
-  if (!userRecord?.personality_assessment_completed) {
-    redirect('/job-seeker/test')
   }
 
   const { data: analysis, error: analysisError } = await supabase
@@ -70,15 +74,28 @@ export default async function PersonalityResultsPage() {
     console.warn('Failed to fetch personality analysis', analysisError)
   }
 
-  if (!analysis) {
+  const isAnalysisReady = analysis?.status === 'completed'
+
+  if (!analysis || !isAnalysisReady) {
+    const statusKey = (analysis?.status as keyof typeof STATUS_VIEW) || 'queued'
+    const statusCopy = STATUS_VIEW[statusKey] ?? STATUS_VIEW.queued
+    const showError = statusKey === 'failed' && analysis?.error_message
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">
         <div className="mx-auto flex max-w-3xl flex-col items-center justify-center rounded-2xl bg-white/80 p-10 text-center shadow-lg">
-          <AlertCircle className="mb-6 h-16 w-16 text-amber-500" />
-          <h1 className="text-2xl font-semibold text-[#0A2540]">Анализ еще готовится</h1>
+          <AlertCircle className={`mb-6 h-16 w-16 ${statusCopy.tone}`} />
+          <h1 className={`text-2xl font-semibold text-[#0A2540] ${statusCopy.tone}`}>
+            {statusCopy.title}
+          </h1>
           <p className="mt-3 text-gray-600">
-            Ваши ответы успешно отправлены. Как только ИИ завершит обработку, результаты появятся здесь автоматически.
+            {statusCopy.description}
           </p>
+          {showError && (
+            <p className="mt-2 text-sm text-red-600">
+              {analysis?.error_message}
+            </p>
+          )}
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Button asChild variant="outline">
               <Link href="/job-seeker/test">Проверить ответы</Link>

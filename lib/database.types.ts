@@ -611,6 +611,10 @@ export interface Database {
           trait_scores: any | null
           ai_confidence_score: number | null
           analysis_version: string | null
+          status: 'queued' | 'processing' | 'completed' | 'failed'
+          queued_at: string
+          processed_at: string | null
+          error_message: string | null
           created_at: string
           updated_at: string
         }
@@ -631,6 +635,10 @@ export interface Database {
           trait_scores?: any | null
           ai_confidence_score?: number | null
           analysis_version?: string | null
+          status?: 'queued' | 'processing' | 'completed' | 'failed'
+          queued_at?: string
+          processed_at?: string | null
+          error_message?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -651,6 +659,10 @@ export interface Database {
           trait_scores?: any | null
           ai_confidence_score?: number | null
           analysis_version?: string | null
+          status?: 'queued' | 'processing' | 'completed' | 'failed'
+          queued_at?: string
+          processed_at?: string | null
+          error_message?: string | null
           created_at?: string
           updated_at?: string
         }
