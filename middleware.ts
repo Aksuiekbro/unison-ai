@@ -124,7 +124,7 @@ export async function middleware(req: NextRequest) {
     try {
       const { data: userData } = await supabase
         .from('users')
-        .select('role, personality_assessment_completed')
+        .select('role, personality_assessment_completed, productivity_assessment_completed')
         .eq('id', user.id)
         .single()
 
@@ -147,7 +147,9 @@ export async function middleware(req: NextRequest) {
 
       // Mandatory productivity assessment for job seekers
       if (normalizedRole === 'job_seeker') {
-        const assessmentCompleted = userData?.personality_assessment_completed || false
+        const assessmentCompleted = (userData?.personality_assessment_completed !== null && userData?.personality_assessment_completed !== undefined)
+          ? userData.personality_assessment_completed
+          : (userData as any)?.productivity_assessment_completed || false
         const isTestPage = pathname === '/job-seeker/test'
         const isResultsPage = pathname === '/job-seeker/results'
 

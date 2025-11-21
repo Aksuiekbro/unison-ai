@@ -136,28 +136,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .upsert(
-        {
-          user_id: user.id,
-          personality_test_completed: true,
-          ai_analysis_completed: false
-        },
-        {
-          onConflict: 'user_id',
-          defaultToNull: false
-        }
-      )
-
-    if (profileError) {
-      console.error('Error updating profile completion flags:', profileError)
-      return NextResponse.json(
-        { success: false, error: 'Failed to update profile status' },
-        { status: 500 }
-      )
-    }
-
     const shouldProcessInline = process.env.PERSONALITY_ANALYSIS_INLINE === 'true'
     const isTestEnv = process.env.NODE_ENV === 'test'
 
@@ -235,19 +213,6 @@ async function processPersonalityAnalysisInBackground(
         { onConflict: 'user_id', ignoreDuplicates: false }
       )
 
-    await supabaseAdmin
-      .from('profiles')
-      .upsert(
-        {
-          user_id: userId,
-          ai_analysis_completed: true
-        },
-        {
-          onConflict: 'user_id',
-          defaultToNull: false
-        }
-      )
-
     const { error: userFlagError } = await supabaseAdmin
       .from('users')
       .update({ personality_assessment_completed: true })
@@ -274,19 +239,6 @@ async function markAnalysisFailed(userId: string, errorMessage: string) {
           error_message: errorMessage
         },
         { onConflict: 'user_id', ignoreDuplicates: false }
-      )
-
-    await supabaseAdmin
-      .from('profiles')
-      .upsert(
-        {
-          user_id: userId,
-          ai_analysis_completed: false
-        },
-        {
-          onConflict: 'user_id',
-          defaultToNull: false
-        }
       )
 
     const { error: userFlagError } = await supabaseAdmin
