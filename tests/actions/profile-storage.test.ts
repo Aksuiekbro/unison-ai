@@ -123,21 +123,15 @@ describe('Profile Actions with Storage', () => {
           contentType: 'application/pdf'
         })
       )
-      expect(mockFetch).toHaveBeenCalledTimes(1)
+      // No auto AI call now; we only upload resume
+      expect(mockFetch).not.toHaveBeenCalled()
     })
 
-    it('should not overwrite AI-updated skills when resume is auto-applied', async () => {
+    it('should keep form-submitted skills when no AI auto-apply is triggered', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: { id: 'user-123' } },
         error: null
       })
-
-      // Simulate AI processing reporting skills as updated using decorated label
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ fieldsUpdated: ['skills (+3)'] }),
-        text: async () => ''
-      } as any)
 
       const resumeFile = new File(['PDF content'], 'resume.pdf', { type: 'application/pdf' })
 
@@ -150,18 +144,17 @@ describe('Profile Actions with Storage', () => {
       formData.append('location', 'San Francisco, CA')
       formData.append('linkedinUrl', 'https://linkedin.com/in/johndoe')
       formData.append('githubUrl', 'https://github.com/johndoe')
-      // Form submits an empty skills array, but AI has already updated skills
-      formData.append('skills', JSON.stringify([]))
+      // Form submits skills; without AI auto-apply we should persist these
+      formData.append('skills', JSON.stringify(['TypeScript']))
       formData.append('resume', resumeFile)
 
       const result = await updateJobSeekerProfile(formData)
 
       expect(result.success).toBe(true)
 
-      // Ensure we did not send a skills property in the update payload,
-      // so AI-imported skills remain intact in the database
+      // Ensure skills from the form are propagated when AI does not run
       const updatePayload = mockSupabase.from().update.mock.calls[0][0]
-      expect(updatePayload).not.toHaveProperty('skills')
+      expect(updatePayload.skills).toEqual(['TypeScript'])
     })
 
     it('should respect manual resume field selections when auto-apply is disabled', async () => {

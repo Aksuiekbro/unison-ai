@@ -1,29 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('@/lib/supabase-client', async () => {
+  const signUpMock = vi.fn().mockResolvedValue({
+    data: { user: { id: 'user-1' } },
+    error: null
+  })
   return {
     supabase: { 
       auth: { 
-        signUp: vi.fn().mockResolvedValue({ 
-          data: { user: { id: 'user-1' } }, 
-          error: null 
-        }) 
+        signUp: signUpMock 
       } 
-    }
-  }
-})
-
-vi.mock('@/lib/supabase-admin', async () => {
-  const insertMock = vi.fn().mockResolvedValue({ data: null, error: null })
-  return {
-    supabaseAdmin: { 
-      from: vi.fn().mockReturnValue({ insert: insertMock }) 
+    },
+    __mocks: {
+      signUpMock
     }
   }
 })
 
 import { signupAction } from '@/app/auth/signup/action'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { supabase } from '@/lib/supabase-client'
 
 describe('signupAction', () => {
   beforeEach(() => {
@@ -31,6 +26,8 @@ describe('signupAction', () => {
   })
 
   it('normalizes role employee/job-seeker to job_seeker and inserts profile with admin client', async () => {
+    const signUpMock = (supabase as any).auth.signUp
+
     const form = new FormData()
     form.set('role', 'job-seeker')
     form.set('fullName', 'Jane Doe')
@@ -40,9 +37,10 @@ describe('signupAction', () => {
     const res = await signupAction(null as any, form)
     expect(res.success).toBe(true)
 
-    // Ensure admin client used
-    expect((supabaseAdmin as any).from).toHaveBeenCalledWith('users')
-    const call = (supabaseAdmin as any).from.mock.results[0].value.insert.mock.calls[0][0]
-    expect(call).toMatchObject({ id: 'user-1', role: 'job_seeker', email: 'jane@example.com' })
+    // Ensure client signUp used and role normalized in metadata
+    expect(signUpMock).toHaveBeenCalledTimes(1)
+    const args = signUpMock.mock.calls[0][0]
+    expect(args.email).toBe('jane@example.com')
+    expect(args.options?.data?.role).toBe('job_seeker')
   })
 })
