@@ -120,7 +120,7 @@ export async function calculateMatchScoreForJobUserWithClient(
       .from('jobs')
       .select(`
         *,
-        companies (name, description),
+        companies (name, description, company_culture),
         job_skills (
           required,
           skills (name, category)
@@ -157,7 +157,7 @@ export async function calculateMatchScoreForJobUserWithClient(
       job_type: job.job_type,
       location: job.location || '',
       remote_allowed: job.remote_allowed,
-      company_culture: job.companies?.description || '',
+      company_culture: job.companies?.company_culture || job.companies?.description || '',
       required_skills: job.job_skills?.filter(js => js.required).map(js => js.skills.name) || [],
       preferred_skills: job.job_skills?.filter(js => !js.required).map(js => js.skills.name) || []
     };

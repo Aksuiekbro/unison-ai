@@ -1,9 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
-import ProductivityAssessmentClient from './client'
-import { checkProductivityAssessmentStatus } from '@/actions/productivity-assessment'
+import PersonalityAssessmentClient from './client'
 
-export default async function ProductivityAssessmentPage() {
+export default async function PersonalityAssessmentPage() {
   const supabase = await createClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -12,11 +11,19 @@ export default async function ProductivityAssessmentPage() {
     redirect('/auth/login?redirectTo=/job-seeker/test')
   }
 
-  // Check if user has already completed the assessment
-  const assessmentStatus = await checkProductivityAssessmentStatus()
-  if (assessmentStatus.completed) {
+  const { data: userRecord, error: userError } = await supabase
+    .from('users')
+    .select('personality_assessment_completed')
+    .eq('id', user.id)
+    .single()
+
+  if (userError) {
+    console.warn('Failed to load personality assessment status', userError)
+  }
+
+  if (userRecord?.personality_assessment_completed) {
     redirect('/job-seeker/results')
   }
 
-  return <ProductivityAssessmentClient />
+  return <PersonalityAssessmentClient userId={user.id} />
 }

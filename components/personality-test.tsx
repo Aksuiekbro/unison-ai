@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Textarea } from './ui/textarea'
 import { Progress } from './ui/progress'
-import { Brain, ChevronRight, CheckCircle, Loader2 } from 'lucide-react'
+import { Brain, ChevronRight, CheckCircle, Loader2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Question {
@@ -66,6 +67,31 @@ const DEFAULT_QUESTIONS: Question[] = [
   }
 ]
 
+type AnalysisStatus = 'idle' | 'queued' | 'processing' | 'completed' | 'failed'
+
+const STATUS_LABELS: Record<AnalysisStatus, { title: string; description: string }> = {
+  idle: {
+    title: 'Ответы еще не отправлены',
+    description: 'Завершите тест, чтобы запустить анализ.'
+  },
+  queued: {
+    title: 'Ответы сохранены',
+    description: 'Мы поставили анализ в очередь и сообщим, как только он завершится.'
+  },
+  processing: {
+    title: 'ИИ анализирует ответы',
+    description: 'Обычно это занимает меньше минуты. Не закрывайте вкладку, если хотите увидеть уведомление.'
+  },
+  completed: {
+    title: 'Анализ готов',
+    description: 'Можете открыть результаты и перейти к подбору вакансий.'
+  },
+  failed: {
+    title: 'Не удалось завершить анализ',
+    description: 'Попробуйте еще раз позже или перепройдите тест.'
+  }
+}
+
 export function PersonalityTest({ userId, onTestComplete, className }: PersonalityTestProps) {
   // Runtime validation for userId prop
   if (!userId || typeof userId !== 'string' || !userId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
@@ -88,10 +114,22 @@ export function PersonalityTest({ userId, onTestComplete, className }: Personali
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [testCompleted, setTestCompleted] = useState(false)
+  const [analysisStatus, setAnalysisStatus] = useState<AnalysisStatus>('idle')
+  const [statusMessage, setStatusMessage] = useState('')
+
+  const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pollAttemptsRef = useRef(0)
+  const pollingActiveRef = useRef(false)
 
   // Load questions on component mount
   useEffect(() => {
     loadQuestions()
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      stopStatusPolling()
+    }
   }, [])
 
   const loadQuestions = async () => {
@@ -117,6 +155,88 @@ export function PersonalityTest({ userId, onTestComplete, className }: Personali
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const stopStatusPolling = () => {
+    pollingActiveRef.current = false
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current)
+      pollTimeoutRef.current = null
+    }
+  }
+
+  const scheduleNextPoll = () => {
+    if (!pollingActiveRef.current) {
+      return
+    }
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current)
+    }
+    const attempts = pollAttemptsRef.current
+    const baseDelay = attempts >= 6 ? 10000 : 5000
+    const jitter = Math.floor(Math.random() * 1500)
+    pollTimeoutRef.current = setTimeout(() => {
+      if (!pollingActiveRef.current) {
+        return
+      }
+      pollAttemptsRef.current += 1
+      pollPersonalityStatus()
+    }, baseDelay + jitter)
+  }
+
+  const pollPersonalityStatus = async () => {
+    let shouldContinue = true
+    try {
+      const response = await fetch('/api/personality/status')
+      if (response.status === 401) {
+        stopStatusPolling()
+        setStatusMessage('Сессия истекла. Войдите снова, чтобы узнать статус.')
+        toast.error('Сессия истекла. Пожалуйста, войдите снова.', { id: 'personality-status' })
+        return
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch personality status')
+      }
+
+      const data = await response.json()
+      const nextStatus = (data.status as AnalysisStatus) || 'queued'
+      setAnalysisStatus(nextStatus)
+
+      const copy = STATUS_LABELS[nextStatus] ?? STATUS_LABELS.queued
+      setStatusMessage(copy.description)
+
+      if (nextStatus === 'completed') {
+        setStatusMessage(STATUS_LABELS.completed.description)
+        toast.success('Анализ готов! Можно открыть результаты.', { id: 'personality-status' })
+        stopStatusPolling()
+        onTestComplete?.(null)
+        shouldContinue = false
+      } else if (nextStatus === 'failed') {
+        const errorMessage = data?.error || STATUS_LABELS.failed.description
+        setStatusMessage(errorMessage)
+        toast.error(errorMessage, { id: 'personality-status' })
+        stopStatusPolling()
+        shouldContinue = false
+      }
+    } catch (error) {
+      console.error('Failed to poll personality status', error)
+      setStatusMessage('Не удалось обновить статус. Попробуем еще раз...')
+    } finally {
+      if (shouldContinue) {
+        scheduleNextPoll()
+      }
+    }
+  }
+
+  const startStatusPolling = () => {
+    pollingActiveRef.current = true
+    pollAttemptsRef.current = 0
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current)
+      pollTimeoutRef.current = null
+    }
+    pollPersonalityStatus()
   }
 
   // Guard against empty questions array and bounds check currentQuestionIndex
@@ -170,8 +290,11 @@ export function PersonalityTest({ userId, onTestComplete, className }: Personali
   }
 
   const submitTest = async () => {
+    stopStatusPolling()
     setIsSubmitting(true)
     setIsAnalyzing(true)
+    setAnalysisStatus('idle')
+    setStatusMessage('')
 
     try {
       // Save final response
@@ -218,9 +341,25 @@ export function PersonalityTest({ userId, onTestComplete, className }: Personali
         const result = await response.json()
         
         if (result.success) {
+          const nextStatus: AnalysisStatus = result.status || 'queued'
+          const analysisPayload = result.analysis ?? null
           setTestCompleted(true)
-          toast.success('Тест личности завершен! Анализ готов.')
-          onTestComplete?.(result.analysis)
+          setAnalysisStatus(nextStatus)
+
+          if (nextStatus === 'completed') {
+            setStatusMessage(STATUS_LABELS.completed.description)
+            toast.success('Анализ готов! Можно перейти к результатам.', { id: 'personality-status' })
+            onTestComplete?.(analysisPayload)
+          } else if (nextStatus === 'failed') {
+            const errorText = result.error || STATUS_LABELS.failed.description
+            setStatusMessage(errorText)
+            toast.error(errorText, { id: 'personality-status' })
+          } else {
+            const copy = STATUS_LABELS[nextStatus] ?? STATUS_LABELS.queued
+            setStatusMessage(copy.description)
+            toast.info(copy.title, { description: copy.description, id: 'personality-status' })
+            startStatusPolling()
+          }
         } else {
           throw new Error(result.error || 'Failed to analyze responses')
         }
@@ -256,18 +395,64 @@ export function PersonalityTest({ userId, onTestComplete, className }: Personali
   }
 
   if (testCompleted) {
+    const effectiveStatus: Exclude<AnalysisStatus, 'idle'> =
+      analysisStatus === 'idle' ? 'queued' : analysisStatus
+    const isReady = effectiveStatus === 'completed'
+    const isFailed = effectiveStatus === 'failed'
+    const statusCopy = STATUS_LABELS[effectiveStatus] ?? STATUS_LABELS.queued
+
     return (
       <div className={className}>
         <Card>
-          <CardContent className="text-center p-8">
-            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">Тест завершен!</h3>
-            <p className="text-gray-600 mb-4">
-              Спасибо за прохождение теста личности. Ваши ответы проанализированы ИИ.
-            </p>
-            <p className="text-sm text-gray-500">
-              Теперь вы можете просматривать вакансии с персонализированными оценками совместимости.
-            </p>
+          <CardContent className="text-center p-8 space-y-6">
+            <div className="flex justify-center">
+              {isReady ? (
+                <CheckCircle className="w-16 h-16 text-green-500" />
+              ) : isFailed ? (
+                <AlertCircle className="w-16 h-16 text-red-500" />
+              ) : (
+                <Loader2 className="w-16 h-16 text-[#00C49A] animate-spin" />
+              )}
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">{statusCopy.title}</h3>
+              <p className="text-gray-600">
+                {statusMessage || statusCopy.description}
+              </p>
+            </div>
+
+            {!isFailed && (
+              <p className="text-sm text-gray-500">
+                Мы отправим уведомление в приложении, как только анализ завершится. Вы можете перейти к другим разделам.
+              </p>
+            )}
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+              <Button
+                asChild
+                disabled={!isReady}
+                className="bg-[#00C49A] hover:bg-[#00A085] disabled:opacity-70"
+              >
+                <Link href="/job-seeker/results">
+                  {isReady ? 'Открыть результаты' : 'Перейти к результатам'}
+                </Link>
+              </Button>
+
+              <Button asChild variant="outline">
+                <Link href="/job-seeker/dashboard">Вернуться в дашборд</Link>
+              </Button>
+            </div>
+
+            {isFailed && (
+              <div className="space-y-3">
+                <p className="text-sm text-red-500">
+                  Если ошибка повторяется, попробуйте перепройти тест или свяжитесь с поддержкой.
+                </p>
+                <Button asChild variant="ghost" className="text-red-600 hover:text-red-600">
+                  <Link href="/job-seeker/test">Пройти тест заново</Link>
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

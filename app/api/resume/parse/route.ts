@@ -385,17 +385,15 @@ export async function POST(request: NextRequest) {
           console.log('🤖 AI Processing - About to update user profile:', JSON.stringify(userUpdate, null, 2))
           console.log('🤖 AI Processing - User ID:', targetUserId)
           
-          const { error: userUpdateError, data: updateResult } = await supabase
+          const { error: userUpdateError } = await supabase
             .from('users')
             .update(userUpdate)
             .eq('id', targetUserId!)
-            .select()
 
           if (userUpdateError) {
             console.error('❌ AI Processing - User update error:', userUpdateError)
           } else {
             console.log('✅ AI Processing - Updated fields:', fieldsUpdated.join(', '))
-            console.log('✅ AI Processing - Database result:', updateResult)
           }
         } else {
           console.log('🤖 AI Processing - No fields to update (userUpdate is empty)')

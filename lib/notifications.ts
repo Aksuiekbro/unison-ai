@@ -1,5 +1,46 @@
 import type { Application } from '@/lib/actions/jobs'
 
+type EmailResult = { delivered: boolean; reason?: string }
+
+async function sendViaResend(payload: {
+  to: string
+  subject: string
+  html: string
+}): Promise<EmailResult> {
+  const apiKey = process.env.RESEND_API_KEY
+  const from = process.env.APPLICATION_STATUS_EMAIL_FROM || 'notifications@unison.ai'
+  if (!apiKey) {
+    return { delivered: false, reason: 'resend-missing-key' }
+  }
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from,
+        to: [payload.to],
+        subject: payload.subject,
+        html: payload.html,
+      }),
+    })
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '')
+      console.error('[notifications] Resend request failed', response.status, text)
+      return { delivered: false, reason: 'resend-request-failed' }
+    }
+
+    return { delivered: true }
+  } catch (error) {
+    console.error('[notifications] Error sending via Resend', error)
+    return { delivered: false, reason: 'resend-error' }
+  }
+}
+
 type NotifiableStatus = Extract<
   Application['status'],
   'interview' | 'interviewed' | 'offered' | 'accepted' | 'hired' | 'rejected'
@@ -27,6 +68,31 @@ interface CandidateStatusNotification {
 interface NotificationResult {
   delivered: boolean
   reason?: string
+}
+
+function buildEmailBody({
+  status,
+  candidateName,
+  jobTitle,
+  companyName,
+  notes,
+}: {
+  status: Application['status']
+  candidateName?: string | null
+  jobTitle?: string | null
+  companyName?: string | null
+  notes?: string | null
+}) {
+  const safeCandidate = candidateName || 'Кандидат'
+  const safeJob = jobTitle || 'вашей вакансии'
+  const safeCompany = companyName || 'Unison AI'
+
+  return `
+    <p>Здравствуйте, ${safeCandidate}!</p>
+    <p>Статус вашей заявки на позицию <strong>${safeJob}</strong> в компании <strong>${safeCompany}</strong> изменился: <strong>${status}</strong>.</p>
+    ${notes ? `<p>Комментарий: ${notes}</p>` : ''}
+    <p>Спасибо, что используете Unison AI.</p>
+  `
 }
 
 function resolveNotificationEndpoint() {
@@ -68,7 +134,13 @@ export async function notifyCandidateStatusChange({
   const endpoint = resolveNotificationEndpoint()
   if (!endpoint) {
     console.warn('[notifications] APPLICATION_STATUS_EMAIL_ENDPOINT or SUPABASE_URL is not configured; skipping notification')
-    return { delivered: false, reason: 'missing-endpoint' }
+    // Try direct provider fallback (Resend) if configured
+    const resendResult = await sendViaResend({
+      to: candidateEmail,
+      subject: `Application status updated: ${status}`,
+      html: buildEmailBody({ status, candidateName, jobTitle, companyName, notes }),
+    })
+    return resendResult
   }
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -105,7 +177,13 @@ export async function notifyCandidateStatusChange({
       console.error(
         `[notifications] Failed to send candidate status email for application ${applicationId}: ${response.status} ${response.statusText} ${errorPayload}`
       )
-      return { delivered: false, reason: 'request-failed' }
+      // Fallback to Resend if primary endpoint failed and key exists
+      const resendResult = await sendViaResend({
+        to: candidateEmail,
+        subject: `Application status updated: ${status}`,
+        html: buildEmailBody({ status, candidateName, jobTitle, companyName, notes }),
+      })
+      return resendResult
     }
 
     return { delivered: true }
@@ -114,6 +192,11 @@ export async function notifyCandidateStatusChange({
       `[notifications] Error while sending candidate status notification for application ${applicationId}:`,
       error
     )
-    return { delivered: false, reason: 'network-error' }
+    const resendResult = await sendViaResend({
+      to: candidateEmail,
+      subject: `Application status updated: ${status}`,
+      html: buildEmailBody({ status, candidateName, jobTitle, companyName, notes }),
+    })
+    return resendResult
   }
 }

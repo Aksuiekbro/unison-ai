@@ -183,7 +183,7 @@ export async function submitProductivityAssessment(prevState: any, formData: For
         .from('users')
         .select('id, email, full_name, role')
         .eq('id', user.id)
-        .maybeSingle()
+        .single()
 
       if (!existingUserRow) {
         const rawRole = (user.user_metadata as any)?.role

@@ -118,7 +118,7 @@ export async function applyToJob(
   const { data: existingApplication } = await supabase
     .from('applications')
     .select('id')
-    .eq('user_id', userId)
+    .eq('applicant_id', userId)
     .eq('job_id', jobId)
     .single()
 
@@ -126,18 +126,16 @@ export async function applyToJob(
     throw new Error('You have already applied to this job')
   }
 
-  const applicationData = {
-    user_id: userId,
-    job_id: jobId,
-    status: 'pending' as const,
-    cover_letter: coverLetter,
-    resume_url: resumeUrl,
-    applied_at: new Date().toISOString()
-  }
-
   const { data, error } = await supabase
     .from('applications')
-    .insert([applicationData])
+    .insert([{
+      applicant_id: userId,
+      job_id: jobId,
+      status: 'pending' as const,
+      cover_letter: coverLetter,
+      resume_url: resumeUrl,
+      applied_at: new Date().toISOString()
+    }])
     .select()
     .single()
 
@@ -156,7 +154,7 @@ export async function getUserApplications(userId: string): Promise<JobApplicatio
       *,
       job:jobs(*)
     `)
-    .eq('user_id', userId)
+    .eq('applicant_id', userId)
     .order('applied_at', { ascending: false })
 
   if (error) {

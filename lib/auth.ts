@@ -22,6 +22,7 @@ export interface UserRow {
   phone?: string | null
   location?: string | null
   bio?: string | null
+  personality_assessment_completed?: boolean
   created_at: string
   updated_at: string
 }
