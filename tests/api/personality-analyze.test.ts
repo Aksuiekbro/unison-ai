@@ -12,7 +12,8 @@ vi.mock('@/lib/supabase-admin', () => ({
       upsert: vi.fn().mockResolvedValue({ error: null }),
       update: vi.fn().mockReturnValue({
         eq: vi.fn().mockResolvedValue({ error: null })
-      })
+      }),
+      insert: vi.fn().mockResolvedValue({ error: null })
     }))
   }
 }))
@@ -37,6 +38,15 @@ describe('Personality Analyze API Route', () => {
         getUser: vi.fn()
       },
       from: vi.fn((table: string) => {
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'user-123' }, error: null })
+              })
+            })
+          }
+        }
         if (table === 'test_responses') {
           return {
             delete: vi.fn().mockReturnValue({
@@ -140,9 +150,19 @@ describe('Personality Analyze API Route', () => {
         order: vi.fn().mockResolvedValue({ data: [], error: null })
       })
     })
+    const mockUserMaybeSingle = vi.fn().mockResolvedValue({ data: { id: 'user-999' }, error: null })
     mockSupabase.from = vi.fn((table: string) => {
       if (table === 'questionnaires') {
         return { select: mockSelect }
+      }
+      if (table === 'users') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              maybeSingle: mockUserMaybeSingle
+            })
+          })
+        }
       }
       if (table === 'test_responses') {
         return {
@@ -187,4 +207,3 @@ describe('Personality Analyze API Route', () => {
     expect(args[0].question_text).toContain('неудачу')
   })
 })
-

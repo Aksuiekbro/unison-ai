@@ -32,6 +32,50 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const { data: existingUser, error: fetchUserError } = await supabase
+      .from('users')
+      .select('id, role')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (fetchUserError) {
+      console.error('Error checking user record before queuing analysis:', fetchUserError)
+      return NextResponse.json(
+        { success: false, error: 'Failed to verify user record' },
+        { status: 500 }
+      )
+    }
+
+    if (!existingUser) {
+      const metadataRole = (user.user_metadata as any)?.role
+      const normalizedRole = metadataRole === 'employer' ? 'employer' : 'job_seeker'
+      const email = user.email || (user.user_metadata as any)?.email
+      if (!email) {
+        return NextResponse.json(
+          { success: false, error: 'User email is required to submit the test' },
+          { status: 400 }
+        )
+      }
+
+      const { error: createUserError } = await supabaseAdmin
+        .from('users')
+        .insert({
+          id: user.id,
+          email,
+          full_name: (user.user_metadata as any)?.full_name || email,
+          role: normalizedRole,
+          avatar_url: (user.user_metadata as any)?.avatar_url || (user.user_metadata as any)?.picture || null,
+        })
+
+      if (createUserError) {
+        console.error('Failed to create user record before queuing analysis:', createUserError)
+        return NextResponse.json(
+          { success: false, error: 'Failed to prepare user record for analysis' },
+          { status: 500 }
+        )
+      }
+    }
+
     const { responses } = await request.json()
     if (!responses || Object.keys(responses).length === 0) {
       return NextResponse.json(
@@ -105,7 +149,8 @@ export async function POST(request: NextRequest) {
 
       const responseInserts = Object.entries(responses).reduce<{ user_id: string; question_id: string; response_text: string }[]>((acc, [questionId, response]) => {
         const questionInfo = questionMapping[questionId]
-        if (!questionInfo) {
+        if (!questionInfo || !questionInfo.uuid) {
+          console.warn(`Skipping test response insert: missing question uuid for questionId=${questionId}`)
           return acc
         }
         acc.push({
