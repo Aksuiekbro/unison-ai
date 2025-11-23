@@ -8,6 +8,7 @@ import { Upload, FileText, CheckCircle, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { updateJobSeekerProfile } from "@/app/actions/profile";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useI18n } from "@/components/i18n/I18nProvider";
 import type { JobSeekerProfileData } from "@/lib/validations";
 
 type ProfileSnapshot = Partial<JobSeekerProfileData> & {
@@ -48,17 +49,17 @@ type DiffItem = {
 const ACCEPTED = [".pdf", ".doc", ".docx"];
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 
-const FIELD_LABELS: Record<ProfileFieldKey, string> = {
-  firstName: "Имя",
-  lastName: "Фамилия",
-  title: "Желаемая должность",
-  summary: "Профессиональное резюме",
-  phone: "Телефон",
-  location: "Локация",
-  linkedinUrl: "LinkedIn",
-  githubUrl: "GitHub",
-  skills: "Навыки",
-};
+const FIELD_KEYS: ProfileFieldKey[] = [
+  "firstName",
+  "lastName",
+  "title",
+  "summary",
+  "phone",
+  "location",
+  "linkedinUrl",
+  "githubUrl",
+  "skills",
+];
 
 const cleanString = (value?: string | null): string | undefined => {
   if (typeof value !== "string") return undefined;
@@ -128,11 +129,12 @@ const arraysDiffer = (a: string[], b: string[]) => {
 
 const buildDiffItems = (
   parsedFields: ParsedProfileFields,
-  currentProfile?: ProfileSnapshot
+  currentProfile: ProfileSnapshot | undefined,
+  labels: Record<ProfileFieldKey, string>
 ): DiffItem[] => {
   const items: DiffItem[] = [];
-  Object.entries(FIELD_LABELS).forEach(([key, label]) => {
-    const typedKey = key as ProfileFieldKey;
+  FIELD_KEYS.forEach((typedKey) => {
+    const label = labels[typedKey];
     const newValue = parsedFields[typedKey];
     if (newValue === undefined) return;
 
@@ -164,15 +166,16 @@ const buildDiffItems = (
   return items;
 };
 
-const formatDiffValue = (key: ProfileFieldKey, value?: string | string[]) => {
+const formatDiffValue = (key: ProfileFieldKey, value: string | string[] | undefined, emptyValue: string) => {
   if (key === "skills") {
     const arr = normalizeSkills(Array.isArray(value) ? (value as string[]) : []);
-    return arr.length > 0 ? arr.join(", ") : "—";
+    return arr.length > 0 ? arr.join(", ") : emptyValue;
   }
-  return cleanString(value as string | undefined) || "—";
+  return cleanString(value as string | undefined) || emptyValue;
 };
 
 export default function ResumeUploadDialog({ open, onOpenChange, onAdded, currentProfile }: ResumeUploadDialogProps) {
+  const { t } = useI18n();
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState<number>(0);
   const [status, setStatus] = useState<UploadStatus>("idle");
@@ -183,6 +186,20 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
   const [isSaving, startTransition] = useTransition();
   const xhrRef = useRef<XMLHttpRequest | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const fieldLabels = useMemo<Record<ProfileFieldKey, string>>(
+    () => ({
+      firstName: t("resumeUpload.fieldLabels.firstName"),
+      lastName: t("resumeUpload.fieldLabels.lastName"),
+      title: t("resumeUpload.fieldLabels.title"),
+      summary: t("resumeUpload.fieldLabels.summary"),
+      phone: t("resumeUpload.fieldLabels.phone"),
+      location: t("resumeUpload.fieldLabels.location"),
+      linkedinUrl: t("resumeUpload.fieldLabels.linkedinUrl"),
+      githubUrl: t("resumeUpload.fieldLabels.githubUrl"),
+      skills: t("resumeUpload.fieldLabels.skills"),
+    }),
+    [t]
+  );
   const safeProfile: ProfileSnapshot = useMemo(
     // Avoid re-creating the profile object each render which would
     // retrigger diffItems/useEffect and cause a state update loop.
@@ -190,7 +207,10 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
     [currentProfile]
   );
   const parsedFields = useMemo(() => extractParsedFields(parsedData), [parsedData]);
-  const diffItems = useMemo(() => buildDiffItems(parsedFields, safeProfile), [parsedFields, safeProfile]);
+  const diffItems = useMemo(
+    () => buildDiffItems(parsedFields, safeProfile, fieldLabels),
+    [parsedFields, safeProfile, fieldLabels]
+  );
   const selectedCount = diffItems.filter((item) => fieldSelections[item.key] ?? true).length;
   const allSelected = diffItems.length > 0 && diffItems.every((item) => fieldSelections[item.key] ?? true);
 
@@ -235,11 +255,11 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
     const lower = f.name.toLowerCase();
     const isAccepted = ACCEPTED.some((ext) => lower.endsWith(ext));
     if (!isAccepted) {
-      toast.error("Поддерживаются только PDF или DOC/DOCX");
+      toast.error(t("resumeUpload.acceptedTypesError"));
       return false;
     }
     if (f.size > MAX_SIZE_BYTES) {
-      toast.error("Размер файла должен быть меньше 10MB");
+      toast.error(t("resumeUpload.maxSizeError"));
       return false;
     }
     return true;
@@ -289,7 +309,7 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
         try {
           const contentType = xhr.getResponseHeader("content-type") || "";
           if (!contentType.includes("application/json")) {
-            throw new Error("Неверный формат ответа сервера");
+            throw new Error(t("resumeUpload.serverResponseError"));
           }
           const res = JSON.parse(xhr.responseText || "{}");
           if (xhr.status >= 200 && xhr.status < 300 && res?.success) {
@@ -297,15 +317,15 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
             setStatus("parsed");
             setParsedData(res.data);
             setFieldsUpdated(res.fieldsUpdated || null);
-            toast.success("Резюме успешно обработано AI");
+            toast.success(t("resumeUpload.processedToast"));
           } else {
-            const msg = res?.error || `Ошибка загрузки: ${xhr.status}`;
+            const msg = res?.error || t("resumeUpload.uploadError", { status: xhr.status });
             setError(msg);
             setStatus("error");
             toast.error(msg);
           }
         } catch (e: any) {
-          const msg = e?.message || "Ошибка обработки ответа сервера";
+          const msg = e?.message || t("resumeUpload.serverResponseError");
           setError(msg);
           setStatus("error");
           toast.error(msg);
@@ -314,15 +334,15 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
     };
 
     xhr.onerror = () => {
-      setError("Сетевая ошибка при загрузке файла");
+      setError(t("resumeUpload.networkError"));
       setStatus("error");
-      toast.error("Сетевая ошибка при загрузке файла");
+      toast.error(t("resumeUpload.networkError"));
     };
 
     xhr.onabort = () => {
-      setError("Загрузка отменена");
+      setError(t("resumeUpload.abortedError"));
       setStatus("error");
-      toast.error("Загрузка отменена");
+      toast.error(t("resumeUpload.abortedError"));
     };
 
     xhr.send(formData);
@@ -394,11 +414,11 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
           toast.error(result.error);
           return;
         }
-        toast.success("Резюме добавлено в профиль");
+        toast.success(t("resumeUpload.attachedToast"));
         onAdded?.({ file, parsedData, fieldsUpdated });
         onOpenChange(false);
       } catch (e: any) {
-        toast.error(e?.message || "Не удалось добавить в профиль");
+        toast.error(e?.message || t("resumeUpload.attachFailedToast"));
       }
     });
   };
@@ -407,9 +427,9 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Upload a resume</DialogTitle>
+          <DialogTitle>{t("resumeUpload.title")}</DialogTitle>
           <p className="text-sm text-gray-500 mt-1">
-            For best results, upload a PDF or DOCX up to 10MB.
+            {t("resumeUpload.subtitle")}
           </p>
         </DialogHeader>
 
@@ -430,17 +450,17 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
         >
           <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
           <p className="text-base font-medium text-gray-700 mb-2">
-            Drag and drop resume to upload
+            {t("resumeUpload.dropTitle")}
           </p>
           <p className="text-xs text-gray-500 mb-4">
-            Your resume will remain private until you publish your profile.
+            {t("resumeUpload.dropSubtitle")}
           </p>
           <Button
             type="button"
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
           >
-            Select files
+            {t("common.actions.selectFiles")}
           </Button>
           <input
             ref={fileInputRef}
@@ -459,13 +479,15 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
                 <div className="flex items-center justify-between">
                   <p className="font-medium text-gray-900">{formatFileName(file.name)}</p>
                   <p className="text-sm text-gray-500">
-                    {Math.round((file.size / 1024 / 1024) * 10) / 10} MB
+                    {t("resumeUpload.fileMeta", {
+                      size: Math.round((file.size / 1024 / 1024) * 10) / 10,
+                    })}
                   </p>
                 </div>
                 <div className="mt-2">
                   <Progress value={progress} className="h-2" />
                   <div className="flex items-center justify-between mt-1 text-xs text-gray-500" aria-live="polite">
-                    <span>{status === "parsed" ? "AI parsing complete" : error ? error : "Uploading..."}</span>
+                    <span>{status === "parsed" ? t("common.status.parsed") : error ? error : t("common.status.uploading")}</span>
                     <span>{progress}%</span>
                   </div>
                 </div>
@@ -483,9 +505,9 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
 
         {status === "parsed" && (
           <div className="mt-4">
-            <h4 className="text-sm font-semibold text-[#0A2540]">Подтвердите найденные Gemini изменения</h4>
+            <h4 className="text-sm font-semibold text-[#0A2540]">{t("resumeUpload.confirmHeading")}</h4>
             <p className="text-xs text-gray-500 mt-1">
-              Отметьте поля, которые выглядят корректно. Только отмеченные значения будут отправлены в профиль.
+              {t("resumeUpload.confirmDescription")}
             </p>
             {diffItems.length > 0 ? (
               <>
@@ -497,11 +519,11 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
                       onCheckedChange={handleToggleAll}
                     />
                     <label htmlFor="select-all-fields" className="cursor-pointer select-none">
-                      Выбрать все поля
+                      {t("resumeUpload.selectAll")}
                     </label>
                   </div>
                   <span className="text-xs text-gray-500">
-                    {selectedCount} из {diffItems.length} выбрано
+                    {t("resumeUpload.selectionCount", { selected: selectedCount, total: diffItems.length })}
                   </span>
                 </div>
                 <div className="mt-3 space-y-3 max-h-72 overflow-auto pr-1">
@@ -516,15 +538,15 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
                         <p className="font-semibold text-[#0A2540]">{item.label}</p>
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div>
-                            <p className="text-xs uppercase text-gray-500">Текущие данные</p>
+                            <p className="text-xs uppercase text-gray-500">{t("common.data.current")}</p>
                             <p className="text-sm text-gray-900 break-words">
-                              {formatDiffValue(item.key, item.oldValue)}
+                              {formatDiffValue(item.key, item.oldValue, t("common.data.none"))}
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs uppercase text-gray-500">Новые данные Gemini</p>
+                            <p className="text-xs uppercase text-gray-500">{t("common.data.next")}</p>
                             <p className="text-sm text-[#0A2540] break-words">
-                              {formatDiffValue(item.key, item.newValue)}
+                              {formatDiffValue(item.key, item.newValue, t("common.data.none"))}
                             </p>
                           </div>
                         </div>
@@ -535,7 +557,7 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
               </>
             ) : (
               <p className="mt-3 rounded-md border border-dashed p-3 text-sm text-gray-600">
-                AI не предложил изменений. Резюме всё равно будет прикреплено к вашему профилю.
+                {t("resumeUpload.noChanges")}
               </p>
             )}
           </div>
@@ -548,7 +570,7 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
             onClick={() => onOpenChange(false)}
             disabled={isSaving}
           >
-            Cancel
+            {t("common.actions.cancel")}
           </Button>
           <Button
             type="button"
@@ -559,10 +581,10 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
             {isSaving ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Adding...
+                {t("common.actions.adding")}
               </>
             ) : (
-              "Add to profile"
+              t("common.actions.addToProfile")
             )}
           </Button>
         </DialogFooter>

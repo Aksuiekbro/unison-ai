@@ -6,10 +6,13 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { UserMenu } from "@/components/user-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
+import { useI18n } from "@/components/i18n/I18nProvider";
 
 export function Header() {
   const [open, setOpen] = useState(false);
   const { user, userData, isLoading } = useAuth();
+  const { t } = useI18n();
 
   const displayName = userData?.full_name || (user?.user_metadata as any)?.full_name || user?.email || "";
   const avatarUrl = (user?.user_metadata as any)?.avatar_url as string | undefined;
@@ -42,7 +45,7 @@ export function Header() {
         {/* Hamburger Icon */}
         <button
           className="md:hidden flex flex-col justify-center items-center w-10 h-10"
-          aria-label="Open navigation"
+          aria-label={t("header.aria.openNavigation")}
           onClick={() => setOpen((v) => !v)}
         >
           <span className={`block h-0.5 w-6 bg-black transition-all duration-200 ${open ? "rotate-45 translate-y-1.5" : ""}`}></span>
@@ -51,23 +54,24 @@ export function Header() {
         </button>
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-8 text-base font-medium">
-          <Link href="/" className="text-gray-700 hover:text-black">Product</Link>
-          <a href="#features" className="text-gray-700 hover:text-black">Functions</a>
-          <Link href="#uni-modules" className="text-gray-700 hover:text-black">Programs</Link>
-          <Link href="#tools" className="text-gray-700 hover:text-black">Tools</Link>
-          <Link href="#pricing" className="text-gray-700 hover:text-black">Pricing</Link>
-          <a href="#footer" className="text-gray-700 hover:text-black">Contacts</a>
+          <Link href="/" className="text-gray-700 hover:text-black">{t("header.nav.product")}</Link>
+          <a href="#features" className="text-gray-700 hover:text-black">{t("header.nav.functions")}</a>
+          <Link href="#uni-modules" className="text-gray-700 hover:text-black">{t("header.nav.programs")}</Link>
+          <Link href="#tools" className="text-gray-700 hover:text-black">{t("header.nav.tools")}</Link>
+          <Link href="#pricing" className="text-gray-700 hover:text-black">{t("header.nav.pricing")}</Link>
+          <a href="#footer" className="text-gray-700 hover:text-black">{t("header.nav.contacts")}</a>
         </nav>
         <div className="hidden md:flex items-center gap-4">
+          <LanguageSwitcher size="sm" />
           {isLoading ? null : user ? (
             <UserMenu />
           ) : (
             <>
               <Link href="/auth/login" className="text-base font-medium text-gray-700 hover:text-black px-2 py-1">
-                Login
+                {t("header.auth.login")}
               </Link>
               <Link href="/auth/signup" className="rounded-md bg-black px-4 py-2 text-base font-semibold text-white shadow-sm hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">
-                Sign up
+                {t("header.auth.signup")}
               </Link>
             </>
           )}
@@ -77,19 +81,20 @@ export function Header() {
       {open && (
         <div className="md:hidden w-full bg-white border-t border-gray-200">
           <nav className="flex flex-col items-center gap-2 py-2 text-base font-medium">
-            <Link href="/" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>Product</Link>
-            <a href="#features" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>Functions</a>
-            <Link href="#uni-modules" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>Programs</Link>
-            <Link href="#tools" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>Tools</Link>
-            <Link href="#pricing" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>Pricing</Link>
-            <a href="#footer" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>Contacts</a>
+            <Link href="/" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>{t("header.nav.product")}</Link>
+            <a href="#features" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>{t("header.nav.functions")}</a>
+            <Link href="#uni-modules" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>{t("header.nav.programs")}</Link>
+            <Link href="#tools" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>{t("header.nav.tools")}</Link>
+            <Link href="#pricing" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>{t("header.nav.pricing")}</Link>
+            <a href="#footer" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>{t("header.nav.contacts")}</a>
+            <LanguageSwitcher className="py-2" size="sm" />
             {!isLoading && !user && (
               <div className="flex flex-col items-center gap-2 mt-2">
                 <Link href="/auth/login" className="text-base font-medium text-gray-700 hover:text-black px-2 py-1" onClick={() => setOpen(false)}>
-                  Login
+                  {t("header.auth.login")}
                 </Link>
                 <Link href="/auth/signup" className="rounded-md bg-black px-4 py-2 text-base font-semibold text-white shadow-sm hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black" onClick={() => setOpen(false)}>
-                  Sign up
+                  {t("header.auth.signup")}
                 </Link>
               </div>
             )}
