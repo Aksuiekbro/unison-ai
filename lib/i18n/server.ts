@@ -15,11 +15,13 @@ const parseAcceptLanguage = (headerValue: string | null): Locale | null => {
   return null
 }
 
-export const detectLocale = (): Locale => {
-  const cookieLocale = cookies().get(localeCookieName)?.value
+export const detectLocale = async (): Promise<Locale> => {
+  const cookieStore = await cookies()
+  const cookieLocale = cookieStore.get(localeCookieName)?.value
   if (isLocale(cookieLocale)) return cookieLocale
 
-  const headerLocale = parseAcceptLanguage(headers().get('accept-language'))
+  const headerStore = await headers()
+  const headerLocale = parseAcceptLanguage(headerStore.get('accept-language'))
   if (headerLocale && (supportedLocales as readonly string[]).includes(headerLocale)) {
     return headerLocale
   }

@@ -13,12 +13,12 @@ export const metadata: Metadata = {
   generator: 'Unison-AI',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const locale = detectLocale()
+  const locale = await detectLocale()
   // Later, add Stagewise Toolbar plugins here
   const stagewiseConfig = { plugins: [] }
   return (
