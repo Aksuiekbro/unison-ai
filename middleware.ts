@@ -152,14 +152,27 @@ export async function middleware(req: NextRequest) {
           : (userData as any)?.productivity_assessment_completed || false
         const isTestPage = pathname === '/job-seeker/test'
         const isResultsPage = pathname === '/job-seeker/results'
+        let assessmentInProgress = false
+
+        if (!assessmentCompleted) {
+          const { data: analysisStatus } = await supabase
+            .from('personality_analysis')
+            .select('status')
+            .eq('user_id', user.id)
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+          assessmentInProgress = analysisStatus?.status === 'queued' || analysisStatus?.status === 'processing'
+        }
 
         // If assessment not completed and not on test page, redirect to test
-        if (!assessmentCompleted && !isTestPage && !isResultsPage) {
+        if (!assessmentCompleted && !assessmentInProgress && !isTestPage && !isResultsPage) {
           return NextResponse.redirect(new URL('/job-seeker/test', req.url))
         }
 
         // If assessment completed and trying to access test page, redirect to results
-        if (assessmentCompleted && isTestPage) {
+        if ((assessmentCompleted || assessmentInProgress) && isTestPage) {
           return NextResponse.redirect(new URL('/job-seeker/results', req.url))
         }
       }
