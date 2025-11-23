@@ -21,6 +21,11 @@ CREATE TABLE public.users (
     phone TEXT,
     location TEXT,
     bio TEXT,
+    linkedin_url TEXT,
+    github_url TEXT,
+    portfolio_url TEXT,
+    current_job_title TEXT,
+    resume_url TEXT,
     personality_assessment_completed BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -132,67 +137,6 @@ CREATE POLICY "Candidates can delete their saved jobs" ON public.saved_jobs
 
 CREATE INDEX IF NOT EXISTS idx_saved_jobs_candidate_id ON public.saved_jobs(candidate_id);
 CREATE INDEX IF NOT EXISTS idx_saved_jobs_job_id ON public.saved_jobs(job_id);
--- Profiles table (unified extended profile data for both job seekers and employers)
-CREATE TABLE public.profiles (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    
-    -- Job seeker specific fields
-    experience_years INTEGER,
-    current_job_title TEXT,
-    desired_salary_min INTEGER,
-    desired_salary_max INTEGER,
-    preferred_location TEXT,
-    remote_preference BOOLEAN,
-    resume_url TEXT,
-    linkedin_url TEXT,
-    github_url TEXT,
-    portfolio_url TEXT,
-    
-    -- Employer specific fields  
-    company_culture TEXT,
-    hiring_preferences TEXT,
-    
-    -- AI analysis flags
-    personality_test_completed BOOLEAN DEFAULT FALSE,
-    resume_parsed BOOLEAN DEFAULT FALSE,
-    ai_analysis_completed BOOLEAN DEFAULT FALSE,
-    
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
-    UNIQUE(user_id)
-);
-
--- Experience entries (for job seekers)
-CREATE TABLE public.experiences (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    profile_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-    job_title TEXT NOT NULL,
-    company_name TEXT NOT NULL,
-    start_date DATE NOT NULL,
-    end_date DATE,
-    is_current BOOLEAN DEFAULT FALSE,
-    description TEXT,
-    achievements TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Education entries (for job seekers)
-CREATE TABLE public.educations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    profile_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-    institution_name TEXT NOT NULL,
-    degree TEXT NOT NULL,
-    field_of_study TEXT,
-    start_date DATE NOT NULL,
-    end_date DATE,
-    is_current BOOLEAN DEFAULT FALSE,
-    gpa TEXT,
-    achievements TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
 -- Questionnaires table (personality test questions)
 CREATE TABLE public.questionnaires (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -397,24 +341,6 @@ CREATE INDEX idx_job_skills_required ON public.job_skills(required);
 CREATE INDEX idx_skills_name ON public.skills(name);
 CREATE INDEX idx_skills_category ON public.skills(category);
 
--- Profiles table indexes
-CREATE INDEX idx_profiles_user_id ON public.profiles(user_id);
-CREATE INDEX idx_profiles_personality_test_completed ON public.profiles(personality_test_completed);
-CREATE INDEX idx_profiles_resume_parsed ON public.profiles(resume_parsed);
-CREATE INDEX idx_profiles_ai_analysis_completed ON public.profiles(ai_analysis_completed);
-CREATE INDEX idx_profiles_experience_years ON public.profiles(experience_years);
-CREATE INDEX idx_profiles_preferred_location ON public.profiles(preferred_location);
-
--- Experiences table indexes
-CREATE INDEX idx_experiences_profile_id ON public.experiences(profile_id);
-CREATE INDEX idx_experiences_is_current ON public.experiences(is_current);
-CREATE INDEX idx_experiences_start_date ON public.experiences(start_date);
-
--- Educations table indexes
-CREATE INDEX idx_educations_profile_id ON public.educations(profile_id);
-CREATE INDEX idx_educations_is_current ON public.educations(is_current);
-CREATE INDEX idx_educations_start_date ON public.educations(start_date);
-
 -- Questionnaires table indexes
 CREATE INDEX idx_questionnaires_is_active ON public.questionnaires(is_active);
 CREATE INDEX idx_questionnaires_category ON public.questionnaires(category);
@@ -469,10 +395,6 @@ CREATE TRIGGER update_jobs_updated_at
 
 CREATE TRIGGER update_applications_updated_at 
     BEFORE UPDATE ON public.applications 
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_profiles_updated_at 
-    BEFORE UPDATE ON public.profiles 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_personality_analysis_updated_at 
@@ -533,9 +455,6 @@ ALTER TABLE public.job_skills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.applications ENABLE ROW LEVEL SECURITY;
 
 -- Enable RLS on AI-related tables
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.experiences ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.educations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.questionnaires ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.test_responses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.personality_analysis ENABLE ROW LEVEL SECURITY;
@@ -553,7 +472,7 @@ CREATE POLICY "Users can update their own profile" ON public.users
 CREATE POLICY "Users can insert their own profile" ON public.users
     FOR INSERT WITH CHECK (auth.uid() = id);
 
--- Public user data access for job applications and company profiles
+-- Public user data access for job applications and company data
 CREATE POLICY "Anyone can view basic user info" ON public.users
     FOR SELECT USING (TRUE);
 
@@ -647,63 +566,6 @@ CREATE POLICY "Company owners can view applications to their jobs" ON public.app
             JOIN public.companies ON companies.id = jobs.company_id
             WHERE jobs.id = applications.job_id 
             AND companies.owner_id = auth.uid()
-        )
-    );
-
-CREATE POLICY "Company owners can update applications to their jobs" ON public.applications
-    FOR UPDATE USING (
-        EXISTS (
-            SELECT 1 FROM public.jobs
-            JOIN public.companies ON companies.id = jobs.company_id
-            WHERE jobs.id = applications.job_id 
-            AND companies.owner_id = auth.uid()
-        )
-    );
-
--- RLS Policies for profiles table
-CREATE POLICY "Users can manage their own profile" ON public.profiles
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.users 
-            WHERE users.id = profiles.user_id 
-            AND users.id = auth.uid()
-        )
-    );
-
-CREATE POLICY "Employers can view job seeker profiles for their applications" ON public.profiles
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM public.users 
-            WHERE users.id = profiles.user_id 
-            AND users.role = 'job_seeker'
-        ) AND EXISTS (
-            SELECT 1 FROM public.applications
-            JOIN public.jobs ON jobs.id = applications.job_id
-            JOIN public.companies ON companies.id = jobs.company_id
-            WHERE applications.applicant_id = profiles.user_id
-            AND companies.owner_id = auth.uid()
-        )
-    );
-
--- RLS Policies for experiences table
-CREATE POLICY "Users can manage their own experiences" ON public.experiences
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            JOIN public.users ON users.id = profiles.user_id
-            WHERE profiles.id = experiences.profile_id 
-            AND users.id = auth.uid()
-        )
-    );
-
--- RLS Policies for educations table  
-CREATE POLICY "Users can manage their own education" ON public.educations
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            JOIN public.users ON users.id = profiles.user_id
-            WHERE profiles.id = educations.profile_id 
-            AND users.id = auth.uid()
         )
     );
 
