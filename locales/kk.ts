@@ -1,4 +1,7 @@
 import { TranslationDictionary } from '@/lib/i18n/types'
+import { employerKk } from './kk/employer'
+import { jobSeekerKk } from './kk/job-seeker'
+import { componentsKk } from './kk/components'
 
 export const kk: TranslationDictionary = {
   common: {
@@ -8,10 +11,12 @@ export const kk: TranslationDictionary = {
       selectFiles: 'Файлды таңдау',
       addToProfile: 'Профильге қосу',
       adding: 'Қосылуда...',
+      retry: 'Қайталау',
     },
     status: {
       uploading: 'Жүктелуде...',
       parsed: 'AI өңдеуі аяқталды',
+      error: 'Қате',
     },
     data: {
       current: 'Ағымдағы деректер',
@@ -42,8 +47,12 @@ export const kk: TranslationDictionary = {
     manageJobs: 'Вакансиялар',
     candidates: 'Үміткерлер',
     companyProfile: 'Компания профилі',
+    employees: 'Қызметкерлер',
     browseJobs: 'Жұмыс іздеу',
     savedJobs: 'Сақталғандар',
+    applications: 'Өтініштер',
+    results: 'Нәтижелер',
+    tests: 'Тест',
     profile: 'Профиль',
     settings: 'Баптаулар',
   },
@@ -198,4 +207,7 @@ export const kk: TranslationDictionary = {
       growthDesc: 'Профиль — дамудың драйвері: AI дағдыларды талдап, мақсат қояды және прогресті өнімділікке қайтарады.',
     },
   },
+  employer: employerKk,
+  jobSeeker: jobSeekerKk,
+  components: componentsKk,
 }

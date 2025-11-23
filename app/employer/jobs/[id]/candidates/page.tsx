@@ -33,6 +33,8 @@ import { useJobApplications } from "@/hooks/use-jobs"
 import { useState } from "react"
 import { Application } from "@/lib/actions/jobs"
 import { toast } from "sonner"
+import { useI18n } from "@/components/i18n/I18nProvider"
+import { getIntlLocale } from "@/lib/i18n/utils"
 
 export default function JobCandidates() {
   const params = useParams()

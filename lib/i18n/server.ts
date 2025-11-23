@@ -1,8 +1,8 @@
 import { cookies, headers } from 'next/headers'
-import { defaultLocale, localeCookieName, Locale, supportedLocales } from './config'
+import { defaultLocale, fallbackLocale, localeCookieName, Locale, supportedLocales } from './config'
 import { getDictionary } from './dictionaries'
 import { TranslationDictionary } from './types'
-import { isLocale } from './utils'
+import { isLocale, translateFromDictionaries } from './utils'
 
 const parseAcceptLanguage = (headerValue: string | null): Locale | null => {
   if (!headerValue) return null
@@ -32,4 +32,19 @@ export const detectLocale = async (): Promise<Locale> => {
 export const getServerDictionary = (locale?: Locale): TranslationDictionary => {
   const normalized = locale && (supportedLocales as readonly string[]).includes(locale) ? locale : defaultLocale
   return getDictionary(normalized as Locale)
+}
+
+type Translator = (key: string, values?: Record<string, string | number>) => string
+
+export const createServerTranslator = async (
+  preferredLocale?: Locale
+): Promise<{ t: Translator; locale: Locale }> => {
+  const locale = preferredLocale && isLocale(preferredLocale) ? preferredLocale : await detectLocale()
+  const primaryDictionary = getDictionary(locale)
+  const fallbackDictionary =
+    locale === fallbackLocale ? primaryDictionary : getDictionary(fallbackLocale)
+
+  const t: Translator = (key, values) => translateFromDictionaries(primaryDictionary, fallbackDictionary, key, values)
+
+  return { t, locale }
 }

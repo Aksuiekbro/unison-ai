@@ -38,3 +38,14 @@ export const translateFromDictionaries = (
   }
   return key
 }
+
+export const getIntlLocale = (locale: Locale): string => {
+  switch (locale) {
+    case 'kk':
+      return 'kk-KZ'
+    case 'en':
+      return 'en-US'
+    default:
+      return 'ru-RU'
+  }
+}

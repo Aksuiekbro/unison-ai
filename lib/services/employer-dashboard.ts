@@ -130,7 +130,7 @@ export class EmployerDashboardService {
           id: job.id,
           title: job.title,
           status: job.status,
-          postedAt: this.formatRelativeDate(job.posted_at),
+          postedAt: job.posted_at,
           totalCandidates: totalCandidates || 0,
           newCandidates: newCandidates || 0,
           company: {
@@ -141,19 +141,6 @@ export class EmployerDashboardService {
     )
 
     return jobsWithStats
-  }
-
-  private formatRelativeDate(dateString: string): string {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffTime = Math.abs(now.getTime() - date.getTime())
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-    if (diffDays === 1) return '1 день назад'
-    if (diffDays < 7) return `${diffDays} дней назад`
-    if (diffDays < 14) return '1 неделю назад'
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} недели назад`
-    return `${Math.floor(diffDays / 30)} месяцев назад`
   }
 }
 

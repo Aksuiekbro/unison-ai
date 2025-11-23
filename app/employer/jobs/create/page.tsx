@@ -14,6 +14,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createJob, JobStatus } from "@/lib/actions/jobs"
 import { toast } from "sonner"
+import { useI18n } from "@/components/i18n/I18nProvider"
 
 export default function CreateJob() {
   const router = useRouter()
@@ -35,9 +36,10 @@ export default function CreateJob() {
   })
 
   const [skills, setSkills] = useState(["React", "TypeScript", "JavaScript", "Node.js", "GraphQL"])
-  const [benefits, setBenefits] = useState(["ДМС", "Гибкий график", "Удаленная работа"])
+  const [benefits, setBenefits] = useState(["Medical insurance", "Flexible schedule", "Remote work"])
   const [newSkill, setNewSkill] = useState('')
   const [newBenefit, setNewBenefit] = useState('')
+  const { t } = useI18n()
 
   const handleSubmit = async (status: JobStatus) => {
     setLoading(true)
@@ -52,13 +54,17 @@ export default function CreateJob() {
       const result = await createJob(jobData)
       
       if (result.success) {
-        toast.success(status === 'draft' ? 'Черновик сохранен' : 'Вакансия опубликована')
+        toast.success(
+          status === 'draft'
+            ? t('employer.jobForm.toasts.draftSaved')
+            : t('employer.jobForm.toasts.published')
+        )
         router.push('/employer/jobs')
       } else {
         toast.error(result.error)
       }
     } catch (error) {
-      toast.error('Произошла ошибка при создании вакансии')
+      toast.error(t('employer.jobForm.toasts.error'))
     } finally {
       setLoading(false)
     }
@@ -92,12 +98,13 @@ export default function CreateJob() {
         <div className="flex items-center space-x-4 mb-8">
           <Link href="/employer/jobs">
             <Button variant="outline" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />К списку вакансий
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              {t('employer.jobForm.back')}
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-[#0A2540]">Создание вакансии</h1>
-            <p className="text-[#333333] mt-1">Заполните информацию о новой позиции</p>
+            <h1 className="text-3xl font-bold text-[#0A2540]">{t('employer.jobForm.title')}</h1>
+            <p className="text-[#333333] mt-1">{t('employer.jobForm.subtitle')}</p>
           </div>
         </div>
 
@@ -107,15 +114,15 @@ export default function CreateJob() {
             {/* Basic Information */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#0A2540]">Основная информация</CardTitle>
-                <CardDescription>Базовые данные о вакансии</CardDescription>
+                <CardTitle className="text-[#0A2540]">{t('employer.jobForm.sections.basic.title')}</CardTitle>
+                <CardDescription>{t('employer.jobForm.sections.basic.description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Название должности *</Label>
+                  <Label htmlFor="title">{t('employer.jobForm.sections.basic.fields.title')}</Label>
                   <Input 
                     id="title" 
-                    placeholder="Senior Frontend Developer"
+                    placeholder={t('employer.jobForm.sections.basic.fields.titlePlaceholder')}
                     value={formData.title}
                     onChange={(e) => setFormData({...formData, title: e.target.value})}
                   />
@@ -123,37 +130,37 @@ export default function CreateJob() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="department">Отдел</Label>
+                    <Label htmlFor="department">{t('employer.jobForm.sections.basic.fields.department')}</Label>
                     <Select 
                       value={formData.department} 
                       onValueChange={(value) => setFormData({...formData, department: value})}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Выберите отдел" />
+                        <SelectValue placeholder={t('employer.jobForm.sections.basic.fields.departmentPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="development">Разработка</SelectItem>
-                        <SelectItem value="design">Дизайн</SelectItem>
-                        <SelectItem value="mobile">Мобильная разработка</SelectItem>
-                        <SelectItem value="qa">Тестирование</SelectItem>
-                        <SelectItem value="devops">DevOps</SelectItem>
+                        <SelectItem value="development">{t('employer.jobForm.sections.basic.options.department.development')}</SelectItem>
+                        <SelectItem value="design">{t('employer.jobForm.sections.basic.options.department.design')}</SelectItem>
+                        <SelectItem value="mobile">{t('employer.jobForm.sections.basic.options.department.mobile')}</SelectItem>
+                        <SelectItem value="qa">{t('employer.jobForm.sections.basic.options.department.qa')}</SelectItem>
+                        <SelectItem value="devops">{t('employer.jobForm.sections.basic.options.department.devops')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="level">Уровень</Label>
+                    <Label htmlFor="level">{t('employer.jobForm.sections.basic.fields.level')}</Label>
                     <Select 
                       value={formData.experience_level}
                       onValueChange={(value: any) => setFormData({...formData, experience_level: value})}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Выберите уровень" />
+                        <SelectValue placeholder={t('employer.jobForm.sections.basic.fields.levelPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="entry">Junior</SelectItem>
-                        <SelectItem value="mid">Middle</SelectItem>
-                        <SelectItem value="senior">Senior</SelectItem>
-                        <SelectItem value="lead">Lead</SelectItem>
+                        <SelectItem value="entry">{t('employer.jobForm.sections.basic.options.level.entry')}</SelectItem>
+                        <SelectItem value="mid">{t('employer.jobForm.sections.basic.options.level.mid')}</SelectItem>
+                        <SelectItem value="senior">{t('employer.jobForm.sections.basic.options.level.senior')}</SelectItem>
+                        <SelectItem value="lead">{t('employer.jobForm.sections.basic.options.level.lead')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -161,28 +168,28 @@ export default function CreateJob() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="location">Местоположение</Label>
+                    <Label htmlFor="location">{t('employer.jobForm.sections.basic.fields.location')}</Label>
                     <Input 
                       id="location" 
-                      placeholder="Москва"
+                      placeholder={t('employer.jobForm.sections.basic.fields.locationPlaceholder')}
                       value={formData.location}
                       onChange={(e) => setFormData({...formData, location: e.target.value})}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="employment">Тип занятости</Label>
+                    <Label htmlFor="employment">{t('employer.jobForm.sections.basic.fields.employment')}</Label>
                     <Select 
                       value={formData.employment_type}
                       onValueChange={(value: any) => setFormData({...formData, employment_type: value})}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Выберите тип" />
+                        <SelectValue placeholder={t('employer.jobForm.sections.basic.fields.employmentPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="full_time">Полная занятость</SelectItem>
-                        <SelectItem value="part_time">Частичная занятость</SelectItem>
-                        <SelectItem value="contract">Контракт</SelectItem>
-                        <SelectItem value="internship">Стажировка</SelectItem>
+                        <SelectItem value="full_time">{t('employer.jobForm.sections.basic.options.employment.full_time')}</SelectItem>
+                        <SelectItem value="part_time">{t('employer.jobForm.sections.basic.options.employment.part_time')}</SelectItem>
+                        <SelectItem value="contract">{t('employer.jobForm.sections.basic.options.employment.contract')}</SelectItem>
+                        <SelectItem value="internship">{t('employer.jobForm.sections.basic.options.employment.internship')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -190,7 +197,7 @@ export default function CreateJob() {
 
                 <div className="flex items-center space-x-2">
                   <Checkbox id="remote" />
-                  <Label htmlFor="remote">Возможна удаленная работа</Label>
+                  <Label htmlFor="remote">{t('employer.jobForm.sections.basic.fields.remote')}</Label>
                 </div>
               </CardContent>
             </Card>
@@ -198,12 +205,12 @@ export default function CreateJob() {
             {/* Salary */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#0A2540]">Заработная плата</CardTitle>
+                <CardTitle className="text-[#0A2540]">{t('employer.jobForm.sections.salary.title')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="salaryFrom">От</Label>
+                    <Label htmlFor="salaryFrom">{t('employer.jobForm.sections.salary.from')}</Label>
                     <Input 
                       id="salaryFrom" 
                       type="number"
@@ -211,7 +218,7 @@ export default function CreateJob() {
                       step={1000}
                       inputMode="numeric"
                       pattern="[0-9]*"
-                      placeholder="200000"
+                      placeholder={t('employer.jobForm.sections.salary.placeholders.from')}
                       value={formData.salary_min || ''}
                       onChange={(e) => {
                         const num = parseInt(e.target.value)
@@ -221,7 +228,7 @@ export default function CreateJob() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="salaryTo">До</Label>
+                    <Label htmlFor="salaryTo">{t('employer.jobForm.sections.salary.to')}</Label>
                     <Input 
                       id="salaryTo" 
                       type="number"
@@ -229,7 +236,7 @@ export default function CreateJob() {
                       step={1000}
                       inputMode="numeric"
                       pattern="[0-9]*"
-                      placeholder="300000"
+                      placeholder={t('employer.jobForm.sections.salary.placeholders.to')}
                       value={formData.salary_max || ''}
                       onChange={(e) => {
                         const num = parseInt(e.target.value)
@@ -239,22 +246,22 @@ export default function CreateJob() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="currency">Валюта</Label>
+                    <Label htmlFor="currency">{t('employer.jobForm.sections.salary.currency')}</Label>
                     <Select defaultValue="rub">
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="rub">₽ Рубли</SelectItem>
-                        <SelectItem value="usd">$ Доллары</SelectItem>
-                        <SelectItem value="eur">€ Евро</SelectItem>
+                        <SelectItem value="rub">{t('employer.jobForm.sections.salary.currencyOptions.rub')}</SelectItem>
+                        <SelectItem value="usd">{t('employer.jobForm.sections.salary.currencyOptions.usd')}</SelectItem>
+                        <SelectItem value="eur">{t('employer.jobForm.sections.salary.currencyOptions.eur')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox id="hideSalary" />
-                  <Label htmlFor="hideSalary">Не показывать зарплату в объявлении</Label>
+                  <Label htmlFor="hideSalary">{t('employer.jobForm.sections.salary.hide')}</Label>
                 </div>
               </CardContent>
             </Card>
@@ -262,14 +269,14 @@ export default function CreateJob() {
             {/* Job Description */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#0A2540]">Описание вакансии</CardTitle>
+                <CardTitle className="text-[#0A2540]">{t('employer.jobForm.sections.description.title')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="description">Описание позиции *</Label>
+                  <Label htmlFor="description">{t('employer.jobForm.sections.description.fieldLabel')}</Label>
                   <Textarea
                     id="description"
-                    placeholder="Опишите основные обязанности, задачи и цели позиции..."
+                    placeholder={t('employer.jobForm.sections.description.placeholder')}
                     className="min-h-[120px]"
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
@@ -281,8 +288,8 @@ export default function CreateJob() {
             {/* Skills */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#0A2540]">Навыки и технологии</CardTitle>
-                <CardDescription>Добавьте ключевые навыки для этой позиции</CardDescription>
+                <CardTitle className="text-[#0A2540]">{t('employer.jobForm.sections.skills.title')}</CardTitle>
+                <CardDescription>{t('employer.jobForm.sections.skills.description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-wrap gap-2">
@@ -298,7 +305,7 @@ export default function CreateJob() {
                 </div>
                 <div className="flex space-x-2">
                   <Input 
-                    placeholder="Добавить навык..."
+                    placeholder={t('employer.jobForm.sections.skills.addPlaceholder')}
                     value={newSkill}
                     onChange={(e) => setNewSkill(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && addSkill()}
@@ -316,7 +323,7 @@ export default function CreateJob() {
             {/* Benefits */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#0A2540]">Льготы и преимущества</CardTitle>
+                <CardTitle className="text-[#0A2540]">{t('employer.jobForm.sections.benefits.title')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-wrap gap-2">
@@ -332,7 +339,7 @@ export default function CreateJob() {
                 </div>
                 <div className="flex space-x-2">
                   <Input 
-                    placeholder="Добавить льготу..."
+                    placeholder={t('employer.jobForm.sections.benefits.addPlaceholder')}
                     value={newBenefit}
                     onChange={(e) => setNewBenefit(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && addBenefit()}
@@ -353,7 +360,7 @@ export default function CreateJob() {
             {/* Actions */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#0A2540]">Действия</CardTitle>
+                <CardTitle className="text-[#0A2540]">{t('employer.jobForm.sidebar.actions.title')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Button 
@@ -362,7 +369,7 @@ export default function CreateJob() {
                   disabled={loading || !formData.title || !formData.description}
                 >
                   <Save className="w-4 h-4 mr-2" />
-                  {loading ? 'Публикация...' : 'Опубликовать'}
+                  {loading ? t('employer.jobForm.sidebar.actions.publishLoading') : t('employer.jobForm.sidebar.actions.publish')}
                 </Button>
                 <Button 
                   variant="outline" 
@@ -371,11 +378,11 @@ export default function CreateJob() {
                   disabled={loading}
                 >
                   <Save className="w-4 h-4 mr-2" />
-                  {loading ? 'Сохранение...' : 'Сохранить черновик'}
+                  {loading ? t('employer.jobForm.sidebar.actions.draftLoading') : t('employer.jobForm.sidebar.actions.draft')}
                 </Button>
                 <Button variant="outline" className="w-full bg-transparent">
                   <Eye className="w-4 h-4 mr-2" />
-                  Предварительный просмотр
+                  {t('employer.jobForm.sidebar.actions.preview')}
                 </Button>
               </CardContent>
             </Card>
@@ -383,21 +390,21 @@ export default function CreateJob() {
             {/* Settings */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#0A2540]">Настройки публикации</CardTitle>
+                <CardTitle className="text-[#0A2540]">{t('employer.jobForm.sidebar.settings.title')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="deadline">Срок подачи заявок</Label>
+                  <Label htmlFor="deadline">{t('employer.jobForm.sidebar.settings.deadline')}</Label>
                   <Input id="deadline" type="date" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="positions">Количество позиций</Label>
+                  <Label htmlFor="positions">{t('employer.jobForm.sidebar.settings.positions')}</Label>
                   <Input id="positions" type="number" defaultValue="1" min="1" />
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox id="autoClose" />
                   <Label htmlFor="autoClose" className="text-sm">
-                    Автоматически закрыть после найма
+                    {t('employer.jobForm.sidebar.settings.autoClose')}
                   </Label>
                 </div>
               </CardContent>
@@ -406,24 +413,24 @@ export default function CreateJob() {
             {/* AI Matching */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#0A2540]">ИИ-подбор кандидатов</CardTitle>
-                <CardDescription>Настройте параметры автоматического поиска</CardDescription>
+                <CardTitle className="text-[#0A2540]">{t('employer.jobForm.sidebar.ai.title')}</CardTitle>
+                <CardDescription>{t('employer.jobForm.sidebar.ai.description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-2">
                   <Checkbox id="aiMatching" defaultChecked />
                   <Label htmlFor="aiMatching" className="text-sm">
-                    Включить ИИ-анализ кандидатов
+                    {t('employer.jobForm.sidebar.ai.enable')}
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox id="autoNotify" defaultChecked />
                   <Label htmlFor="autoNotify" className="text-sm">
-                    Уведомлять о новых подходящих кандидатах
+                    {t('employer.jobForm.sidebar.ai.notify')}
                   </Label>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="minMatch">Минимальный Match Score</Label>
+                  <Label htmlFor="minMatch">{t('employer.jobForm.sidebar.ai.minMatch')}</Label>
                   <Input id="minMatch" type="number" defaultValue="70" min="0" max="100" />
                 </div>
               </CardContent>
@@ -432,14 +439,14 @@ export default function CreateJob() {
             {/* Tips */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#0A2540]">Советы</CardTitle>
+                <CardTitle className="text-[#0A2540]">{t('employer.jobForm.sidebar.tips.title')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 text-sm text-[#333333]">
-                  <p>• Четко опишите обязанности и требования</p>
-                  <p>• Укажите реальный уровень зарплаты</p>
-                  <p>• Добавьте ключевые технологии и навыки</p>
-                  <p>• Расскажите о преимуществах работы в компании</p>
+                  <p>• {t('employer.jobForm.sidebar.tips.items.one')}</p>
+                  <p>• {t('employer.jobForm.sidebar.tips.items.two')}</p>
+                  <p>• {t('employer.jobForm.sidebar.tips.items.three')}</p>
+                  <p>• {t('employer.jobForm.sidebar.tips.items.four')}</p>
                 </div>
               </CardContent>
             </Card>

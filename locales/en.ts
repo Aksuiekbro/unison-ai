@@ -1,4 +1,7 @@
 import { TranslationDictionary } from '@/lib/i18n/types'
+import { employerEn } from './en/employer'
+import { jobSeekerEn } from './en/job-seeker'
+import { componentsEn } from './en/components'
 
 export const en: TranslationDictionary = {
   common: {
@@ -8,10 +11,12 @@ export const en: TranslationDictionary = {
       selectFiles: 'Select files',
       addToProfile: 'Add to profile',
       adding: 'Adding...',
+      retry: 'Retry',
     },
     status: {
       uploading: 'Uploading...',
       parsed: 'AI parsing complete',
+      error: 'Error',
     },
     data: {
       current: 'Current data',
@@ -42,8 +47,12 @@ export const en: TranslationDictionary = {
     manageJobs: 'Manage jobs',
     candidates: 'Candidates',
     companyProfile: 'Company profile',
+    employees: 'Employees',
     browseJobs: 'Browse jobs',
     savedJobs: 'Saved jobs',
+    applications: 'Applications',
+    results: 'Results',
+    tests: 'Assessment',
     profile: 'Profile',
     settings: 'Settings',
   },
@@ -198,4 +207,7 @@ export const en: TranslationDictionary = {
       growthDesc: 'Use Profile as a main growth driver for employees. AI analyzes skills, defines goals, and builds progress back into productivity and deal success.',
     },
   },
+  employer: employerEn,
+  jobSeeker: jobSeekerEn,
+  components: componentsEn,
 }

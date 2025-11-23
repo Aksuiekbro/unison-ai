@@ -1,4 +1,7 @@
 import { TranslationDictionary } from '@/lib/i18n/types'
+import { employerRu } from './ru/employer'
+import { jobSeekerRu } from './ru/job-seeker'
+import { componentsRu } from './ru/components'
 
 export const ru: TranslationDictionary = {
   common: {
@@ -8,10 +11,12 @@ export const ru: TranslationDictionary = {
       selectFiles: 'Выбрать файл',
       addToProfile: 'Добавить в профиль',
       adding: 'Добавление...',
+      retry: 'Повторить',
     },
     status: {
       uploading: 'Загрузка...',
       parsed: 'AI обработка завершена',
+      error: 'Ошибка',
     },
     data: {
       current: 'Текущие данные',
@@ -42,8 +47,12 @@ export const ru: TranslationDictionary = {
     manageJobs: 'Вакансии',
     candidates: 'Кандидаты',
     companyProfile: 'Профиль компании',
+    employees: 'Сотрудники',
     browseJobs: 'Поиск вакансий',
     savedJobs: 'Сохранённые',
+    applications: 'Мои заявки',
+    results: 'Результаты',
+    tests: 'Тест',
     profile: 'Профиль',
     settings: 'Настройки',
   },
@@ -198,4 +207,7 @@ export const ru: TranslationDictionary = {
       growthDesc: 'Профиль как драйвер развития: AI анализирует навыки, ставит цели и возвращает прогресс в продуктивность и сделки.',
     },
   },
+  employer: employerRu,
+  jobSeeker: jobSeekerRu,
+  components: componentsRu,
 }
