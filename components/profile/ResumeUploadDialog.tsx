@@ -179,7 +179,7 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
   const [error, setError] = useState<string | null>(null);
   const [parsedData, setParsedData] = useState<any | null>(null);
   const [fieldsUpdated, setFieldsUpdated] = useState<string[] | null>(null);
-  const [fieldSelections, setFieldSelections] = useState<Record<ProfileFieldKey, boolean>>({});
+  const [fieldSelections, setFieldSelections] = useState<Partial<Record<ProfileFieldKey, boolean>>>({});
   const [isSaving, startTransition] = useTransition();
   const xhrRef = useRef<XMLHttpRequest | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -215,13 +215,12 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
       setFieldSelections({});
       return;
     }
-    setFieldSelections((prev) => {
-      const next: Record<ProfileFieldKey, boolean> = {} as Record<ProfileFieldKey, boolean>;
-      diffItems.forEach((item) => {
-        next[item.key] = prev[item.key] ?? true;
-      });
-      return next;
-    });
+    setFieldSelections((prev) =>
+      diffItems.reduce<Partial<Record<ProfileFieldKey, boolean>>>((acc, item) => {
+        acc[item.key] = prev[item.key] ?? true;
+        return acc;
+      }, {})
+    );
   }, [diffItems]);
 
   const acceptAttr = useMemo(() => ACCEPTED.join(","), []);
@@ -255,7 +254,7 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
 
   const handleToggleAll = (checked: boolean | "indeterminate") => {
     const shouldSelect = checked === true;
-    const next: Record<ProfileFieldKey, boolean> = {} as Record<ProfileFieldKey, boolean>;
+    const next: Partial<Record<ProfileFieldKey, boolean>> = {};
     diffItems.forEach((item) => {
       next[item.key] = shouldSelect;
     });
