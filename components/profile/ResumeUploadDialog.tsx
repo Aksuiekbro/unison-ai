@@ -183,7 +183,12 @@ export default function ResumeUploadDialog({ open, onOpenChange, onAdded, curren
   const [isSaving, startTransition] = useTransition();
   const xhrRef = useRef<XMLHttpRequest | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const safeProfile: ProfileSnapshot = currentProfile ? { ...currentProfile } : {};
+  const safeProfile: ProfileSnapshot = useMemo(
+    // Avoid re-creating the profile object each render which would
+    // retrigger diffItems/useEffect and cause a state update loop.
+    () => (currentProfile ? { ...currentProfile } : {}),
+    [currentProfile]
+  );
   const parsedFields = useMemo(() => extractParsedFields(parsedData), [parsedData]);
   const diffItems = useMemo(() => buildDiffItems(parsedFields, safeProfile), [parsedFields, safeProfile]);
   const selectedCount = diffItems.filter((item) => fieldSelections[item.key] ?? true).length;
