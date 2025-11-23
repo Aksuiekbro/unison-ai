@@ -47,11 +47,14 @@ export default function JobCandidates() {
   const [statusFilter, setStatusFilter] = useState<Application['status'] | 'all'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [sortMode, setSortMode] = useState<'match_score' | 'date'>('match_score')
+  const { t, locale } = useI18n()
+  const intlLocale = getIntlLocale(locale)
+  const dateFormatter = new Intl.DateTimeFormat(intlLocale)
 
   const handleStatusUpdate = async (applicationId: string, newStatus: Application['status']) => {
     const result = await updateStatus(applicationId, newStatus)
     if (result.success) {
-      toast.success('Статус заявки обновлен')
+      toast.success(t('employer.candidates.toasts.statusUpdated'))
     } else {
       toast.error(result.error)
     }
@@ -81,26 +84,17 @@ export default function JobCandidates() {
   }
 
   const getStatusText = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "В ожидании"
-      case "reviewing":
-        return "На рассмотрении"
-      case "interview":
-        return "Назначено собеседование"
-      case "interviewed":
-        return "Собеседование"
-      case "offered":
-        return "Предложение"
-      case "accepted":
-        return "Предложение принято"
-      case "hired":
-        return "Принят"
-      case "rejected":
-        return "Отклонен"
-      default:
-        return "Неизвестно"
+    const map: Record<string, string> = {
+      pending: t('employer.applicationStatus.pending'),
+      reviewing: t('employer.applicationStatus.reviewing'),
+      interview: t('employer.applicationStatus.interview'),
+      interviewed: t('employer.applicationStatus.interviewed'),
+      offered: t('employer.applicationStatus.offered'),
+      accepted: t('employer.applicationStatus.accepted'),
+      hired: t('employer.applicationStatus.hired'),
+      rejected: t('employer.applicationStatus.rejected'),
     }
+    return map[status] || t('employer.applicationStatus.unknown')
   }
 
   const filteredApplications = applications.filter(app => {
@@ -129,10 +123,10 @@ export default function JobCandidates() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card>
           <CardContent className="p-6">
-            <p className="text-red-600">Ошибка: {error}</p>
+            <p className="text-red-600">{t('employer.candidates.errors.title', { message: error })}</p>
             <Link href="/employer/jobs">
               <Button className="mt-4">
-                Вернуться к вакансиям
+                {t('employer.candidates.errors.back')}
               </Button>
             </Link>
           </CardContent>
@@ -150,7 +144,7 @@ export default function JobCandidates() {
             <Link href="/" className="text-xl font-bold text-[#0A2540]">
               Unison AI
             </Link>
-            <p className="text-sm text-[#333333] mt-1">TechCorp Inc.</p>
+            <p className="text-sm text-[#333333] mt-1">{t('employer.sidebar.placeholderCompany')}</p>
           </div>
           <nav className="px-4 space-y-2">
             <Link
@@ -158,28 +152,28 @@ export default function JobCandidates() {
               className="flex items-center px-4 py-3 text-[#333333] hover:bg-gray-100 rounded-lg"
             >
               <LayoutDashboard className="w-5 h-5 mr-3" />
-              Дашборд
+              {t('dashboardNav.dashboard')}
             </Link>
             <Link
               href="/employer/jobs"
               className="flex items-center px-4 py-3 text-[#FF7A00] bg-[#FF7A00]/10 rounded-lg"
             >
               <Briefcase className="w-5 h-5 mr-3" />
-              Вакансии
+              {t('dashboardNav.manageJobs')}
             </Link>
             <Link
               href="/employer/company"
               className="flex items-center px-4 py-3 text-[#333333] hover:bg-gray-100 rounded-lg"
             >
               <Building2 className="w-5 h-5 mr-3" />
-              Профиль компании
+              {t('dashboardNav.companyProfile')}
             </Link>
             <Link
               href="/employer/settings"
               className="flex items-center px-4 py-3 text-[#333333] hover:bg-gray-100 rounded-lg"
             >
               <Settings className="w-5 h-5 mr-3" />
-              Настройки
+              {t('dashboardNav.settings')}
             </Link>
           </nav>
         </div>
@@ -191,12 +185,12 @@ export default function JobCandidates() {
               <Link href="/employer/jobs">
                 <Button variant="outline" size="sm">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  К списку вакансий
+                  {t('employer.candidates.header.back')}
                 </Button>
               </Link>
               <div>
-                <h1 className="text-3xl font-bold text-[#0A2540]">Кандидаты</h1>
-                <p className="text-[#333333] mt-1">Управление заявками на вакансию</p>
+                <h1 className="text-3xl font-bold text-[#0A2540]">{t('employer.candidates.header.title')}</h1>
+                <p className="text-[#333333] mt-1">{t('employer.candidates.header.subtitle')}</p>
               </div>
             </div>
 
@@ -206,43 +200,43 @@ export default function JobCandidates() {
                 <Card>
                   <CardContent className="p-4 text-center">
                     <div className="text-2xl font-bold text-[#0A2540]">{stats.total}</div>
-                    <div className="text-sm text-[#333333]">Всего</div>
+                    <div className="text-sm text-[#333333]">{t('employer.candidates.stats.total')}</div>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-4 text-center">
                     <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-                    <div className="text-sm text-[#333333]">В ожидании</div>
+                    <div className="text-sm text-[#333333]">{t('employer.candidates.stats.pending')}</div>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-4 text-center">
                     <div className="text-2xl font-bold text-blue-600">{stats.reviewing}</div>
-                    <div className="text-sm text-[#333333]">Рассмотрение</div>
+                    <div className="text-sm text-[#333333]">{t('employer.candidates.stats.reviewing')}</div>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-4 text-center">
                     <div className="text-2xl font-bold text-purple-600">{stats.interviewed}</div>
-                    <div className="text-sm text-[#333333]">Собеседование</div>
+                    <div className="text-sm text-[#333333]">{t('employer.candidates.stats.interviewed')}</div>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-4 text-center">
                     <div className="text-2xl font-bold text-green-600">{stats.offered}</div>
-                    <div className="text-sm text-[#333333]">Предложение</div>
+                    <div className="text-sm text-[#333333]">{t('employer.candidates.stats.offered')}</div>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-4 text-center">
                     <div className="text-2xl font-bold text-emerald-700">{stats.hired}</div>
-                    <div className="text-sm text-[#333333]">Приняты</div>
+                    <div className="text-sm text-[#333333]">{t('employer.candidates.stats.hired')}</div>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-4 text-center">
                     <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
-                    <div className="text-sm text-[#333333]">Отклонены</div>
+                    <div className="text-sm text-[#333333]">{t('employer.candidates.stats.rejected')}</div>
                   </CardContent>
                 </Card>
               </div>
@@ -254,7 +248,7 @@ export default function JobCandidates() {
                 <div className="flex items-center space-x-4">
                   <div className="flex-1">
                     <Input 
-                      placeholder="Поиск по имени или email..." 
+                      placeholder={t('employer.candidates.filters.searchPlaceholder')} 
                       className="h-10"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
@@ -262,34 +256,34 @@ export default function JobCandidates() {
                   </div>
                   <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
                     <SelectTrigger className="w-48">
-                      <SelectValue />
+                      <SelectValue placeholder={t('employer.candidates.filters.statusAll')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Все статусы</SelectItem>
-                      <SelectItem value="pending">В ожидании</SelectItem>
-                      <SelectItem value="reviewing">На рассмотрении</SelectItem>
-                      <SelectItem value="interviewed">Собеседование</SelectItem>
-                      <SelectItem value="offered">Предложение</SelectItem>
-                      <SelectItem value="hired">Приняты</SelectItem>
-                      <SelectItem value="rejected">Отклонены</SelectItem>
+                      <SelectItem value="all">{t('employer.candidates.filters.statusAll')}</SelectItem>
+                      <SelectItem value="pending">{t('employer.applicationStatus.pending')}</SelectItem>
+                      <SelectItem value="reviewing">{t('employer.applicationStatus.reviewing')}</SelectItem>
+                      <SelectItem value="interviewed">{t('employer.applicationStatus.interviewed')}</SelectItem>
+                      <SelectItem value="offered">{t('employer.applicationStatus.offered')}</SelectItem>
+                      <SelectItem value="hired">{t('employer.applicationStatus.hired')}</SelectItem>
+                      <SelectItem value="rejected">{t('employer.applicationStatus.rejected')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <Select value={sortMode} onValueChange={(value: string) => setSortMode(value as 'match_score' | 'date')}>
                     <SelectTrigger className="w-48">
-                      <SelectValue placeholder="Сортировка" />
+                      <SelectValue placeholder={t('employer.candidates.filters.sortPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="match_score">По совместимости</SelectItem>
-                      <SelectItem value="date">По дате отклика</SelectItem>
+                      <SelectItem value="match_score">{t('employer.candidates.filters.sortMatch')}</SelectItem>
+                      <SelectItem value="date">{t('employer.candidates.filters.sortDate')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <Button className="bg-[#00C49A] hover:bg-[#00A085]">
                     <Filter className="w-4 h-4 mr-2" />
-                    Фильтр
+                    {t('employer.candidates.filters.filter')}
                   </Button>
                   <Button variant="outline">
                     <Download className="w-4 h-4 mr-2" />
-                    Экспорт
+                    {t('employer.candidates.filters.export')}
                   </Button>
                 </div>
               </CardContent>
@@ -299,25 +293,29 @@ export default function JobCandidates() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-[#0A2540]">
-                  {loading ? 'Загрузка...' : `Заявки (${filteredApplications.length})`}
+                  {loading
+                    ? t('employer.candidates.table.loadingTitle')
+                    : t('employer.candidates.table.title', { count: filteredApplications.length })}
                 </CardTitle>
-                <CardDescription>Список кандидатов на вакансию</CardDescription>
+                <CardDescription>{t('employer.candidates.table.description')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? (
                   <div className="flex items-center justify-center h-32">
-                    <div className="text-[#333333]">Загрузка заявок...</div>
+                    <div className="text-[#333333]">{t('employer.candidates.table.loading')}</div>
                   </div>
                 ) : filteredApplications.length === 0 ? (
                   <div className="text-center py-12">
                     <User className="w-12 h-12 mx-auto text-gray-400 mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      {applications.length === 0 ? 'Нет заявок' : 'Нет результатов'}
+                      {applications.length === 0
+                        ? t('employer.candidates.table.emptyTitle.none')
+                        : t('employer.candidates.table.emptyTitle.filtered')}
                     </h3>
                     <p className="text-gray-500">
                       {applications.length === 0 
-                        ? 'Пока никто не откликнулся на эту вакансию' 
-                        : 'Попробуйте изменить фильтры поиска'
+                        ? t('employer.candidates.table.emptyDescription.none')
+                        : t('employer.candidates.table.emptyDescription.filtered')
                       }
                     </p>
                   </div>
@@ -326,6 +324,15 @@ export default function JobCandidates() {
                     {sortedApplications.map((application) => {
                       const resumeLink = application.resumeUrl || application.resume_url || application.applicant.resume_url || null
                       const matchScoreValue = application.matchScore ?? application.matchScoreDetails?.overall_score ?? null
+                      const submittedLabel = t('employer.candidates.cards.submittedOn', {
+                        date: dateFormatter.format(new Date(application.applied_at)),
+                      })
+                      const experienceLabel =
+                        application.applicant.experience_years != null
+                          ? t('employer.candidates.cards.experience', {
+                              years: application.applicant.experience_years,
+                            })
+                          : null
                       return (
                       <div key={application.id} className="border rounded-lg p-6 hover:shadow-md transition-shadow">
                         <div className="flex items-start justify-between">
@@ -347,7 +354,7 @@ export default function JobCandidates() {
                                 </Badge>
                                 {matchScoreValue != null && (
                                   <Badge variant="outline" className="border-[#FF7A00] text-[#FF7A00]">
-                                    AI {matchScoreValue}%
+                                    {t('employer.candidates.cards.aiBadge', { score: matchScoreValue })}
                                   </Badge>
                                 )}
                               </div>
@@ -374,12 +381,12 @@ export default function JobCandidates() {
                               <div className="flex items-center space-x-6 text-sm text-[#333333] mb-3">
                                 <div className="flex items-center">
                                   <Clock className="w-4 h-4 mr-1" />
-                                  Подано: {new Date(application.applied_at).toLocaleDateString("ru-RU")}
+                                {submittedLabel}
                                 </div>
                                 {application.applicant.experience_years != null && (
                                   <div className="flex items-center">
                                     <Briefcase className="w-4 h-4 mr-1" />
-                                    Опыт: {application.applicant.experience_years} лет
+                                  {experienceLabel}
                                   </div>
                                 )}
                               </div>
@@ -399,7 +406,7 @@ export default function JobCandidates() {
                               <Button variant="outline" size="sm" asChild>
                                 <a href={resumeLink} target="_blank" rel="noreferrer" className="flex items-center">
                                   <FileText className="w-4 h-4 mr-2" />
-                                  Резюме
+                                  {t('employer.candidates.cards.resume')}
                                 </a>
                               </Button>
                             )}
@@ -407,37 +414,37 @@ export default function JobCandidates() {
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="outline" size="sm">
-                                  Действия
+                                  {t('employer.candidates.cards.actions')}
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem asChild>
                                   <Link href={`/employer/candidates/${application.id}`} className="flex items-center">
                                     <Eye className="w-4 h-4 mr-2" />
-                                    Просмотр профиля
+                                    {t('employer.candidates.cards.viewProfile')}
                                   </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
                                   <a href={`mailto:${application.applicant.email}`} className="flex items-center">
                                     <Mail className="w-4 h-4 mr-2" />
-                                    Отправить письмо
+                                    {t('employer.candidates.cards.sendEmail')}
                                   </a>
                                 </DropdownMenuItem>
                                 {application.status === 'pending' && (
                                   <DropdownMenuItem onClick={() => handleStatusUpdate(application.id, 'reviewing')}>
                                     <Eye className="w-4 h-4 mr-2" />
-                                    Взять на рассмотрение
+                                    {t('employer.candidates.cards.takeReview')}
                                   </DropdownMenuItem>
                                 )}
                                 {application.status === 'reviewing' && (
                                   <>
                                     <DropdownMenuItem onClick={() => handleStatusUpdate(application.id, 'interviewed')}>
                                       <User className="w-4 h-4 mr-2" />
-                                      Пригласить на собеседование
+                                      {t('employer.candidates.cards.inviteInterview')}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleStatusUpdate(application.id, 'rejected')}>
                                       <X className="w-4 h-4 mr-2" />
-                                      Отклонить
+                                      {t('employer.candidates.cards.reject')}
                                     </DropdownMenuItem>
                                   </>
                                 )}
@@ -445,11 +452,11 @@ export default function JobCandidates() {
                                   <>
                                     <DropdownMenuItem onClick={() => handleStatusUpdate(application.id, 'offered')}>
                                       <Check className="w-4 h-4 mr-2" />
-                                      Сделать предложение
+                                      {t('employer.candidates.cards.makeOffer')}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleStatusUpdate(application.id, 'rejected')}>
                                       <X className="w-4 h-4 mr-2" />
-                                      Отклонить
+                                      {t('employer.candidates.cards.reject')}
                                     </DropdownMenuItem>
                                   </>
                                 )}
@@ -457,11 +464,11 @@ export default function JobCandidates() {
                                   <>
                                     <DropdownMenuItem onClick={() => handleStatusUpdate(application.id, 'hired')}>
                                       <Star className="w-4 h-4 mr-2" />
-                                      Принять на работу
+                                      {t('employer.candidates.cards.hire')}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleStatusUpdate(application.id, 'rejected')}>
                                       <X className="w-4 h-4 mr-2" />
-                                      Отклонить
+                                      {t('employer.candidates.cards.reject')}
                                     </DropdownMenuItem>
                                   </>
                                 )}
