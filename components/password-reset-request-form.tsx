@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, CheckCircle2 } from "lucide-react"
+import { useI18n } from "@/components/i18n/I18nProvider"
 
 type ResetResponse = {
   success: boolean
@@ -17,10 +18,12 @@ interface PasswordResetRequestFormProps {
   description?: string | null
 }
 
-export function PasswordResetRequestForm({ submitLabel = "Send reset link", description = "Enter the email associated with your account and we'll send you reset instructions." }: PasswordResetRequestFormProps) {
+export function PasswordResetRequestForm({ submitLabel, description = undefined }: PasswordResetRequestFormProps) {
   const [state, setState] = useState<ResetResponse | null>(null)
   const [email, setEmail] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { t } = useI18n()
+  const resolvedDescription = description === undefined ? t("auth.resetRequest.formDescription") : description
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -41,11 +44,11 @@ export function PasswordResetRequestForm({ submitLabel = "Send reset link", desc
           setEmail("")
         }
       } else {
-        setState({ success: false, message: "Unexpected response. Please try again." })
+        setState({ success: false, message: t("auth.common.unexpectedResponse") })
       }
     } catch (error) {
       console.error("Forgot password request failed", error)
-      setState({ success: false, message: "Unable to send reset instructions right now. Please try again." })
+      setState({ success: false, message: t("auth.common.unableToProcess") })
     } finally {
       setIsSubmitting(false)
     }
@@ -54,7 +57,7 @@ export function PasswordResetRequestForm({ submitLabel = "Send reset link", desc
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <Label htmlFor="reset-email">Email</Label>
+        <Label htmlFor="reset-email">{t("auth.common.email")}</Label>
         <Input
           id="reset-email"
           name="email"
@@ -67,7 +70,7 @@ export function PasswordResetRequestForm({ submitLabel = "Send reset link", desc
         {state?.errors?.email && <p className="mt-1 text-xs text-red-500">{state.errors.email[0]}</p>}
       </div>
 
-      {description && <p className="text-sm text-muted-foreground">{description}</p>}
+      {resolvedDescription !== null && <p className="text-sm text-muted-foreground">{resolvedDescription}</p>}
 
       {state?.message && (
         <div
@@ -81,7 +84,7 @@ export function PasswordResetRequestForm({ submitLabel = "Send reset link", desc
       )}
 
       <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? "Sending..." : submitLabel}
+        {isSubmitting ? t("auth.resetRequest.sending") : submitLabel ?? t("auth.resetRequest.submit")}
       </Button>
     </form>
   )

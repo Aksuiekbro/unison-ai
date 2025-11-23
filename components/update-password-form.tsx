@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, CheckCircle2 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useI18n } from "@/components/i18n/I18nProvider"
 
 type Status = { type: "idle" | "success" | "error"; message?: string }
 type ResetResponse = { success: boolean; message: string; errors?: Record<string, string[]> }
@@ -16,15 +17,16 @@ export function UpdatePasswordForm() {
   const [status, setStatus] = useState<Status>({ type: "idle" })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
+  const { t } = useI18n()
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
     if (password.length < 8) {
-      setStatus({ type: "error", message: "Password must be at least 8 characters long." })
+      setStatus({ type: "error", message: t("auth.common.passwordTooShort") })
       return
     }
     if (password !== confirmPassword) {
-      setStatus({ type: "error", message: "Passwords do not match." })
+      setStatus({ type: "error", message: t("auth.common.passwordMismatch") })
       return
     }
 
@@ -42,7 +44,7 @@ export function UpdatePasswordForm() {
       const data = (await response.json().catch(() => null)) as ResetResponse | null
 
       if (!data) {
-        setStatus({ type: "error", message: "Unexpected response. Please try again." })
+        setStatus({ type: "error", message: t("auth.common.unexpectedResponse") })
       } else if (data.success) {
         setStatus({ type: "success", message: data.message })
         setPassword("")
@@ -55,7 +57,7 @@ export function UpdatePasswordForm() {
       }
     } catch (error) {
       console.error("Password update request failed", error)
-      setStatus({ type: "error", message: "Unable to update password right now. Please try again." })
+      setStatus({ type: "error", message: t("auth.common.unableToProcess") })
     } finally {
       setIsSubmitting(false)
     }
@@ -64,7 +66,7 @@ export function UpdatePasswordForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <Label htmlFor="new-password">New password</Label>
+        <Label htmlFor="new-password">{t("auth.resetUpdate.newPasswordLabel")}</Label>
         <Input
           id="new-password"
           type="password"
@@ -72,10 +74,10 @@ export function UpdatePasswordForm() {
           value={password}
           onChange={(event) => setPassword(event.target.value)}
         />
-        <p className="mt-1 text-xs text-muted-foreground">Use at least 8 characters.</p>
+        <p className="mt-1 text-xs text-muted-foreground">{t("auth.common.passwordHint")}</p>
       </div>
       <div>
-        <Label htmlFor="confirm-password">Confirm new password</Label>
+        <Label htmlFor="confirm-password">{t("auth.common.confirmPassword")}</Label>
         <Input
           id="confirm-password"
           type="password"
@@ -99,10 +101,10 @@ export function UpdatePasswordForm() {
       )}
 
       <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? "Updating..." : "Update password"}
+        {isSubmitting ? t("auth.resetUpdate.submitting") : t("auth.resetUpdate.submit")}
       </Button>
       <Button type="button" variant="ghost" className="w-full" onClick={() => router.push("/auth/login")}>
-        Back to login
+        {t("auth.resetUpdate.backToLogin")}
       </Button>
     </form>
   )

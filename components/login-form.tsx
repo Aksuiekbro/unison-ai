@@ -11,6 +11,7 @@ import { AlertCircle, CheckCircle2 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ForgotPasswordDialog } from "@/components/forgot-password-dialog"
+import { useI18n } from "@/components/i18n/I18nProvider"
 
 export function LoginForm() {
   const [state, formAction, isPending] = useActionState(loginAction, null)
@@ -21,6 +22,7 @@ export function LoginForm() {
   const searchParams = useSearchParams()
   const redirectTo = searchParams?.get('redirectTo') || null
   const didRedirectRef = useRef(false)
+  const { t } = useI18n()
 
   useEffect(() => {
     if (!state?.success || didRedirectRef.current) return
@@ -53,11 +55,11 @@ export function LoginForm() {
       <Card>
         <CardHeader className="text-center">
           <CheckCircle2 className="mx-auto h-12 w-12 text-green-500" />
-          <CardTitle className="text-2xl">Success!</CardTitle>
+          <CardTitle className="text-2xl">{t("auth.login.successTitle")}</CardTitle>
           <CardDescription>{state.message}</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-center text-sm text-gray-600">Redirecting you to your dashboard...</p>
+          <p className="text-center text-sm text-gray-600">{t("auth.login.redirecting")}</p>
         </CardContent>
       </Card>
     )
@@ -66,21 +68,21 @@ export function LoginForm() {
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Welcome back</CardTitle>
+        <CardTitle className="text-2xl">{t("auth.login.title")}</CardTitle>
         <CardDescription>
-          Enter your credentials to access your account.
+          {t("auth.login.description")}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form action={formAction} className="space-y-4">
           {redirectTo && <input type="hidden" name="redirectTo" value={redirectTo} />}
           <div>
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t("auth.common.email")}</Label>
             <Input id="email" name="email" type="email" placeholder="you@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
             {state?.errors?.email && <p className="text-xs text-red-500 mt-1">{state.errors.email[0]}</p>}
           </div>
           <div>
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t("auth.common.password")}</Label>
             <Input id="password" name="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
             {state?.errors?.password && <p className="text-xs text-red-500 mt-1">{state.errors.password[0]}</p>}
           </div>
@@ -97,13 +99,13 @@ export function LoginForm() {
             <ForgotPasswordDialog />
           </div>
           <Button type="submit" className="w-full" disabled={isPending}>
-            {isPending ? "Logging in..." : "Login"}
+            {isPending ? t("auth.login.loggingIn") : t("auth.login.submit")}
           </Button>
         </form>
         <div className="mt-4 text-center text-sm">
-          Don't have an account?{" "}
+          {t("auth.login.signupPrompt")}{" "}
           <Link href="/auth/signup" className="font-medium text-purple-600 hover:underline">
-            Sign up
+            {t("auth.login.signupCta")}
           </Link>
         </div>
       </CardContent>
