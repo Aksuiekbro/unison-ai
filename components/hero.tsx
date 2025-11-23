@@ -1,14 +1,26 @@
 "use client";
-import { useRef, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, PlayCircle } from "lucide-react"
 import Image from "next/image"
 import { motion } from "framer-motion"
 import { Typewriter } from "@/components/ui/typewriter"
+import { useI18n } from "@/components/i18n/I18nProvider"
 
 export function Hero() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
+  const { t } = useI18n()
+  const phrases = useMemo(
+    () => [
+      t("landing.hero.phrase1"),
+      t("landing.hero.phrase2"),
+      t("landing.hero.phrase3"),
+      t("landing.hero.phrase4"),
+      t("landing.hero.phrase5"),
+    ],
+    [t]
+  )
 
   const handlePlayPause = () => {
     const video = videoRef.current
@@ -33,15 +45,9 @@ export function Hero() {
       >
         <div className="mx-auto max-w-3xl">
           <h1 className="text-5xl font-extrabold tracking-tighter sm:text-6xl md:text-7xl lg:text-6xl">
-            UnisonAI{" "}
+            {t("landing.hero.titlePrefix")}{" "}
             <Typewriter
-              phrases={[
-                "unifies recruiting, CRM & projects in one powerful platform",
-                "automates candidate screening with AI",
-                "analyzes soft skills for cultural fit",
-                "ranks applicants by AI Match Score",
-                "built for Kazakhstan’s SMBs",
-              ]}
+              phrases={phrases}
               typingSpeedMs={40}
               deletingSpeedMs={20}
               pauseMs={1200}
@@ -50,15 +56,14 @@ export function Hero() {
             />
           </h1>
           <p className="mx-auto mt-8 max-w-2xl text-2xl md:text-3xl text-gray-600">
-            Advance your entire organization with intelligent 
-            automation and AI-driven people analytics.
+            {t("landing.hero.subtitle")}
           </p>
           <div className="mt-10 flex justify-center gap-6">
             <Button size="lg" className="text-xl px-8 py-4">
-              Get Started <ArrowRight className="ml-2 h-5 w-5" />
+              {t("landing.hero.ctaPrimary")} <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
             <Button size="lg" variant="outline" className="text-xl px-8 py-4">
-              Watch Video
+              {t("landing.hero.ctaSecondary")}
             </Button>
           </div>
         </div>
@@ -67,7 +72,7 @@ export function Hero() {
         {/* Hero image card, no container, no shadow, no ring, no blur */}
         <Image
           src="/hero page find your next role1.png"
-          alt="Find your next role preview"
+          alt={t("landing.hero.heroAlt")}
           width={1920}
           height={600}
           className="w-[98vw] max-w-[1920px] mx-auto rounded-2xl"
