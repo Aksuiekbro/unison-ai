@@ -31,10 +31,21 @@ export const kk: TranslationDictionary = {
     auth: {
       login: 'Кіру',
       signup: 'Тіркелу',
+      signout: 'Шығу',
     },
     aria: {
       openNavigation: 'Навигацияны ашу',
     },
+  },
+  dashboardNav: {
+    dashboard: 'Дашборд',
+    manageJobs: 'Вакансиялар',
+    candidates: 'Үміткерлер',
+    companyProfile: 'Компания профилі',
+    browseJobs: 'Жұмыс іздеу',
+    savedJobs: 'Сақталғандар',
+    profile: 'Профиль',
+    settings: 'Баптаулар',
   },
   resumeUpload: {
     title: 'Түйіндемені жүктеу',

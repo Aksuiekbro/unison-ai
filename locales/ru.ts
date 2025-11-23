@@ -31,10 +31,21 @@ export const ru: TranslationDictionary = {
     auth: {
       login: 'Войти',
       signup: 'Регистрация',
+      signout: 'Выйти',
     },
     aria: {
       openNavigation: 'Открыть навигацию',
     },
+  },
+  dashboardNav: {
+    dashboard: 'Дашборд',
+    manageJobs: 'Вакансии',
+    candidates: 'Кандидаты',
+    companyProfile: 'Профиль компании',
+    browseJobs: 'Поиск вакансий',
+    savedJobs: 'Сохранённые',
+    profile: 'Профиль',
+    settings: 'Настройки',
   },
   resumeUpload: {
     title: 'Загрузка резюме',

@@ -31,10 +31,21 @@ export const en: TranslationDictionary = {
     auth: {
       login: 'Login',
       signup: 'Sign up',
+      signout: 'Sign out',
     },
     aria: {
       openNavigation: 'Open navigation',
     },
+  },
+  dashboardNav: {
+    dashboard: 'Dashboard',
+    manageJobs: 'Manage jobs',
+    candidates: 'Candidates',
+    companyProfile: 'Company profile',
+    browseJobs: 'Browse jobs',
+    savedJobs: 'Saved jobs',
+    profile: 'Profile',
+    settings: 'Settings',
   },
   resumeUpload: {
     title: 'Upload a resume',

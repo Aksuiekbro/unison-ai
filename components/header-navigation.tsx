@@ -8,6 +8,8 @@ import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "@/components/user-menu";
 import { LayoutDashboard, Briefcase, Building2, User, Search, Settings, Heart, LogOut } from "lucide-react";
+import { useI18n } from "@/components/i18n/I18nProvider";
+import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 
 export function HeaderNavigation() {
   const [open, setOpen] = useState(false);
@@ -15,6 +17,7 @@ export function HeaderNavigation() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { t } = useI18n();
 
   // Use shared singleton client to avoid multiple GoTrue instances
   const client = supabase
@@ -48,18 +51,18 @@ export function HeaderNavigation() {
 
     if (userRole === 'employer') {
       return [
-        { href: '/employer/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { href: '/employer/jobs', label: 'Manage Jobs', icon: Briefcase },
-        { href: '/employer/candidates', label: 'Candidates', icon: User },
-        { href: '/employer/company', label: 'Company Profile', icon: Building2 },
+        { href: '/employer/dashboard', label: t("dashboardNav.dashboard"), icon: LayoutDashboard },
+        { href: '/employer/jobs', label: t("dashboardNav.manageJobs"), icon: Briefcase },
+        { href: '/employer/candidates', label: t("dashboardNav.candidates"), icon: User },
+        { href: '/employer/company', label: t("dashboardNav.companyProfile"), icon: Building2 },
       ];
     } else if (userRole === 'employee' || userRole === 'job-seeker') {
       return [
-        { href: '/job-seeker/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { href: '/job-seeker/search', label: 'Browse Jobs', icon: Search },
-        { href: '/job-seeker/saved', label: 'Saved Jobs', icon: Heart },
-        { href: '/job-seeker/profile', label: 'Profile', icon: User },
-        { href: '/job-seeker/settings', label: 'Settings', icon: Settings },
+        { href: '/job-seeker/dashboard', label: t("dashboardNav.dashboard"), icon: LayoutDashboard },
+        { href: '/job-seeker/search', label: t("dashboardNav.browseJobs"), icon: Search },
+        { href: '/job-seeker/saved', label: t("dashboardNav.savedJobs"), icon: Heart },
+        { href: '/job-seeker/profile', label: t("dashboardNav.profile"), icon: User },
+        { href: '/job-seeker/settings', label: t("dashboardNav.settings"), icon: Settings },
       ];
     }
 
@@ -109,7 +112,7 @@ export function HeaderNavigation() {
         {/* Hamburger Icon */}
         <button
           className="md:hidden flex flex-col justify-center items-center w-10 h-10"
-          aria-label="Open navigation"
+          aria-label={t("header.aria.openNavigation")}
           onClick={() => setOpen((v) => !v)}
         >
           <span className={`block h-0.5 w-6 bg-black transition-all duration-200 ${open ? "rotate-45 translate-y-1.5" : ""}`}></span>
@@ -137,26 +140,27 @@ export function HeaderNavigation() {
             </>
           ) : (
             <>
-              <Link href="/" className="text-gray-700 hover:text-black">Product</Link>
-              <a href="#features" className="text-gray-700 hover:text-black">Functions</a>
-              <Link href="#uni-modules" className="text-gray-700 hover:text-black">Programs</Link>
-              <Link href="#tools" className="text-gray-700 hover:text-black">Tools</Link>
-              <Link href="#pricing" className="text-gray-700 hover:text-black">Pricing</Link>
-              <a href="#footer" className="text-gray-700 hover:text-black">Contacts</a>
+              <Link href="/" className="text-gray-700 hover:text-black">{t("header.nav.product")}</Link>
+              <a href="#features" className="text-gray-700 hover:text-black">{t("header.nav.functions")}</a>
+              <Link href="#uni-modules" className="text-gray-700 hover:text-black">{t("header.nav.programs")}</Link>
+              <Link href="#tools" className="text-gray-700 hover:text-black">{t("header.nav.tools")}</Link>
+              <Link href="#pricing" className="text-gray-700 hover:text-black">{t("header.nav.pricing")}</Link>
+              <a href="#footer" className="text-gray-700 hover:text-black">{t("header.nav.contacts")}</a>
             </>
           )}
         </nav>
 
         <div className="hidden md:flex items-center gap-4">
+          <LanguageSwitcher size="sm" />
           {user ? (
             <UserMenu />
           ) : (
             <>
               <Link href="/auth/login" className="text-base font-medium text-gray-700 hover:text-black px-2 py-1">
-                Login
+                {t("header.auth.login")}
               </Link>
               <Link href="/auth/signup" className="rounded-md bg-black px-4 py-2 text-base font-semibold text-white shadow-sm hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">
-                Sign up
+                {t("header.auth.signup")}
               </Link>
             </>
           )}
@@ -187,6 +191,7 @@ export function HeaderNavigation() {
                   <span className="text-sm text-gray-600">
                     {user.email} ({userRole})
                   </span>
+                  <LanguageSwitcher className="w-full justify-center" size="sm" />
                   <Button
                     onClick={() => {
                       handleSignOut();
@@ -197,24 +202,25 @@ export function HeaderNavigation() {
                     className="flex items-center gap-2"
                   >
                     <LogOut className="w-4 h-4" />
-                    Sign Out
+                    {t("header.auth.signout")}
                   </Button>
                 </div>
               </>
             ) : (
               <>
-                <Link href="/" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>Product</Link>
-                <a href="#features" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>Functions</a>
-                <Link href="#uni-modules" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>Programs</Link>
-                <Link href="#tools" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>Tools</Link>
-                <Link href="#pricing" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>Pricing</Link>
-                <a href="#footer" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>Contacts</a>
+                <Link href="/" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>{t("header.nav.product")}</Link>
+                <a href="#features" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>{t("header.nav.functions")}</a>
+                <Link href="#uni-modules" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>{t("header.nav.programs")}</Link>
+                <Link href="#tools" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>{t("header.nav.tools")}</Link>
+                <Link href="#pricing" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>{t("header.nav.pricing")}</Link>
+                <a href="#footer" className="text-gray-700 hover:text-black w-full text-center" onClick={() => setOpen(false)}>{t("header.nav.contacts")}</a>
+                <LanguageSwitcher className="py-2" size="sm" />
                 <div className="flex flex-col items-center gap-2 mt-2">
                   <Link href="/auth/login" className="text-base font-medium text-gray-700 hover:text-black px-2 py-1" onClick={() => setOpen(false)}>
-                    Login
+                    {t("header.auth.login")}
                   </Link>
                   <Link href="/auth/signup" className="rounded-md bg-black px-4 py-2 text-base font-semibold text-white shadow-sm hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black" onClick={() => setOpen(false)}>
-                    Sign up
+                    {t("header.auth.signup")}
                   </Link>
                 </div>
               </>
