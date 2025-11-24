@@ -16,6 +16,7 @@ export interface Job {
   requirements: string | null
   responsibilities: string | null
   company_id: string
+  employer_id: string
   job_type: JobType
   experience_level: ExperienceLevel
   salary_min: number | null
@@ -152,10 +153,44 @@ export async function createJob(data: Omit<Job, 'id' | 'created_at' | 'updated_a
     // Validate employer access to company
     await validateEmployerAccess(employerId, data.company_id)
 
+    // Resolve company ownership explicitly to avoid invalid placeholder IDs from clients
+    let resolvedCompanyId = data.company_id
+    if (!resolvedCompanyId) {
+      const { data: company, error: companyLookupError } = await supabaseAdmin
+        .from('companies')
+        .select('id, owner_id')
+        .eq('owner_id', employerId)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+
+      if (companyLookupError && companyLookupError.code !== 'PGRST116') {
+        throw new Error('Failed to resolve employer company')
+      }
+
+      if (!company) {
+        throw new Error('Company not found for employer')
+      }
+
+      resolvedCompanyId = company.id
+    } else {
+      const { data: company, error: companyFetchError } = await supabaseAdmin
+        .from('companies')
+        .select('id, owner_id')
+        .eq('id', resolvedCompanyId)
+        .single()
+
+      if (companyFetchError || !company || company.owner_id !== employerId) {
+        throw new Error('Access denied. Invalid company association')
+      }
+    }
+
     const { data: job, error } = await supabaseAdmin
       .from('jobs')
       .insert([{
         ...data,
+        company_id: resolvedCompanyId,
+        employer_id: employerId,
         posted_at: data.status === 'published' ? new Date().toISOString() : null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()

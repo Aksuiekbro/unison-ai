@@ -414,23 +414,47 @@ export async function updateEmployerProfile(formData: FormData) {
       })
       .eq('id', user.id)
 
-    // Also create/update company record
-    const { error: companyError } = await supabase
+    // Also create/update company record; explicitly fetch by owner_id to avoid relying on missing constraints
+    const { data: existingCompany, error: companyFetchError } = await supabase
       .from('companies')
-      .upsert({
-        owner_id: user.id,
-        name: validatedData.companyName,
-        description: validatedData.companyDescription || null,
-        industry: validatedData.industry || null,
-        size: validatedData.companySize || null,
-        website: validatedData.websiteUrl || null,
-        location: composedLocation || null,
-        company_culture: validatedData.companyCulture || null,
-        benefits: validatedData.benefits || [],
-        technologies: validatedData.technologies || [],
-      }, {
-        onConflict: 'owner_id'
-      })
+      .select('id')
+      .eq('owner_id', user.id)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    if (companyFetchError && companyFetchError.code !== 'PGRST116') {
+      console.error('Error fetching company:', companyFetchError)
+      return { error: 'Failed to update company information' }
+    }
+
+    const companyPayload = {
+      owner_id: user.id,
+      name: validatedData.companyName,
+      description: validatedData.companyDescription || null,
+      industry: validatedData.industry || null,
+      size: validatedData.companySize || null,
+      website: validatedData.websiteUrl || null,
+      location: composedLocation || null,
+      company_culture: validatedData.companyCulture || null,
+      benefits: validatedData.benefits || [],
+      technologies: validatedData.technologies || [],
+      updated_at: new Date().toISOString(),
+    }
+
+    let companyError = null
+    if (existingCompany?.id) {
+      const { error } = await supabase
+        .from('companies')
+        .update(companyPayload)
+        .eq('id', existingCompany.id)
+      companyError = error
+    } else {
+      const { error } = await supabase
+        .from('companies')
+        .insert(companyPayload)
+      companyError = error
+    }
 
     if (updateError) {
       console.error('Error updating employer profile:', updateError)
