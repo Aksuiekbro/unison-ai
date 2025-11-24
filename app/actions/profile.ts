@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
+import { normalizeSkillsInput } from '@/lib/utils'
 // Using untyped client to avoid friction with partially generated DB types
 import { 
   jobSeekerProfileSchema,
@@ -76,6 +77,17 @@ export async function updateJobSeekerProfile(formData: FormData) {
       return { error: 'Job seeker not found' }
     }
 
+    // Safely parse and normalize skills even if the payload contains objects from older data
+    let parsedSkills: unknown = []
+    const rawSkills = formData.get('skills')
+    if (typeof rawSkills === 'string') {
+      try {
+        parsedSkills = JSON.parse(rawSkills)
+      } catch {
+        parsedSkills = []
+      }
+    }
+
     // Parse form data
     const data = {
       firstName: formData.get('firstName') as string,
@@ -86,7 +98,7 @@ export async function updateJobSeekerProfile(formData: FormData) {
       location: formData.get('location') as string,
       linkedinUrl: formData.get('linkedinUrl') as string,
       githubUrl: formData.get('githubUrl') as string,
-      skills: formData.get('skills') ? JSON.parse(formData.get('skills') as string) : [],
+      skills: normalizeSkillsInput(parsedSkills),
     }
 
     // Validate data

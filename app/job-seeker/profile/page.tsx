@@ -4,6 +4,7 @@ import Link from "next/link"
 import type { Database } from '@/lib/database.types'
 import JobSeekerProfileForm from '@/components/profile/job-seeker-profile-form'
 import { createClient } from '@/lib/supabase-server'
+import { normalizeSkillsInput } from '@/lib/utils'
 
 export default async function JobSeekerProfile() {
   const supabase = await createClient()
@@ -30,6 +31,8 @@ export default async function JobSeekerProfile() {
       return <div>Error loading profile</div>
     }
 
+    const sanitizedSkills = normalizeSkillsInput(userData.skills)
+
     // Transform data for the form (all from users table now)
     const nameParts = userData.full_name?.split(' ') || []
     const initialData = {
@@ -41,7 +44,7 @@ export default async function JobSeekerProfile() {
       location: userData.location || '',
       linkedinUrl: userData.linkedin_url || '',
       githubUrl: userData.github_url || '',
-      skills: (userData.skills as string[]) || [], // Load skills from database
+      skills: sanitizedSkills, // Load skills from database
     }
 
     // Get experiences and education from JSON fields (already in correct format)

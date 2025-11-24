@@ -19,6 +19,7 @@ import { updateJobSeekerProfile, addJobSeekerExperience, addJobSeekerEducation }
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import ResumeUploadDialog from "@/components/profile/ResumeUploadDialog"
+import { normalizeSkillsInput } from '@/lib/utils'
 
 interface JobSeekerProfileFormProps {
   initialData?: Partial<JobSeekerProfileData> & {
@@ -54,7 +55,8 @@ export default function JobSeekerProfileForm({
   const { toast } = useToast();
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [skills, setSkills] = useState<string[]>(initialData?.skills || [])
+  const cleanedInitialSkills = normalizeSkillsInput(initialData?.skills)
+  const [skills, setSkills] = useState<string[]>(cleanedInitialSkills)
   const [newSkill, setNewSkill] = useState('')
   const [isEditing, setIsEditing] = useState(false)
   const [selectedResume, setSelectedResume] = useState<File | null>(null)
@@ -67,7 +69,7 @@ export default function JobSeekerProfileForm({
   const [resumeDialogOpen, setResumeDialogOpen] = useState(false)
   const [resumeProfileSnapshot, setResumeProfileSnapshot] = useState<Partial<JobSeekerProfileData> & { skills?: string[] }>(() => ({
     ...(initialData || {}),
-    skills: initialData?.skills || [],
+    skills: cleanedInitialSkills,
   }))
   const [latestResumeName, setLatestResumeName] = useState<string | null>(null)
 
@@ -82,7 +84,7 @@ export default function JobSeekerProfileForm({
       location: initialData?.location || '',
       linkedinUrl: initialData?.linkedinUrl || '',
       githubUrl: initialData?.githubUrl || '',
-      skills: initialData?.skills || [],
+      skills: cleanedInitialSkills,
     },
   })
 
@@ -94,7 +96,7 @@ export default function JobSeekerProfileForm({
         Object.entries(data).forEach(([key, value]) => {
           if (value !== undefined && value !== null) {
             if (key === 'skills') {
-              formData.append(key, JSON.stringify(skills))
+              formData.append(key, JSON.stringify(normalizeSkillsInput(skills)))
             } else if (key === 'linkedinUrl' || key === 'githubUrl') {
               const v = value.toString().trim()
               const normalized = v && !/^https?:\/\//i.test(v) ? `https://${v}` : v
@@ -140,6 +142,7 @@ export default function JobSeekerProfileForm({
 
   // Keep form in sync with server-provided initialData
   React.useEffect(() => {
+    const sanitizedSkills = normalizeSkillsInput(initialData?.skills)
     form.reset({
       firstName: initialData?.firstName || '',
       lastName: initialData?.lastName || '',
@@ -149,9 +152,9 @@ export default function JobSeekerProfileForm({
       location: initialData?.location || '',
       linkedinUrl: initialData?.linkedinUrl || '',
       githubUrl: initialData?.githubUrl || '',
-      skills: initialData?.skills || [],
+      skills: sanitizedSkills,
     })
-    setSkills(initialData?.skills || [])
+    setSkills(sanitizedSkills)
   }, [initialData])
 
   const addSkill = () => {
@@ -372,7 +375,7 @@ export default function JobSeekerProfileForm({
               onClick={() => {
                 setResumeProfileSnapshot({
                   ...form.getValues(),
-                  skills: [...skills],
+                  skills: normalizeSkillsInput(skills),
                 })
                 setResumeDialogOpen(true)
               }}
