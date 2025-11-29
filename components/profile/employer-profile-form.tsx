@@ -236,21 +236,22 @@ export default function EmployerProfileForm({ initialData }: EmployerProfileForm
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="foundedYear"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Год основания</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number"
-                          placeholder="2018" 
+                name="foundedYear"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Год основания</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number"
+                        placeholder="2018" 
                           {...field}
+                          value={field.value ?? ''}
                           onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
                 />
                 <FormField
                   control={form.control}

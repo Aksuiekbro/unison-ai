@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import type { Database } from '@/lib/database.types'
 import { revalidatePath } from 'next/cache'
 import { notifyCandidateStatusChange } from '@/lib/notifications'
+import { createClient } from '@/lib/supabase-server'
 
 export type JobStatus = 'draft' | 'published' | 'closed' | 'cancelled'
 export type JobType = 'full_time' | 'part_time' | 'contract' | 'internship'
@@ -89,6 +90,12 @@ export interface CandidateApplicationDetails {
   resumeUrl: string | null
 }
 
+type CreateJobInput = Omit<Job, 'id' | 'created_at' | 'updated_at' | 'posted_at' | 'employer_id' | 'company_id' | 'requirements' | 'responsibilities'> & {
+  company_id?: string | null
+  requirements?: string | string[] | null
+  responsibilities?: string | string[] | null
+}
+
 // Validate user is employer and has access to company
 async function validateEmployerAccess(userId: string, companyId?: string) {
   // Try to read application-owned profile first
@@ -148,10 +155,35 @@ async function validateEmployerAccess(userId: string, companyId?: string) {
   return user
 }
 
-export async function createJob(data: Omit<Job, 'id' | 'created_at' | 'updated_at' | 'posted_at'>, employerId: string) {
+export async function createJob(data: CreateJobInput, employerId?: string) {
   try {
+    let resolvedEmployerId = employerId
+
+    // Allow direct server action usage without manually passing employerId
+    if (!resolvedEmployerId) {
+      const supabase = await createClient()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+      if (authError || !user) {
+        throw new Error('Authentication required')
+      }
+
+      resolvedEmployerId = user.id
+    }
+
+    if (!resolvedEmployerId) {
+      throw new Error('User not found')
+    }
+
+    const normalizedRequirements = Array.isArray(data.requirements)
+      ? data.requirements.join(', ')
+      : data.requirements ?? null
+    const normalizedResponsibilities = Array.isArray(data.responsibilities)
+      ? data.responsibilities.join(', ')
+      : data.responsibilities ?? null
+
     // Validate employer access to company
-    await validateEmployerAccess(employerId, data.company_id)
+    await validateEmployerAccess(resolvedEmployerId, data.company_id)
 
     // Resolve company ownership explicitly to avoid invalid placeholder IDs from clients
     let resolvedCompanyId = data.company_id
@@ -159,7 +191,7 @@ export async function createJob(data: Omit<Job, 'id' | 'created_at' | 'updated_a
       const { data: company, error: companyLookupError } = await supabaseAdmin
         .from('companies')
         .select('id, owner_id')
-        .eq('owner_id', employerId)
+        .eq('owner_id', resolvedEmployerId)
         .order('created_at', { ascending: true })
         .limit(1)
         .maybeSingle()
@@ -180,7 +212,7 @@ export async function createJob(data: Omit<Job, 'id' | 'created_at' | 'updated_a
         .eq('id', resolvedCompanyId)
         .single()
 
-      if (companyFetchError || !company || company.owner_id !== employerId) {
+      if (companyFetchError || !company || company.owner_id !== resolvedEmployerId) {
         throw new Error('Access denied. Invalid company association')
       }
     }
@@ -189,8 +221,10 @@ export async function createJob(data: Omit<Job, 'id' | 'created_at' | 'updated_a
       .from('jobs')
       .insert([{
         ...data,
+        requirements: normalizedRequirements,
+        responsibilities: normalizedResponsibilities,
         company_id: resolvedCompanyId,
-        employer_id: employerId,
+        employer_id: resolvedEmployerId,
         posted_at: data.status === 'published' ? new Date().toISOString() : null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()

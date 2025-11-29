@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 import { normalizeSkillsInput } from '@/lib/utils'
 // Using untyped client to avoid friction with partially generated DB types
 import { 
@@ -415,7 +416,8 @@ export async function updateEmployerProfile(formData: FormData) {
       .eq('id', user.id)
 
     // Also create/update company record; explicitly fetch by owner_id to avoid relying on missing constraints
-    const { data: existingCompany, error: companyFetchError } = await supabase
+    // Use service role for company operations to bypass legacy RLS that referenced dropped profiles table
+    const { data: existingCompany, error: companyFetchError } = await supabaseAdmin
       .from('companies')
       .select('id')
       .eq('owner_id', user.id)
@@ -444,13 +446,13 @@ export async function updateEmployerProfile(formData: FormData) {
 
     let companyError = null
     if (existingCompany?.id) {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('companies')
         .update(companyPayload)
         .eq('id', existingCompany.id)
       companyError = error
     } else {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('companies')
         .insert(companyPayload)
       companyError = error

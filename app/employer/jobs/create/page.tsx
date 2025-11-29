@@ -29,10 +29,7 @@ export default function CreateJob() {
     department: '',
     employment_type: 'full_time' as const,
     experience_level: 'mid' as const,
-    status: 'draft' as JobStatus,
-    // These would normally come from auth context
-    company_id: 'company_1',
-    employer_id: 'usr_employer_1'
+    status: 'draft' as JobStatus
   })
 
   const [skills, setSkills] = useState(["React", "TypeScript", "JavaScript", "Node.js", "GraphQL"])
