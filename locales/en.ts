@@ -207,6 +207,19 @@ export const en: TranslationDictionary = {
       growthDesc: 'Use Profile as a main growth driver for employees. AI analyzes skills, defines goals, and builds progress back into productivity and deal success.',
     },
   },
+  share: {
+    report: {
+      title: 'Productivity assessment (shared)',
+      overall: 'Overall score',
+      roleType: 'Role type',
+      motivation: 'Motivation level',
+      workTitle: 'Work experience',
+      workDates: {
+        present: 'Present',
+      },
+      knowledgeTitle: 'Knowledge',
+    },
+  },
   employer: employerEn,
   jobSeeker: jobSeekerEn,
   components: componentsEn,

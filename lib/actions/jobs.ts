@@ -22,7 +22,7 @@ export interface Job {
   experience_level: ExperienceLevel
   salary_min: number | null
   salary_max: number | null
-  currency: string
+  currency: string | null
   location: string | null
   remote_allowed: boolean
   status: JobStatus
@@ -94,6 +94,7 @@ type CreateJobInput = Omit<Job, 'id' | 'created_at' | 'updated_at' | 'posted_at'
   company_id?: string | null
   requirements?: string | string[] | null
   responsibilities?: string | string[] | null
+  department?: string | null
 }
 
 // Validate user is employer and has access to company
@@ -157,7 +158,21 @@ async function validateEmployerAccess(userId: string, companyId?: string) {
 
 export async function createJob(data: CreateJobInput, employerId?: string) {
   try {
+    const jobType = (data as any).job_type ?? (data as any).employment_type
+    const experienceLevel = data.experience_level
+
     let resolvedEmployerId = employerId
+    const requiredFields: [string, any][] = [
+      ['title', data.title],
+      ['description', data.description],
+      ['job_type', jobType],
+      ['experience_level', experienceLevel],
+    ]
+    for (const [field, value] of requiredFields) {
+      if (!value) {
+        throw new Error(`Missing required field: ${field}`)
+      }
+    }
 
     // Allow direct server action usage without manually passing employerId
     if (!resolvedEmployerId) {
@@ -181,6 +196,7 @@ export async function createJob(data: CreateJobInput, employerId?: string) {
     const normalizedResponsibilities = Array.isArray(data.responsibilities)
       ? data.responsibilities.join(', ')
       : data.responsibilities ?? null
+    const now = new Date().toISOString()
 
     // Validate employer access to company
     await validateEmployerAccess(resolvedEmployerId, data.company_id)
@@ -217,18 +233,30 @@ export async function createJob(data: CreateJobInput, employerId?: string) {
       }
     }
 
+    const jobPayload = {
+      title: data.title,
+      description: data.description,
+      requirements: normalizedRequirements,
+      responsibilities: normalizedResponsibilities,
+      company_id: resolvedCompanyId,
+      employer_id: resolvedEmployerId,
+      job_type: jobType,
+      experience_level: experienceLevel,
+      salary_min: data.salary_min ?? null,
+      salary_max: data.salary_max ?? null,
+      currency: data.currency ?? null,
+      location: data.location ?? null,
+      remote_allowed: data.remote_allowed ?? false,
+      status: data.status ?? 'draft',
+      posted_at: data.status === 'published' ? now : null,
+      expires_at: data.expires_at ?? null,
+      created_at: now,
+      updated_at: now,
+    }
+
     const { data: job, error } = await supabaseAdmin
       .from('jobs')
-      .insert([{
-        ...data,
-        requirements: normalizedRequirements,
-        responsibilities: normalizedResponsibilities,
-        company_id: resolvedCompanyId,
-        employer_id: resolvedEmployerId,
-        posted_at: data.status === 'published' ? new Date().toISOString() : null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }])
+      .insert([jobPayload])
       .select(`
         *,
         companies!jobs_company_id_fkey (

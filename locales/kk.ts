@@ -207,6 +207,19 @@ export const kk: TranslationDictionary = {
       growthDesc: 'Профиль — дамудың драйвері: AI дағдыларды талдап, мақсат қояды және прогресті өнімділікке қайтарады.',
     },
   },
+  share: {
+    report: {
+      title: 'Өнімділік бағасы (ортақ қолжетімділік)',
+      overall: 'Жалпы көрсеткіш',
+      roleType: 'Роль түрі',
+      motivation: 'Мотивация деңгейі',
+      workTitle: 'Жұмыс тәжірибесі',
+      workDates: {
+        present: 'Қазір',
+      },
+      knowledgeTitle: 'Білім',
+    },
+  },
   employer: employerKk,
   jobSeeker: jobSeekerKk,
   components: componentsKk,

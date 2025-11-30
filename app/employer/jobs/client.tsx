@@ -38,7 +38,6 @@ export default function EmployerJobsClient({ userId }: EmployerJobsClientProps) 
   const { jobs, loading, error, changeJobStatus, removeJob, fetchJobs } = useJobs(userId)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<JobStatus | 'all'>('all')
-  const [departmentFilter, setDepartmentFilter] = useState('all-dept')
   const { t, locale } = useI18n()
   const intlLocale = getIntlLocale(locale)
   const dateFormatter = new Intl.DateTimeFormat(intlLocale)
@@ -47,7 +46,6 @@ export default function EmployerJobsClient({ userId }: EmployerJobsClientProps) 
     fetchJobs({
       search: searchQuery || undefined,
       status: statusFilter !== 'all' ? statusFilter : undefined,
-      department: departmentFilter !== 'all-dept' ? departmentFilter : undefined,
     })
   }
 
@@ -94,6 +92,13 @@ export default function EmployerJobsClient({ userId }: EmployerJobsClientProps) 
       cancelled: t('employer.jobStatus.cancelled'),
     }
     return map[status] || t('employer.jobStatus.paused')
+  }
+
+  const jobTypeLabels: Record<string, string> = {
+    full_time: t('employer.jobForm.sections.basic.options.employment.full_time'),
+    part_time: t('employer.jobForm.sections.basic.options.employment.part_time'),
+    contract: t('employer.jobForm.sections.basic.options.employment.contract'),
+    internship: t('employer.jobForm.sections.basic.options.employment.internship'),
   }
 
   if (error) {
@@ -198,18 +203,6 @@ export default function EmployerJobsClient({ userId }: EmployerJobsClientProps) 
                       <SelectItem value="cancelled">{t('employer.jobsList.filters.status.cancelled')}</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder={t('employer.jobsList.filters.department.all')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all-dept">{t('employer.jobsList.filters.department.all')}</SelectItem>
-                      <SelectItem value="development">{t('employer.jobsList.filters.department.development')}</SelectItem>
-                      <SelectItem value="design">{t('employer.jobsList.filters.department.design')}</SelectItem>
-                      <SelectItem value="mobile">{t('employer.jobsList.filters.department.mobile')}</SelectItem>
-                      <SelectItem value="devops">{t('employer.jobsList.filters.department.devops')}</SelectItem>
-                    </SelectContent>
-                  </Select>
                   <Button 
                     className="bg-[#00C49A] hover:bg-[#00A085]"
                     onClick={handleSearch}
@@ -261,7 +254,7 @@ export default function EmployerJobsClient({ userId }: EmployerJobsClientProps) 
                               </Badge>
                             </div>
                             <div className="flex items-center space-x-6 text-sm text-[#333333] mb-3">
-                              <span>{job.department}</span>
+                              <span>{jobTypeLabels[job.job_type] || job.job_type}</span>
                               <span>{job.location}</span>
                               <span>{job.salary_min} - {job.salary_max} ₽</span>
                             <span>

@@ -207,6 +207,19 @@ export const ru: TranslationDictionary = {
       growthDesc: 'Профиль как драйвер развития: AI анализирует навыки, ставит цели и возвращает прогресс в продуктивность и сделки.',
     },
   },
+  share: {
+    report: {
+      title: 'Оценка продуктивности (общий доступ)',
+      overall: 'Общий показатель',
+      roleType: 'Тип роли',
+      motivation: 'Уровень мотивации',
+      workTitle: 'Опыт работы',
+      workDates: {
+        present: 'По наст.',
+      },
+      knowledgeTitle: 'Знания',
+    },
+  },
   employer: employerRu,
   jobSeeker: jobSeekerRu,
   components: componentsRu,

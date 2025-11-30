@@ -1,10 +1,12 @@
 import { notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { createServerTranslator } from '@/lib/i18n/server'
 
 export default async function SharedReportPage({ params }: { params: { token: string } }) {
   const token = params.token
   if (!token) return notFound()
+  const { t } = await createServerTranslator()
 
   const { data: shared } = await supabaseAdmin
     .from('shared_reports')
@@ -42,13 +44,19 @@ export default async function SharedReportPage({ params }: { params: { token: st
       <div className="max-w-6xl mx-auto space-y-6">
         <Card className="shadow-xl border-0">
           <CardHeader>
-            <CardTitle className="text-[#0A2540]">Оценка продуктивности (общий доступ)</CardTitle>
+            <CardTitle className="text-[#0A2540]">{t('share.report.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-[#333333] space-y-2">
-              <div>Общий показатель: <b>{assessment.overall_productivity_score ?? '—'}%</b></div>
-              <div>Тип роли: {assessment.role_type ?? '—'}</div>
-              <div>Уровень мотивации: {assessment.motivation_level ?? '—'}</div>
+              <div>
+                {t('share.report.overall')}: <b>{assessment.overall_productivity_score ?? t('common.data.none')}%</b>
+              </div>
+              <div>
+                {t('share.report.roleType')}: {assessment.role_type ?? t('common.data.none')}
+              </div>
+              <div>
+                {t('share.report.motivation')}: {assessment.motivation_level ?? t('common.data.none')}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -56,13 +64,15 @@ export default async function SharedReportPage({ params }: { params: { token: st
         {!!workExperiences?.length && (
           <Card className="shadow-xl border-0">
             <CardHeader>
-              <CardTitle className="text-[#0A2540]">Опыт работы</CardTitle>
+              <CardTitle className="text-[#0A2540]">{t('share.report.workTitle')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {workExperiences.map((exp: any) => (
                 <div key={exp.id} className="p-3 border rounded-lg">
                   <div className="font-medium">{exp.company_name} — {exp.position}</div>
-                  <div className="text-sm text-gray-600">{exp.start_date} — {exp.end_date || 'По наст.'}</div>
+                  <div className="text-sm text-gray-600">
+                    {exp.start_date} — {exp.end_date || t('share.report.workDates.present')}
+                  </div>
                 </div>
               ))}
             </CardContent>
@@ -72,11 +82,14 @@ export default async function SharedReportPage({ params }: { params: { token: st
         {knowledge && (
           <Card className="shadow-xl border-0">
             <CardHeader>
-              <CardTitle className="text-[#0A2540]">Знания</CardTitle>
+              <CardTitle className="text-[#0A2540]">{t('share.report.knowledgeTitle')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-sm text-[#333333] whitespace-pre-wrap">
-                {knowledge.professional_development || knowledge.recent_learning_activities || knowledge.future_learning_goals || '—'}
+                {knowledge.professional_development ||
+                  knowledge.recent_learning_activities ||
+                  knowledge.future_learning_goals ||
+                  t('common.data.none')}
               </div>
             </CardContent>
           </Card>
@@ -85,5 +98,4 @@ export default async function SharedReportPage({ params }: { params: { token: st
     </div>
   )
 }
-
 

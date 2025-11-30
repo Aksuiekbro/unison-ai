@@ -26,10 +26,10 @@ export default function CreateJob() {
     salary_min: 0,
     salary_max: 0,
     location: '',
-    department: '',
-    employment_type: 'full_time' as const,
+    job_type: 'full_time' as const,
     experience_level: 'mid' as const,
-    status: 'draft' as JobStatus
+    status: 'draft' as JobStatus,
+    remote_allowed: false,
   })
 
   const [skills, setSkills] = useState(["React", "TypeScript", "JavaScript", "Node.js", "GraphQL"])
@@ -127,24 +127,6 @@ export default function CreateJob() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="department">{t('employer.jobForm.sections.basic.fields.department')}</Label>
-                    <Select 
-                      value={formData.department} 
-                      onValueChange={(value) => setFormData({...formData, department: value})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('employer.jobForm.sections.basic.fields.departmentPlaceholder')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="development">{t('employer.jobForm.sections.basic.options.department.development')}</SelectItem>
-                        <SelectItem value="design">{t('employer.jobForm.sections.basic.options.department.design')}</SelectItem>
-                        <SelectItem value="mobile">{t('employer.jobForm.sections.basic.options.department.mobile')}</SelectItem>
-                        <SelectItem value="qa">{t('employer.jobForm.sections.basic.options.department.qa')}</SelectItem>
-                        <SelectItem value="devops">{t('employer.jobForm.sections.basic.options.department.devops')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
                     <Label htmlFor="level">{t('employer.jobForm.sections.basic.fields.level')}</Label>
                     <Select 
                       value={formData.experience_level}
@@ -161,23 +143,11 @@ export default function CreateJob() {
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="location">{t('employer.jobForm.sections.basic.fields.location')}</Label>
-                    <Input 
-                      id="location" 
-                      placeholder={t('employer.jobForm.sections.basic.fields.locationPlaceholder')}
-                      value={formData.location}
-                      onChange={(e) => setFormData({...formData, location: e.target.value})}
-                    />
-                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="employment">{t('employer.jobForm.sections.basic.fields.employment')}</Label>
                     <Select 
-                      value={formData.employment_type}
-                      onValueChange={(value: any) => setFormData({...formData, employment_type: value})}
+                      value={formData.job_type}
+                      onValueChange={(value: any) => setFormData({...formData, job_type: value})}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder={t('employer.jobForm.sections.basic.fields.employmentPlaceholder')} />
@@ -192,9 +162,26 @@ export default function CreateJob() {
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="remote" />
-                  <Label htmlFor="remote">{t('employer.jobForm.sections.basic.fields.remote')}</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="location">{t('employer.jobForm.sections.basic.fields.location')}</Label>
+                    <Input 
+                      id="location" 
+                      placeholder={t('employer.jobForm.sections.basic.fields.locationPlaceholder')}
+                      value={formData.location}
+                      onChange={(e) => setFormData({...formData, location: e.target.value})}
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2 pt-6">
+                    <Checkbox
+                      id="remote"
+                      checked={formData.remote_allowed}
+                      onCheckedChange={(checked) =>
+                        setFormData({ ...formData, remote_allowed: Boolean(checked) })
+                      }
+                    />
+                    <Label htmlFor="remote">{t('employer.jobForm.sections.basic.fields.remote')}</Label>
+                  </div>
                 </div>
               </CardContent>
             </Card>
