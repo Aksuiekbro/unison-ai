@@ -290,9 +290,13 @@ export default function EmployerJobsClient({ userId }: EmployerJobsClientProps) 
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  <Edit className="w-4 h-4 mr-2" />
-                                  {t('employer.jobsList.actions.edit')}
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/employer/jobs/${job.id}/edit`}>
+                                    <span className="flex items-center">
+                                      <Edit className="w-4 h-4 mr-2" />
+                                      {t('employer.jobsList.actions.edit')}
+                                    </span>
+                                  </Link>
                                 </DropdownMenuItem>
                                 {job.status === "published" ? (
                                   <DropdownMenuItem onClick={() => handleStatusChange(job.id, 'cancelled')}>

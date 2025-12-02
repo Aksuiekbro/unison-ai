@@ -97,6 +97,18 @@ type CreateJobInput = Omit<Job, 'id' | 'created_at' | 'updated_at' | 'posted_at'
   department?: string | null
 }
 
+let cachedJobsHasEmployerId: boolean | null = null
+async function jobsTableHasEmployerIdColumn() {
+  if (cachedJobsHasEmployerId !== null) return cachedJobsHasEmployerId
+  const { error } = await supabaseAdmin.from('jobs').select('employer_id').limit(1)
+  if (error && /employer_id/.test(error.message)) {
+    cachedJobsHasEmployerId = false
+    return false
+  }
+  cachedJobsHasEmployerId = true
+  return true
+}
+
 // Validate user is employer and has access to company
 async function validateEmployerAccess(userId: string, companyId?: string) {
   // Try to read application-owned profile first
@@ -158,8 +170,10 @@ async function validateEmployerAccess(userId: string, companyId?: string) {
 
 export async function createJob(data: CreateJobInput, employerId?: string) {
   try {
+    cachedJobsHasEmployerId = null
     const jobType = (data as any).job_type ?? (data as any).employment_type
     const experienceLevel = data.experience_level
+    const hasEmployerIdColumn = await jobsTableHasEmployerIdColumn()
 
     let resolvedEmployerId = employerId
     const requiredFields: [string, any][] = [
@@ -197,6 +211,13 @@ export async function createJob(data: CreateJobInput, employerId?: string) {
       ? data.responsibilities.join(', ')
       : data.responsibilities ?? null
     const now = new Date().toISOString()
+    const normalizedStatus: JobStatus = (() => {
+      const incoming = data.status
+      if (incoming === 'active') return 'published'
+      if (incoming === 'paused') return 'cancelled'
+      if (incoming === 'published' || incoming === 'closed' || incoming === 'cancelled') return incoming
+      return 'draft'
+    })()
 
     // Validate employer access to company
     await validateEmployerAccess(resolvedEmployerId, data.company_id)
@@ -233,13 +254,12 @@ export async function createJob(data: CreateJobInput, employerId?: string) {
       }
     }
 
-    const jobPayload = {
+    const jobPayload: Record<string, any> = {
       title: data.title,
       description: data.description,
       requirements: normalizedRequirements,
       responsibilities: normalizedResponsibilities,
       company_id: resolvedCompanyId,
-      employer_id: resolvedEmployerId,
       job_type: jobType,
       experience_level: experienceLevel,
       salary_min: data.salary_min ?? null,
@@ -247,11 +267,14 @@ export async function createJob(data: CreateJobInput, employerId?: string) {
       currency: data.currency ?? null,
       location: data.location ?? null,
       remote_allowed: data.remote_allowed ?? false,
-      status: data.status ?? 'draft',
-      posted_at: data.status === 'published' ? now : null,
+      status: normalizedStatus,
+      posted_at: normalizedStatus === 'published' ? now : null,
       expires_at: data.expires_at ?? null,
       created_at: now,
       updated_at: now,
+    }
+    if (hasEmployerIdColumn) {
+      jobPayload.employer_id = resolvedEmployerId
     }
 
     const { data: job, error } = await supabaseAdmin
