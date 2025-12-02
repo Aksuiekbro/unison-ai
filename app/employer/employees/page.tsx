@@ -78,35 +78,35 @@ export default async function EmployerEmployeesPage() {
               className="flex items-center px-4 py-3 text-[#333333] hover:bg-gray-100 rounded-lg"
             >
               <LayoutDashboard className="w-5 h-5 mr-3" />
-              Дашборд
+              Dashboard
             </Link>
             <Link
               href="/employer/jobs"
               className="flex items-center px-4 py-3 text-[#333333] hover:bg-gray-100 rounded-lg"
             >
               <Briefcase className="w-5 h-5 mr-3" />
-              Вакансии
+              Jobs
             </Link>
             <Link
               href="/employer/employees"
               className="flex items-center px-4 py-3 text-[#FF7A00] bg-[#FF7A00]/10 rounded-lg"
             >
               <Users className="w-5 h-5 mr-3" />
-              Сотрудники
+              Employees
             </Link>
             <Link
               href="/employer/company"
               className="flex items-center px-4 py-3 text-[#333333] hover:bg-gray-100 rounded-lg"
             >
               <Building2 className="w-5 h-5 mr-3" />
-              Профиль компании
+              Company profile
             </Link>
             <Link
               href="/employer/settings"
               className="flex items-center px-4 py-3 text-[#333333] hover:bg-gray-100 rounded-lg"
             >
               <Settings className="w-5 h-5 mr-3" />
-              Настройки
+              Settings
             </Link>
           </nav>
         </div>
@@ -115,18 +115,18 @@ export default async function EmployerEmployeesPage() {
         <div className="flex-1 p-8">
           <div className="max-w-6xl mx-auto">
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-[#0A2540]">Сотрудники</h1>
-              <p className="text-[#333333] mt-1">Просмотр соискателей на платформе</p>
+              <h1 className="text-3xl font-bold text-[#0A2540]">Employees</h1>
+              <p className="text-[#333333] mt-1">Browse job seekers on the platform</p>
             </div>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#0A2540]">Список</CardTitle>
-                <CardDescription>Показаны последние {employees?.length || 0} соискателей</CardDescription>
+                <CardTitle className="text-[#0A2540]">Recent applicants</CardTitle>
+                <CardDescription>Showing the latest {employees?.length || 0} job seekers</CardDescription>
               </CardHeader>
               <CardContent>
                 {error ? (
-                  <div className="text-red-600">Ошибка загрузки: {error.message}</div>
+                  <div className="text-red-600">Failed to load: {error.message}</div>
                 ) : (
                   <div className="divide-y">
                     {(employees || []).map((e) => {
@@ -137,7 +137,7 @@ export default async function EmployerEmployeesPage() {
                           <div>
                             <div className="font-medium text-[#0A2540]">{(e as any).full_name || (e as any).email}</div>
                             <div className="text-sm text-[#333333]">
-                              {(e as any).current_job_title ? `${(e as any).current_job_title} • ` : ''}{(e as any).location || 'Локация не указана'}
+                              {(e as any).current_job_title ? `${(e as any).current_job_title} • ` : ''}{(e as any).location || 'Location not provided'}
                             </div>
                             {/* Gemini score badges */}
                             <div className="mt-2 flex flex-wrap gap-2">
@@ -165,7 +165,7 @@ export default async function EmployerEmployeesPage() {
                               <div className="text-sm font-semibold text-[#0A2540]">{composite}%</div>
                             ) : null}
                             <div className="text-xs text-[#333333] whitespace-nowrap mt-1">
-                              {new Date((e as any).created_at as any).toLocaleDateString('ru-RU')}
+                              {new Date((e as any).created_at as any).toLocaleDateString('en-US')}
                             </div>
                           </div>
                         </div>
@@ -181,5 +181,4 @@ export default async function EmployerEmployeesPage() {
     </div>
   )
 }
-
 

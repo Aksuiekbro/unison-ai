@@ -91,35 +91,35 @@ export default async function CompanyProfile() {
               className="flex items-center px-4 py-3 text-[#333333] hover:bg-gray-100 rounded-lg"
             >
               <LayoutDashboard className="w-5 h-5 mr-3" />
-              Панель
+              Dashboard
             </Link>
             <Link
               href="/employer/jobs"
               className="flex items-center px-4 py-3 text-[#333333] hover:bg-gray-100 rounded-lg"
             >
               <Briefcase className="w-5 h-5 mr-3" />
-              Вакансии
+              Jobs
             </Link>
             <Link
               href="/employer/employees"
               className="flex items-center px-4 py-3 text-[#333333] hover:bg-gray-100 rounded-lg"
             >
               <Users className="w-5 h-5 mr-3" />
-              Сотрудники
+              Employees
             </Link>
             <Link
               href="/employer/company"
               className="flex items-center px-4 py-3 text-[#FF7A00] bg-[#FF7A00]/10 rounded-lg"
             >
               <Building2 className="w-5 h-5 mr-3" />
-              Профиль компании
+              Company profile
             </Link>
             <Link
               href="/employer/settings"
               className="flex items-center px-4 py-3 text-[#333333] hover:bg-gray-100 rounded-lg"
             >
               <Settings className="w-5 h-5 mr-3" />
-              Настройки
+              Settings
             </Link>
           </nav>
         </div>
