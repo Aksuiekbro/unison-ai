@@ -24,4 +24,4 @@ Follow the `type(scope): summary` pattern from the existing history (e.g., `feat
 Copy `env.example` to `.env.local`, fill Supabase keys, and keep secrets out of Git. Consume shared clients from `lib/` instead of instantiating Supabase directly. Background jobs and agents should document required scopes in their PR for reviewer confirmation.
 
 ## Migration and Database Management
-When you are working with migrations or related with database, you should use the supabase mcp command to get the latest information about the database. You can run the command by running `supabase mcp` in the terminal.
+When you are working with migrations or related with database, you should use the supabase mcp command to get the latest information about the database.

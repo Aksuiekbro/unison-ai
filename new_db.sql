@@ -132,6 +132,13 @@ CREATE TABLE public.jobs (
     salary_min INTEGER,
     salary_max INTEGER,
     currency TEXT DEFAULT 'USD',
+    hide_salary BOOLEAN DEFAULT FALSE,
+    benefits TEXT[] DEFAULT ARRAY[]::text[],
+    open_positions INTEGER DEFAULT 1,
+    auto_close_on_hire BOOLEAN DEFAULT FALSE,
+    ai_matching_enabled BOOLEAN DEFAULT FALSE,
+    ai_notify_matches BOOLEAN DEFAULT FALSE,
+    ai_min_match_score INTEGER DEFAULT 70,
     location TEXT,
     remote_allowed BOOLEAN DEFAULT FALSE,
     required_skills TEXT[], -- Array of required skill names
@@ -144,6 +151,12 @@ CREATE TABLE public.jobs (
     
     CONSTRAINT jobs_salary_range CHECK (
         salary_min IS NULL OR salary_max IS NULL OR salary_min <= salary_max
+    ),
+    CONSTRAINT jobs_open_positions_positive CHECK (
+        open_positions >= 1
+    ),
+    CONSTRAINT jobs_ai_min_match_range CHECK (
+        ai_min_match_score BETWEEN 0 AND 100
     )
 );
 

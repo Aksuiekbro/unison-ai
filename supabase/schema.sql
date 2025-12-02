@@ -87,6 +87,13 @@ CREATE TABLE public.jobs (
     salary_min INTEGER,
     salary_max INTEGER,
     currency TEXT DEFAULT 'USD',
+    hide_salary BOOLEAN DEFAULT FALSE,
+    benefits TEXT[] DEFAULT ARRAY[]::text[],
+    open_positions INTEGER DEFAULT 1,
+    auto_close_on_hire BOOLEAN DEFAULT FALSE,
+    ai_matching_enabled BOOLEAN DEFAULT FALSE,
+    ai_notify_matches BOOLEAN DEFAULT FALSE,
+    ai_min_match_score INTEGER DEFAULT 70,
     location TEXT,
     remote_allowed BOOLEAN DEFAULT FALSE,
     status job_status NOT NULL DEFAULT 'draft',
@@ -94,7 +101,8 @@ CREATE TABLE public.jobs (
     expires_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
+    CONSTRAINT jobs_open_positions_positive CHECK (open_positions >= 1),
+    CONSTRAINT jobs_ai_min_match_range CHECK (ai_min_match_score BETWEEN 0 AND 100),
     CONSTRAINT jobs_employer_is_employer_role CHECK (
         EXISTS (
             SELECT 1 FROM public.users 

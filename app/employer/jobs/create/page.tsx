@@ -23,13 +23,21 @@ export default function CreateJob() {
     title: '',
     description: '',
     requirements: [] as string[],
-    salary_min: 0,
-    salary_max: 0,
+    salary_min: null as number | null,
+    salary_max: null as number | null,
     location: '',
     job_type: 'full_time' as const,
     experience_level: 'mid' as const,
     status: 'draft' as JobStatus,
     remote_allowed: false,
+    currency: 'rub',
+    hide_salary: false,
+    expires_at: '',
+    open_positions: 1,
+    auto_close_on_hire: false,
+    ai_matching_enabled: true,
+    ai_notify_matches: true,
+    ai_min_match_score: 70,
   })
 
   const [skills, setSkills] = useState(["React", "TypeScript", "JavaScript", "Node.js", "GraphQL"])
@@ -45,7 +53,15 @@ export default function CreateJob() {
       const jobData = {
         ...formData,
         requirements: skills,
-        status
+        benefits,
+        status,
+        salary_min: formData.salary_min ?? null,
+        salary_max: formData.salary_max ?? null,
+        open_positions: formData.open_positions || 1,
+        ai_min_match_score: formData.ai_min_match_score ?? null,
+        expires_at: formData.expires_at
+          ? new Date(formData.expires_at).toISOString()
+          : null,
       }
       
       const result = await createJob(jobData)
@@ -203,10 +219,10 @@ export default function CreateJob() {
                       inputMode="numeric"
                       pattern="[0-9]*"
                       placeholder={t('employer.jobForm.sections.salary.placeholders.from')}
-                      value={formData.salary_min || ''}
+                      value={formData.salary_min ?? ''}
                       onChange={(e) => {
-                        const num = parseInt(e.target.value)
-                        const clamped = Number.isNaN(num) ? 0 : Math.max(0, num)
+                        const num = parseInt(e.target.value, 10)
+                        const clamped = Number.isNaN(num) ? null : Math.max(0, num)
                         setFormData({ ...formData, salary_min: clamped })
                       }}
                     />
@@ -221,17 +237,20 @@ export default function CreateJob() {
                       inputMode="numeric"
                       pattern="[0-9]*"
                       placeholder={t('employer.jobForm.sections.salary.placeholders.to')}
-                      value={formData.salary_max || ''}
+                      value={formData.salary_max ?? ''}
                       onChange={(e) => {
-                        const num = parseInt(e.target.value)
-                        const clamped = Number.isNaN(num) ? 0 : Math.max(0, num)
+                        const num = parseInt(e.target.value, 10)
+                        const clamped = Number.isNaN(num) ? null : Math.max(0, num)
                         setFormData({ ...formData, salary_max: clamped })
                       }}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="currency">{t('employer.jobForm.sections.salary.currency')}</Label>
-                    <Select defaultValue="rub">
+                    <Select 
+                      value={formData.currency}
+                      onValueChange={(value) => setFormData({ ...formData, currency: value })}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -244,7 +263,13 @@ export default function CreateJob() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="hideSalary" />
+                  <Checkbox 
+                    id="hideSalary" 
+                    checked={formData.hide_salary}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, hide_salary: Boolean(checked) })
+                    }
+                  />
                   <Label htmlFor="hideSalary">{t('employer.jobForm.sections.salary.hide')}</Label>
                 </div>
               </CardContent>
@@ -379,14 +404,32 @@ export default function CreateJob() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="deadline">{t('employer.jobForm.sidebar.settings.deadline')}</Label>
-                  <Input id="deadline" type="date" />
+                  <Input 
+                    id="deadline" 
+                    type="date" 
+                    value={formData.expires_at}
+                    onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="positions">{t('employer.jobForm.sidebar.settings.positions')}</Label>
-                  <Input id="positions" type="number" defaultValue="1" min="1" />
+                  <Input 
+                    id="positions" 
+                    type="number" 
+                    min="1" 
+                    value={formData.open_positions}
+                    onChange={(e) => {
+                      const num = parseInt(e.target.value, 10)
+                      setFormData({ ...formData, open_positions: Number.isNaN(num) ? 1 : Math.max(1, num) })
+                    }}
+                  />
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="autoClose" />
+                  <Checkbox 
+                    id="autoClose" 
+                    checked={formData.auto_close_on_hire}
+                    onCheckedChange={(checked) => setFormData({ ...formData, auto_close_on_hire: Boolean(checked) })}
+                  />
                   <Label htmlFor="autoClose" className="text-sm">
                     {t('employer.jobForm.sidebar.settings.autoClose')}
                   </Label>
@@ -402,20 +445,43 @@ export default function CreateJob() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="aiMatching" defaultChecked />
+                  <Checkbox 
+                    id="aiMatching" 
+                    checked={formData.ai_matching_enabled}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, ai_matching_enabled: Boolean(checked) })
+                    }
+                  />
                   <Label htmlFor="aiMatching" className="text-sm">
                     {t('employer.jobForm.sidebar.ai.enable')}
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="autoNotify" defaultChecked />
+                  <Checkbox 
+                    id="autoNotify" 
+                    checked={formData.ai_notify_matches}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, ai_notify_matches: Boolean(checked) })
+                    }
+                  />
                   <Label htmlFor="autoNotify" className="text-sm">
                     {t('employer.jobForm.sidebar.ai.notify')}
                   </Label>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="minMatch">{t('employer.jobForm.sidebar.ai.minMatch')}</Label>
-                  <Input id="minMatch" type="number" defaultValue="70" min="0" max="100" />
+                  <Input 
+                    id="minMatch" 
+                    type="number" 
+                    min="0" 
+                    max="100" 
+                    value={formData.ai_min_match_score ?? ''}
+                    onChange={(e) => {
+                      const num = parseInt(e.target.value, 10)
+                      const clamped = Number.isNaN(num) ? null : Math.min(100, Math.max(0, num))
+                      setFormData({ ...formData, ai_min_match_score: clamped })
+                    }}
+                  />
                 </div>
               </CardContent>
             </Card>

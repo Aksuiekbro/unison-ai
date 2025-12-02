@@ -265,7 +265,14 @@ export interface Database {
           experience_level: 'entry' | 'junior' | 'mid' | 'senior' | 'executive'
           salary_min: number | null
           salary_max: number | null
-          currency: string
+          currency: string | null
+          hide_salary: boolean | null
+          benefits: string[] | null
+          open_positions: number | null
+          auto_close_on_hire: boolean | null
+          ai_matching_enabled: boolean | null
+          ai_notify_matches: boolean | null
+          ai_min_match_score: number | null
           location: string | null
           remote_allowed: boolean
           status: 'draft' | 'published' | 'closed' | 'cancelled'
@@ -285,7 +292,14 @@ export interface Database {
           experience_level?: 'entry' | 'junior' | 'mid' | 'senior' | 'executive'
           salary_min?: number | null
           salary_max?: number | null
-          currency?: string
+          currency?: string | null
+          hide_salary?: boolean | null
+          benefits?: string[] | null
+          open_positions?: number | null
+          auto_close_on_hire?: boolean | null
+          ai_matching_enabled?: boolean | null
+          ai_notify_matches?: boolean | null
+          ai_min_match_score?: number | null
           location?: string | null
           remote_allowed?: boolean
           status?: 'draft' | 'published' | 'closed' | 'cancelled'
@@ -305,7 +319,14 @@ export interface Database {
           experience_level?: 'entry' | 'junior' | 'mid' | 'senior' | 'executive'
           salary_min?: number | null
           salary_max?: number | null
-          currency?: string
+          currency?: string | null
+          hide_salary?: boolean | null
+          benefits?: string[] | null
+          open_positions?: number | null
+          auto_close_on_hire?: boolean | null
+          ai_matching_enabled?: boolean | null
+          ai_notify_matches?: boolean | null
+          ai_min_match_score?: number | null
           location?: string | null
           remote_allowed?: boolean
           status?: 'draft' | 'published' | 'closed' | 'cancelled'

@@ -39,6 +39,13 @@ interface JobData {
   salary_min: number | null
   salary_max: number | null
   currency: string | null
+  hide_salary?: boolean | null
+  benefits?: string[] | null
+  open_positions?: number | null
+  auto_close_on_hire?: boolean | null
+  ai_matching_enabled?: boolean | null
+  ai_notify_matches?: boolean | null
+  ai_min_match_score?: number | null
   location: string | null
   remote_allowed: boolean
   status: JobStatus
@@ -74,8 +81,8 @@ export function EditJobForm({ job, employerId }: EditJobFormProps) {
     title: job.title,
     description: job.description,
     requirements: job.requirements,
-    salary_min: job.salary_min || 0,
-    salary_max: job.salary_max || 0,
+    salary_min: job.salary_min ?? null,
+    salary_max: job.salary_max ?? null,
     location: job.location || '',
     job_type: job.job_type,
     experience_level: job.experience_level,
@@ -83,10 +90,16 @@ export function EditJobForm({ job, employerId }: EditJobFormProps) {
     remote_allowed: job.remote_allowed,
     currency: job.currency || 'rub',
     expires_at: job.expires_at,
+    hide_salary: Boolean(job.hide_salary),
+    open_positions: job.open_positions || 1,
+    auto_close_on_hire: Boolean(job.auto_close_on_hire),
+    ai_matching_enabled: job.ai_matching_enabled ?? true,
+    ai_notify_matches: job.ai_notify_matches ?? true,
+    ai_min_match_score: typeof job.ai_min_match_score === 'number' ? job.ai_min_match_score : 70,
   })
 
   const [skills, setSkills] = useState<string[]>(parseSkillsFromRequirements(job.requirements))
-  const [benefits, setBenefits] = useState<string[]>([])
+  const [benefits, setBenefits] = useState<string[]>(job.benefits || [])
   const [newSkill, setNewSkill] = useState('')
   const [newBenefit, setNewBenefit] = useState('')
   const { t } = useI18n()
@@ -99,14 +112,24 @@ export function EditJobForm({ job, employerId }: EditJobFormProps) {
         title: formData.title,
         description: formData.description,
         requirements: skills.join(', '),
-        salary_min: formData.salary_min || null,
-        salary_max: formData.salary_max || null,
+        salary_min: formData.salary_min ?? null,
+        salary_max: formData.salary_max ?? null,
         location: formData.location || null,
         job_type: formData.job_type,
         experience_level: formData.experience_level,
         remote_allowed: formData.remote_allowed,
         currency: formData.currency,
         status,
+        benefits,
+        hide_salary: formData.hide_salary,
+        open_positions: formData.open_positions || 1,
+        auto_close_on_hire: formData.auto_close_on_hire,
+        ai_matching_enabled: formData.ai_matching_enabled,
+        ai_notify_matches: formData.ai_notify_matches,
+        ai_min_match_score: formData.ai_min_match_score ?? null,
+        expires_at: formData.expires_at
+          ? new Date(formData.expires_at).toISOString()
+          : null,
       }
       
       const result = await updateJob(job.id, jobData, employerId)
@@ -317,10 +340,10 @@ export function EditJobForm({ job, employerId }: EditJobFormProps) {
                       inputMode="numeric"
                       pattern="[0-9]*"
                       placeholder={t('employer.jobForm.sections.salary.placeholders.from')}
-                      value={formData.salary_min || ''}
+                      value={formData.salary_min ?? ''}
                       onChange={(e) => {
-                        const num = parseInt(e.target.value)
-                        const clamped = Number.isNaN(num) ? 0 : Math.max(0, num)
+                        const num = parseInt(e.target.value, 10)
+                        const clamped = Number.isNaN(num) ? null : Math.max(0, num)
                         setFormData({ ...formData, salary_min: clamped })
                       }}
                     />
@@ -335,10 +358,10 @@ export function EditJobForm({ job, employerId }: EditJobFormProps) {
                       inputMode="numeric"
                       pattern="[0-9]*"
                       placeholder={t('employer.jobForm.sections.salary.placeholders.to')}
-                      value={formData.salary_max || ''}
+                      value={formData.salary_max ?? ''}
                       onChange={(e) => {
-                        const num = parseInt(e.target.value)
-                        const clamped = Number.isNaN(num) ? 0 : Math.max(0, num)
+                        const num = parseInt(e.target.value, 10)
+                        const clamped = Number.isNaN(num) ? null : Math.max(0, num)
                         setFormData({ ...formData, salary_max: clamped })
                       }}
                     />
@@ -361,7 +384,13 @@ export function EditJobForm({ job, employerId }: EditJobFormProps) {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="hideSalary" />
+                  <Checkbox 
+                    id="hideSalary" 
+                    checked={formData.hide_salary}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, hide_salary: Boolean(checked) })
+                    }
+                  />
                   <Label htmlFor="hideSalary">{t('employer.jobForm.sections.salary.hide')}</Label>
                 </div>
               </CardContent>
@@ -505,10 +534,25 @@ export function EditJobForm({ job, employerId }: EditJobFormProps) {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="positions">{t('employer.jobForm.sidebar.settings.positions')}</Label>
-                  <Input id="positions" type="number" defaultValue="1" min="1" />
+                  <Input 
+                    id="positions" 
+                    type="number" 
+                    min="1" 
+                    value={formData.open_positions}
+                    onChange={(e) => {
+                      const num = parseInt(e.target.value, 10)
+                      setFormData({ ...formData, open_positions: Number.isNaN(num) ? 1 : Math.max(1, num) })
+                    }}
+                  />
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="autoClose" />
+                  <Checkbox 
+                    id="autoClose" 
+                    checked={formData.auto_close_on_hire}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, auto_close_on_hire: Boolean(checked) })
+                    }
+                  />
                   <Label htmlFor="autoClose" className="text-sm">
                     {t('employer.jobForm.sidebar.settings.autoClose')}
                   </Label>
@@ -524,20 +568,43 @@ export function EditJobForm({ job, employerId }: EditJobFormProps) {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="aiMatching" defaultChecked />
+                  <Checkbox 
+                    id="aiMatching" 
+                    checked={formData.ai_matching_enabled}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, ai_matching_enabled: Boolean(checked) })
+                    }
+                  />
                   <Label htmlFor="aiMatching" className="text-sm">
                     {t('employer.jobForm.sidebar.ai.enable')}
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="autoNotify" defaultChecked />
+                  <Checkbox 
+                    id="autoNotify" 
+                    checked={formData.ai_notify_matches}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, ai_notify_matches: Boolean(checked) })
+                    }
+                  />
                   <Label htmlFor="autoNotify" className="text-sm">
                     {t('employer.jobForm.sidebar.ai.notify')}
                   </Label>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="minMatch">{t('employer.jobForm.sidebar.ai.minMatch')}</Label>
-                  <Input id="minMatch" type="number" defaultValue="70" min="0" max="100" />
+                  <Input 
+                    id="minMatch" 
+                    type="number" 
+                    min="0" 
+                    max="100" 
+                    value={formData.ai_min_match_score ?? ''}
+                    onChange={(e) => {
+                      const num = parseInt(e.target.value, 10)
+                      const clamped = Number.isNaN(num) ? null : Math.min(100, Math.max(0, num))
+                      setFormData({ ...formData, ai_min_match_score: clamped })
+                    }}
+                  />
                 </div>
               </CardContent>
             </Card>

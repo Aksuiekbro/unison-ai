@@ -23,6 +23,13 @@ export interface Job {
   salary_min: number | null
   salary_max: number | null
   currency: string | null
+  hide_salary?: boolean | null
+  benefits?: string[] | null
+  open_positions?: number | null
+  auto_close_on_hire?: boolean | null
+  ai_matching_enabled?: boolean | null
+  ai_notify_matches?: boolean | null
+  ai_min_match_score?: number | null
   location: string | null
   remote_allowed: boolean
   status: JobStatus
@@ -210,6 +217,33 @@ export async function createJob(data: CreateJobInput, employerId?: string) {
     const normalizedResponsibilities = Array.isArray(data.responsibilities)
       ? data.responsibilities.join(', ')
       : data.responsibilities ?? null
+    const normalizeBool = (value: any) => {
+      if (typeof value === 'string') {
+        const normalized = value.toLowerCase()
+        return normalized === 'true' || normalized === '1' || normalized === 'on'
+      }
+      return Boolean(value)
+    }
+    const normalizedBenefits = Array.isArray((data as any).benefits)
+      ? (data as any).benefits.filter(Boolean)
+      : (data as any).benefits ?? []
+
+    const rawMinMatch = (data as any).ai_min_match_score
+    let normalizedMinMatch: number | null = null
+    if (typeof rawMinMatch === 'number') {
+      normalizedMinMatch = Math.min(100, Math.max(0, rawMinMatch))
+    } else if (typeof rawMinMatch === 'string' && rawMinMatch.trim() !== '') {
+      const parsed = parseInt(rawMinMatch, 10)
+      normalizedMinMatch = Number.isNaN(parsed) ? null : Math.min(100, Math.max(0, parsed))
+    }
+
+    const rawOpenPositions = (data as any).open_positions
+    const normalizedOpenPositions =
+      typeof rawOpenPositions === 'number' && rawOpenPositions > 0
+        ? rawOpenPositions
+        : typeof rawOpenPositions === 'string'
+          ? Math.max(1, parseInt(rawOpenPositions, 10) || 1)
+          : 1
     const now = new Date().toISOString()
     const normalizedStatus: JobStatus = (() => {
       const incoming = data.status
@@ -265,6 +299,13 @@ export async function createJob(data: CreateJobInput, employerId?: string) {
       salary_min: data.salary_min ?? null,
       salary_max: data.salary_max ?? null,
       currency: data.currency ?? null,
+      hide_salary: normalizeBool((data as any).hide_salary),
+      benefits: normalizedBenefits,
+      open_positions: normalizedOpenPositions,
+      auto_close_on_hire: normalizeBool((data as any).auto_close_on_hire),
+      ai_matching_enabled: normalizeBool((data as any).ai_matching_enabled),
+      ai_notify_matches: normalizeBool((data as any).ai_notify_matches),
+      ai_min_match_score: normalizedMinMatch,
       location: data.location ?? null,
       remote_allowed: data.remote_allowed ?? false,
       status: normalizedStatus,
@@ -306,6 +347,14 @@ export async function createJob(data: CreateJobInput, employerId?: string) {
 
 export async function updateJob(jobId: string, updates: Partial<Omit<Job, 'id' | 'created_at' | 'updated_at'>>, employerId: string) {
   try {
+    const normalizeBool = (value: any) => {
+      if (typeof value === 'string') {
+        const normalized = value.toLowerCase()
+        return normalized === 'true' || normalized === '1' || normalized === 'on'
+      }
+      return Boolean(value)
+    }
+
     // First get the job to validate ownership
     const { data: existingJob, error: fetchError } = await supabaseAdmin
       .from('jobs')
@@ -331,7 +380,45 @@ export async function updateJob(jobId: string, updates: Partial<Omit<Job, 'id' |
     }
 
     // Set posted_at when status changes to published
-    const updatedData = { ...updates }
+    const updatedData: Record<string, any> = { ...updates }
+    if ('benefits' in updates) {
+      updatedData.benefits = Array.isArray(updates.benefits)
+        ? updates.benefits.filter(Boolean)
+        : updates.benefits ?? []
+    }
+    if ('ai_min_match_score' in updates) {
+      const rawMinMatch = (updates as any).ai_min_match_score
+      if (typeof rawMinMatch === 'number') {
+        updatedData.ai_min_match_score = Math.min(100, Math.max(0, rawMinMatch))
+      } else if (typeof rawMinMatch === 'string' && rawMinMatch.trim() !== '') {
+        const parsed = parseInt(rawMinMatch, 10)
+        updatedData.ai_min_match_score = Number.isNaN(parsed) ? null : Math.min(100, Math.max(0, parsed))
+      } else {
+        updatedData.ai_min_match_score = null
+      }
+    }
+    if ('open_positions' in updates) {
+      const rawOpenPositions = (updates as any).open_positions
+      if (typeof rawOpenPositions === 'number') {
+        updatedData.open_positions = rawOpenPositions > 0 ? rawOpenPositions : 1
+      } else if (typeof rawOpenPositions === 'string') {
+        const parsed = parseInt(rawOpenPositions, 10)
+        updatedData.open_positions = Number.isNaN(parsed) ? 1 : Math.max(1, parsed)
+      }
+    }
+    if ('hide_salary' in updates) {
+      updatedData.hide_salary = normalizeBool(updates.hide_salary)
+    }
+    if ('auto_close_on_hire' in updates) {
+      updatedData.auto_close_on_hire = normalizeBool(updates.auto_close_on_hire)
+    }
+    if ('ai_matching_enabled' in updates) {
+      updatedData.ai_matching_enabled = normalizeBool(updates.ai_matching_enabled)
+    }
+    if ('ai_notify_matches' in updates) {
+      updatedData.ai_notify_matches = normalizeBool(updates.ai_notify_matches)
+    }
+
     if (updates.status === 'published' && !updatedData.posted_at) {
       updatedData.posted_at = new Date().toISOString()
     }
