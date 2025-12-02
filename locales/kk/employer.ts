@@ -274,5 +274,42 @@ export const employerKk: TranslationDictionary = {
       },
     },
   },
+  editJobForm: {
+    title: 'Вакансияны өңдеу',
+    subtitle: 'Вакансия мәліметтерін жаңартыңыз',
+    viewCandidates: 'Кандидаттар',
+    toasts: {
+      updated: 'Вакансия сәтті жаңартылды',
+      error: 'Вакансияны жаңарту мүмкін болмады',
+      deleted: 'Вакансия сәтті жойылды',
+      deleteError: 'Вакансияны жою мүмкін болмады',
+    },
+    actions: {
+      saveChanges: 'Өзгерістерді сақтау',
+      savingChanges: 'Сақтау...',
+    },
+    status: {
+      draft: 'Жоба',
+      published: 'Жарияланған',
+      closed: 'Жабық',
+      cancelled: 'Бас тартылған',
+    },
+    jobInfo: {
+      title: 'Вакансия туралы',
+      created: 'Құрылды',
+      updated: 'Жаңартылды',
+      published: 'Жарияланды',
+      company: 'Компания',
+    },
+    dangerZone: {
+      title: 'Қауіпті аймақ',
+      delete: 'Вакансияны жою',
+      deleting: 'Жойылуда...',
+      confirmTitle: 'Бұл вакансияны жою керек пе?',
+      confirmDescription: 'Бұл әрекетті болдырмау мүмкін емес. Вакансия мен барлық байланысты өтініштер біржола жойылады.',
+      cancel: 'Бас тарту',
+      confirmDelete: 'Иә, жою',
+    },
+  },
 }
 

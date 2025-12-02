@@ -274,5 +274,42 @@ export const employerRu: TranslationDictionary = {
       },
     },
   },
+  editJobForm: {
+    title: 'Редактировать вакансию',
+    subtitle: 'Обновите детали вакансии',
+    viewCandidates: 'Кандидаты',
+    toasts: {
+      updated: 'Вакансия успешно обновлена',
+      error: 'Не удалось обновить вакансию',
+      deleted: 'Вакансия успешно удалена',
+      deleteError: 'Не удалось удалить вакансию',
+    },
+    actions: {
+      saveChanges: 'Сохранить изменения',
+      savingChanges: 'Сохранение...',
+    },
+    status: {
+      draft: 'Черновик',
+      published: 'Опубликовано',
+      closed: 'Закрыто',
+      cancelled: 'Отменено',
+    },
+    jobInfo: {
+      title: 'Информация о вакансии',
+      created: 'Создано',
+      updated: 'Обновлено',
+      published: 'Опубликовано',
+      company: 'Компания',
+    },
+    dangerZone: {
+      title: 'Опасная зона',
+      delete: 'Удалить вакансию',
+      deleting: 'Удаление...',
+      confirmTitle: 'Удалить эту вакансию?',
+      confirmDescription: 'Это действие нельзя отменить. Вакансия и все связанные отклики будут удалены безвозвратно.',
+      cancel: 'Отмена',
+      confirmDelete: 'Да, удалить',
+    },
+  },
 }
 

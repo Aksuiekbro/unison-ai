@@ -274,5 +274,42 @@ export const employerEn: TranslationDictionary = {
       },
     },
   },
+  editJobForm: {
+    title: 'Edit job',
+    subtitle: 'Update the job details',
+    viewCandidates: 'View candidates',
+    toasts: {
+      updated: 'Job updated successfully',
+      error: 'Failed to update job',
+      deleted: 'Job deleted successfully',
+      deleteError: 'Failed to delete job',
+    },
+    actions: {
+      saveChanges: 'Save changes',
+      savingChanges: 'Saving...',
+    },
+    status: {
+      draft: 'Draft',
+      published: 'Published',
+      closed: 'Closed',
+      cancelled: 'Cancelled',
+    },
+    jobInfo: {
+      title: 'Job information',
+      created: 'Created',
+      updated: 'Last updated',
+      published: 'Published',
+      company: 'Company',
+    },
+    dangerZone: {
+      title: 'Danger zone',
+      delete: 'Delete job',
+      deleting: 'Deleting...',
+      confirmTitle: 'Delete this job?',
+      confirmDescription: 'This action cannot be undone. This will permanently delete the job posting and all associated applications.',
+      cancel: 'Cancel',
+      confirmDelete: 'Yes, delete job',
+    },
+  },
 }
 
