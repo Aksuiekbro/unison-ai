@@ -1,15 +1,14 @@
 "use client";
-import { useMemo, useRef, useState } from "react"
+import { useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, PlayCircle } from "lucide-react"
 import Image from "next/image"
 import { motion } from "framer-motion"
 import { Typewriter } from "@/components/ui/typewriter"
 import { useI18n } from "@/components/i18n/I18nProvider"
+import Link from "next/link"
 
 export function Hero() {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const [isPlaying, setIsPlaying] = useState(false)
   const { t } = useI18n()
   const phrases = useMemo(
     () => [
@@ -22,15 +21,14 @@ export function Hero() {
     [t]
   )
 
-  const handlePlayPause = () => {
-    const video = videoRef.current
-    if (!video) return
-    if (video.paused) {
-      video.play()
-      setIsPlaying(true)
-    } else {
-      video.pause()
-      setIsPlaying(false)
+  const scrollToVideo = () => {
+    const videoElement = document.querySelector('video')
+    if (videoElement) {
+      videoElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      // Auto-play the video after scrolling
+      setTimeout(() => {
+        videoElement.play()
+      }, 500)
     }
   }
 
@@ -59,10 +57,18 @@ export function Hero() {
             {t("landing.hero.subtitle")}
           </p>
           <div className="mt-10 flex justify-center gap-6">
-            <Button size="lg" className="text-xl px-8 py-4">
-              {t("landing.hero.ctaPrimary")} <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <Button size="lg" variant="outline" className="text-xl px-8 py-4">
+            <Link href="/auth/signup">
+              <Button size="lg" className="text-xl px-8 py-4">
+                {t("landing.hero.ctaPrimary")} <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+            <Button 
+              size="lg" 
+              variant="outline" 
+              className="text-xl px-8 py-4"
+              onClick={scrollToVideo}
+            >
+              <PlayCircle className="mr-2 h-5 w-5" />
               {t("landing.hero.ctaSecondary")}
             </Button>
           </div>
