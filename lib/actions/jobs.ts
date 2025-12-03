@@ -104,6 +104,45 @@ type CreateJobInput = Omit<Job, 'id' | 'created_at' | 'updated_at' | 'posted_at'
   department?: string | null
 }
 
+const normalizeJobStatusValue = (status?: any): JobStatus => {
+  if (!status) return 'draft'
+  const normalized = typeof status === 'string' ? status.toLowerCase() : status
+  if (normalized === 'active' || normalized === 'published') return 'published'
+  if (normalized === 'paused' || normalized === 'cancelled' || normalized === 'canceled') return 'cancelled'
+  if (normalized === 'closed') return 'closed'
+  if (normalized === 'draft') return 'draft'
+  return 'draft'
+}
+
+const normalizeTextList = (value: any): string | null => {
+  if (Array.isArray(value)) {
+    const cleaned = value
+      .map((v) => (typeof v === 'string' ? v.trim() : ''))
+      .filter(Boolean)
+    return cleaned.length ? cleaned.join(', ') : null
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    return trimmed.length ? trimmed : null
+  }
+  return null
+}
+
+const normalizeNumberField = (value: any): number | null => {
+  if (typeof value === 'number') return Number.isFinite(value) ? Math.max(0, value) : null
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = parseInt(value, 10)
+    return Number.isNaN(parsed) ? null : Math.max(0, parsed)
+  }
+  return null
+}
+
+const normalizeDateValue = (value: any): string | null => {
+  if (!value) return null
+  const date = value instanceof Date ? value : new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date.toISOString()
+}
+
 let cachedJobsHasEmployerId: boolean | null = null
 async function jobsTableHasEmployerIdColumn() {
   if (cachedJobsHasEmployerId !== null) return cachedJobsHasEmployerId
@@ -211,12 +250,8 @@ export async function createJob(data: CreateJobInput, employerId?: string) {
       throw new Error('User not found')
     }
 
-    const normalizedRequirements = Array.isArray(data.requirements)
-      ? data.requirements.join(', ')
-      : data.requirements ?? null
-    const normalizedResponsibilities = Array.isArray(data.responsibilities)
-      ? data.responsibilities.join(', ')
-      : data.responsibilities ?? null
+    const normalizedRequirements = normalizeTextList(data.requirements)
+    const normalizedResponsibilities = normalizeTextList(data.responsibilities)
     const normalizeBool = (value: any) => {
       if (typeof value === 'string') {
         const normalized = value.toLowerCase()
@@ -245,13 +280,16 @@ export async function createJob(data: CreateJobInput, employerId?: string) {
           ? Math.max(1, parseInt(rawOpenPositions, 10) || 1)
           : 1
     const now = new Date().toISOString()
-    const normalizedStatus: JobStatus = (() => {
-      const incoming = data.status
-      if (incoming === 'active') return 'published'
-      if (incoming === 'paused') return 'cancelled'
-      if (incoming === 'published' || incoming === 'closed' || incoming === 'cancelled') return incoming
-      return 'draft'
-    })()
+    const normalizedStatus: JobStatus = normalizeJobStatusValue(data.status)
+    const normalizedSalaryMin = normalizeNumberField((data as any).salary_min)
+    const normalizedSalaryMax = normalizeNumberField((data as any).salary_max)
+    const coercedSalaryMax =
+      typeof normalizedSalaryMin === 'number' &&
+      typeof normalizedSalaryMax === 'number' &&
+      normalizedSalaryMax < normalizedSalaryMin
+        ? normalizedSalaryMin
+        : normalizedSalaryMax
+    const normalizedExpiresAt = normalizeDateValue((data as any).expires_at)
 
     // Validate employer access to company
     await validateEmployerAccess(resolvedEmployerId, data.company_id)
@@ -296,9 +334,11 @@ export async function createJob(data: CreateJobInput, employerId?: string) {
       company_id: resolvedCompanyId,
       job_type: jobType,
       experience_level: experienceLevel,
-      salary_min: data.salary_min ?? null,
-      salary_max: data.salary_max ?? null,
-      currency: data.currency ?? null,
+      salary_min: normalizedSalaryMin,
+      salary_max: coercedSalaryMax,
+      currency: typeof (data as any).currency === 'string'
+        ? (data as any).currency.trim() || null
+        : data.currency ?? null,
       hide_salary: normalizeBool((data as any).hide_salary),
       benefits: normalizedBenefits,
       open_positions: normalizedOpenPositions,
@@ -307,10 +347,10 @@ export async function createJob(data: CreateJobInput, employerId?: string) {
       ai_notify_matches: normalizeBool((data as any).ai_notify_matches),
       ai_min_match_score: normalizedMinMatch,
       location: data.location ?? null,
-      remote_allowed: data.remote_allowed ?? false,
+      remote_allowed: normalizeBool((data as any).remote_allowed),
       status: normalizedStatus,
       posted_at: normalizedStatus === 'published' ? now : null,
-      expires_at: data.expires_at ?? null,
+      expires_at: normalizedExpiresAt,
       created_at: now,
       updated_at: now,
     }
@@ -379,12 +419,35 @@ export async function updateJob(jobId: string, updates: Partial<Omit<Job, 'id' |
       throw new Error('Access denied. You can only update jobs for your company')
     }
 
-    // Set posted_at when status changes to published
+    // Normalize incoming data to align with UI payloads
     const updatedData: Record<string, any> = { ...updates }
+    const nextStatus = 'status' in updates ? normalizeJobStatusValue((updates as any).status) : undefined
+    if (nextStatus) {
+      updatedData.status = nextStatus
+    }
+    if ('requirements' in updates) {
+      updatedData.requirements = normalizeTextList((updates as any).requirements)
+    }
+    if ('responsibilities' in updates) {
+      updatedData.responsibilities = normalizeTextList((updates as any).responsibilities)
+    }
     if ('benefits' in updates) {
       updatedData.benefits = Array.isArray(updates.benefits)
         ? updates.benefits.filter(Boolean)
         : updates.benefits ?? []
+    }
+    if ('salary_min' in updates) {
+      updatedData.salary_min = normalizeNumberField((updates as any).salary_min)
+    }
+    if ('salary_max' in updates) {
+      updatedData.salary_max = normalizeNumberField((updates as any).salary_max)
+    }
+    if (
+      typeof updatedData.salary_min === 'number' &&
+      typeof updatedData.salary_max === 'number' &&
+      updatedData.salary_min > updatedData.salary_max
+    ) {
+      updatedData.salary_max = updatedData.salary_min
     }
     if ('ai_min_match_score' in updates) {
       const rawMinMatch = (updates as any).ai_min_match_score
@@ -418,8 +481,17 @@ export async function updateJob(jobId: string, updates: Partial<Omit<Job, 'id' |
     if ('ai_notify_matches' in updates) {
       updatedData.ai_notify_matches = normalizeBool(updates.ai_notify_matches)
     }
+    if ('remote_allowed' in updates) {
+      updatedData.remote_allowed = normalizeBool((updates as any).remote_allowed)
+    }
+    if ('currency' in updates && typeof updates.currency === 'string') {
+      updatedData.currency = updates.currency.trim() || null
+    }
+    if ('expires_at' in updates) {
+      updatedData.expires_at = normalizeDateValue((updates as any).expires_at)
+    }
 
-    if (updates.status === 'published' && !updatedData.posted_at) {
+    if (nextStatus === 'published' && !updatedData.posted_at) {
       updatedData.posted_at = new Date().toISOString()
     }
 
@@ -540,7 +612,7 @@ export async function getJobs(employerId: string, filters?: {
 
     // Apply filters
     if (filters?.status) {
-      query = query.eq('status', filters.status)
+      query = query.eq('status', normalizeJobStatusValue(filters.status))
     }
 
     if (filters?.job_type) {
