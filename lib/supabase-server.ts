@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
+import { cache } from 'react'
 import type { Database } from './types/database'
 
 export async function createClient() {
@@ -35,3 +36,50 @@ export async function createClient() {
     }
   )
 }
+
+/**
+ * Get user ID from middleware headers - FAST (no DB call)
+ * Returns null if not authenticated or headers not available
+ */
+export const getUserIdFromMiddleware = cache(async () => {
+  try {
+    const headersList = await headers()
+    const userId = headersList.get('x-user-id')
+    const userRole = headersList.get('x-user-role')
+    return { userId, userRole }
+  } catch {
+    return { userId: null, userRole: null }
+  }
+})
+
+/**
+ * Request-memoized user getter. 
+ * Call this from multiple server components in the same request - 
+ * only ONE database round-trip will be made.
+ */
+export const getUser = cache(async () => {
+  const supabase = await createClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
+  return { user, error }
+})
+
+/**
+ * Request-memoized user data getter (role, assessment status, etc.)
+ * Combines auth + user table data in a single cached call.
+ */
+export const getUserWithProfile = cache(async () => {
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  
+  if (authError || !user) {
+    return { user: null, profile: null, error: authError }
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from('users')
+    .select('role, full_name, email, personality_assessment_completed, productivity_assessment_completed')
+    .eq('id', user.id)
+    .single()
+
+  return { user, profile, error: profileError }
+})

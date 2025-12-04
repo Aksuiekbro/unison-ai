@@ -1,7 +1,6 @@
 "use server"
 
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createClient, getUser, getUserIdFromMiddleware } from '@/lib/supabase-server'
 import type { Database } from '@/lib/database.types'
 
 // Types
@@ -30,38 +29,8 @@ interface SavedJob {
 
 // Saved jobs functions
 export async function saveJob(jobId: string) {
-  const cookieStore = await cookies()
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          try {
-            cookieStore.set({ name, value, ...options })
-          } catch (error) {
-            // The `set` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-          }
-        },
-        remove(name: string, options: any) {
-          try {
-            cookieStore.set({ name, value: '', ...options })
-          } catch (error) {
-            // The `delete` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-          }
-        },
-      },
-    }
-  )
-  
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  // Use cached auth helper
+  const { user, error: authError } = await getUser()
   
   if (authError || !user) {
     return {
@@ -69,6 +38,8 @@ export async function saveJob(jobId: string) {
       message: "Authentication required.",
     }
   }
+
+  const supabase = await createClient()
 
   // Get user role
   const { data: userData, error: userError } = await supabase
@@ -146,38 +117,8 @@ export async function saveJob(jobId: string) {
 }
 
 export async function unsaveJob(jobId: string) {
-  const cookieStore = await cookies()
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          try {
-            cookieStore.set({ name, value, ...options })
-          } catch (error) {
-            // The `set` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-          }
-        },
-        remove(name: string, options: any) {
-          try {
-            cookieStore.set({ name, value: '', ...options })
-          } catch (error) {
-            // The `delete` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-          }
-        },
-      },
-    }
-  )
-  
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  // Use cached auth helper
+  const { user, error: authError } = await getUser()
   
   if (authError || !user) {
     return {
@@ -185,6 +126,8 @@ export async function unsaveJob(jobId: string) {
       message: "Authentication required.",
     }
   }
+
+  const supabase = await createClient()
 
   // Get user role
   const { data: userData, error: userError } = await supabase
@@ -228,48 +171,16 @@ export async function unsaveJob(jobId: string) {
 
 export async function getSavedJobs(candidateId?: string): Promise<SavedJob[]> {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          try {
-            cookieStore.set({ name, value, ...options })
-          } catch (error) {
-            // The `set` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-          }
-        },
-        remove(name: string, options: any) {
-          try {
-            cookieStore.set({ name, value: '', ...options })
-          } catch (error) {
-            // The `delete` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-          }
-        },
-      },
-    }
-  )
+    // Use middleware header for fast user ID lookup
+    const { userId } = await getUserIdFromMiddleware()
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      return []
-    }
-
-    const targetCandidateId = candidateId || user.id
+    const targetCandidateId = candidateId || userId
 
     if (!targetCandidateId) {
       return []
     }
+
+    const supabase = await createClient()
 
     const { data, error } = await supabase
       .from('saved_jobs')
@@ -306,48 +217,16 @@ export async function getSavedJobs(candidateId?: string): Promise<SavedJob[]> {
 
 export async function isJobSaved(jobId: string, candidateId?: string): Promise<boolean> {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          try {
-            cookieStore.set({ name, value, ...options })
-          } catch (error) {
-            // The `set` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-          }
-        },
-        remove(name: string, options: any) {
-          try {
-            cookieStore.set({ name, value: '', ...options })
-          } catch (error) {
-            // The `delete` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-          }
-        },
-      },
-    }
-  )
-    
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      return false
-    }
+    // Use middleware header for fast user ID lookup
+    const { userId } = await getUserIdFromMiddleware()
 
-    const targetCandidateId = candidateId || user.id
+    const targetCandidateId = candidateId || userId
 
     if (!targetCandidateId) {
       return false
     }
+
+    const supabase = await createClient()
 
     const { data, error } = await supabase
       .from('saved_jobs')

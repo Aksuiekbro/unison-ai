@@ -53,6 +53,15 @@ export async function middleware(req: NextRequest) {
     console.warn('Middleware auth check failed (network issue):', error)
   }
 
+  // Pass user ID to server components via header to avoid re-authentication
+  if (user) {
+    response.headers.set('x-user-id', user.id)
+    const role = (user.user_metadata as any)?.role
+    if (role) {
+      response.headers.set('x-user-role', role)
+    }
+  }
+
   const { pathname } = req.nextUrl
 
   // Protected routes that require authentication
@@ -90,114 +99,125 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
+  // Helper to normalize role
+  const normalizeRole = (role: string | null | undefined) => {
+    if (role === 'job-seeker' || role === 'employee') return 'job_seeker'
+    return role
+  }
+
   // If accessing auth routes while logged in, redirect to appropriate dashboard
   if (isAuthRoute && user) {
+    // Use metadata role directly - fast path without DB query
+    const metadataRole = normalizeRole((user.user_metadata as any)?.role)
+    
+    if (metadataRole === 'employer') {
+      return NextResponse.redirect(new URL('/employer/dashboard', req.url))
+    } else if (metadataRole === 'job_seeker') {
+      return NextResponse.redirect(new URL('/job-seeker/dashboard', req.url))
+    }
+    
+    // Only query DB if metadata doesn't have role
     try {
-      // Get user data to determine role
       const { data: userData } = await supabase
         .from('users')
         .select('role')
         .eq('id', user.id)
         .single()
 
-      const role = (userData?.role || (user.user_metadata as any)?.role) as any
-      const normalizedRole = (role === 'job-seeker' || role === 'employee') ? 'job_seeker' : role
+      const role = normalizeRole(userData?.role)
 
-      if (normalizedRole === 'employer') {
+      if (role === 'employer') {
         return NextResponse.redirect(new URL('/employer/dashboard', req.url))
-      } else if (normalizedRole === 'job_seeker') {
+      } else if (role === 'job_seeker') {
         return NextResponse.redirect(new URL('/job-seeker/dashboard', req.url))
       } else {
         return NextResponse.redirect(new URL('/', req.url))
       }
     } catch (error) {
-      // If database query fails, fall back to user metadata or allow auth page
       console.warn('Middleware database query failed:', error)
-      const role = (user?.user_metadata as any)?.role
-      const normalizedRole = (role === 'job-seeker' || role === 'employee') ? 'job_seeker' : role
-      
-      if (normalizedRole === 'employer') {
-        return NextResponse.redirect(new URL('/employer/dashboard', req.url))
-      } else if (normalizedRole === 'job_seeker') {
-        return NextResponse.redirect(new URL('/job-seeker/dashboard', req.url))
-      }
-      // If no role found, allow access to auth page
+      return NextResponse.redirect(new URL('/', req.url))
     }
   }
 
   // Role-based route protection
   if (user && isProtectedRoute) {
-    try {
-      const { data: userData } = await supabase
-        .from('users')
-        .select('role, personality_assessment_completed, productivity_assessment_completed')
-        .eq('id', user.id)
-        .single()
-
-      const role = (userData?.role || (user.user_metadata as any)?.role) as any
-      const normalizedRole = (role === 'job-seeker' || role === 'employee') ? 'job_seeker' : role
-
-      // If role is unknown, do not bounce between dashboards
-      if (normalizedRole !== 'employer' && normalizedRole !== 'job_seeker') {
-        return response
-      }
-
-      // Check if user is accessing the correct role-based route
-      if (pathname.startsWith('/employer') && normalizedRole !== 'employer') {
+    // Fast path: check metadata role first
+    const metadataRole = normalizeRole((user.user_metadata as any)?.role)
+    
+    // Quick role mismatch check without DB query
+    if (metadataRole) {
+      if (pathname.startsWith('/employer') && metadataRole !== 'employer') {
         return NextResponse.redirect(new URL('/job-seeker/dashboard', req.url))
       }
-
-      if (pathname.startsWith('/job-seeker') && normalizedRole !== 'job_seeker') {
+      if (pathname.startsWith('/job-seeker') && metadataRole !== 'job_seeker') {
         return NextResponse.redirect(new URL('/employer/dashboard', req.url))
       }
+    }
 
-      // Mandatory productivity assessment for job seekers
-      if (normalizedRole === 'job_seeker') {
-        const assessmentCompleted = (userData?.personality_assessment_completed !== null && userData?.personality_assessment_completed !== undefined)
-          ? userData.personality_assessment_completed
-          : (userData as any)?.productivity_assessment_completed || false
-        const isTestPage = pathname === '/job-seeker/test'
-        const isResultsPage = pathname === '/job-seeker/results'
-        let assessmentInProgress = false
+    // For job-seekers accessing job-seeker routes, check assessment status
+    // Only query DB when absolutely necessary
+    const needsAssessmentCheck = metadataRole === 'job_seeker' && pathname.startsWith('/job-seeker')
+    const isTestPage = pathname === '/job-seeker/test'
+    const isResultsPage = pathname === '/job-seeker/results'
+    
+    if (needsAssessmentCheck && !isResultsPage) {
+      try {
+        // Single combined query for user data + assessment status
+        const [userDataResult, analysisResult] = await Promise.all([
+          supabase
+            .from('users')
+            .select('role, personality_assessment_completed, productivity_assessment_completed')
+            .eq('id', user.id)
+            .single(),
+          // Only query analysis if we might need it (not on test page already)
+          isTestPage 
+            ? Promise.resolve({ data: null })
+            : supabase
+                .from('personality_analysis')
+                .select('status')
+                .eq('user_id', user.id)
+                .order('updated_at', { ascending: false })
+                .limit(1)
+                .maybeSingle()
+        ])
 
-        if (!assessmentCompleted) {
-          const { data: analysisStatus } = await supabase
-            .from('personality_analysis')
-            .select('status')
-            .eq('user_id', user.id)
-            .order('updated_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
+        const userData = userDataResult.data
+        const role = normalizeRole(userData?.role || metadataRole)
 
-          assessmentInProgress = analysisStatus?.status === 'queued' || analysisStatus?.status === 'processing'
+        // Verify role from DB if metadata was wrong
+        if (role !== 'employer' && role !== 'job_seeker') {
+          return response
         }
 
-        // If assessment not completed and not on test page, redirect to test
-        if (!assessmentCompleted && !assessmentInProgress && !isTestPage && !isResultsPage) {
-          return NextResponse.redirect(new URL('/job-seeker/test', req.url))
+        if (pathname.startsWith('/employer') && role !== 'employer') {
+          return NextResponse.redirect(new URL('/job-seeker/dashboard', req.url))
         }
 
-        // If assessment completed and trying to access test page, redirect to results
-        if ((assessmentCompleted || assessmentInProgress) && isTestPage) {
-          return NextResponse.redirect(new URL('/job-seeker/results', req.url))
+        if (pathname.startsWith('/job-seeker') && role !== 'job_seeker') {
+          return NextResponse.redirect(new URL('/employer/dashboard', req.url))
         }
-      }
-    } catch (error) {
-      // If database query fails, fall back to user metadata
-      console.warn('Middleware role protection query failed:', error)
-      const role = (user?.user_metadata as any)?.role
-      const normalizedRole = (role === 'job-seeker' || role === 'employee') ? 'job_seeker' : role
 
-      if (normalizedRole !== 'employer' && normalizedRole !== 'job_seeker') {
-        return response
-      }
+        // Assessment check for job seekers
+        if (role === 'job_seeker') {
+          const assessmentCompleted = (userData?.personality_assessment_completed !== null && userData?.personality_assessment_completed !== undefined)
+            ? userData.personality_assessment_completed
+            : (userData as any)?.productivity_assessment_completed || false
 
-      if (pathname.startsWith('/employer') && normalizedRole !== 'employer') {
-        return NextResponse.redirect(new URL('/job-seeker/dashboard', req.url))
-      }
+          const assessmentInProgress = analysisResult.data?.status === 'queued' || analysisResult.data?.status === 'processing'
 
-      if (pathname.startsWith('/job-seeker') && normalizedRole !== 'job_seeker') {
-        return NextResponse.redirect(new URL('/employer/dashboard', req.url))
+          // If assessment not completed and not on test page, redirect to test
+          if (!assessmentCompleted && !assessmentInProgress && !isTestPage && !isResultsPage) {
+            return NextResponse.redirect(new URL('/job-seeker/test', req.url))
+          }
+
+          // If assessment completed and trying to access test page, redirect to results
+          if ((assessmentCompleted || assessmentInProgress) && isTestPage) {
+            return NextResponse.redirect(new URL('/job-seeker/results', req.url))
+          }
+        }
+      } catch (error) {
+        console.warn('Middleware role protection query failed:', error)
+        // Fall through and allow access if DB query fails
       }
     }
   }
