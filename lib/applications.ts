@@ -61,7 +61,7 @@ export async function updateApplicationStatus(
   return data;
 }
 
-export async function getCandidateApplications(candidateId: string): Promise<ApplicationWithDetails[]> {
+export async function getCandidateApplications(applicantId: string): Promise<ApplicationWithDetails[]> {
   const { data, error } = await supabase
     .from('applications')
     .select(`
@@ -82,8 +82,8 @@ export async function getCandidateApplications(candidateId: string): Promise<App
         )
       )
     `)
-    .eq('candidate_id', candidateId)
-    .order('applied_date', { ascending: false });
+    .eq('applicant_id', applicantId)
+    .order('applied_at', { ascending: false });
 
   if (error) {
     throw new Error(`Failed to fetch candidate applications: ${error.message}`);
@@ -107,14 +107,14 @@ export async function getEmployerApplications(employerId: string): Promise<Appli
         employment_type,
         experience_level
       ),
-      candidate:users!applications_candidate_id_fkey (
+      applicant:users!applications_applicant_id_fkey (
         id,
         full_name,
         email
       )
     `)
     .eq('employer_id', employerId)
-    .order('applied_date', { ascending: false });
+    .order('applied_at', { ascending: false });
 
   if (error) {
     throw new Error(`Failed to fetch employer applications: ${error.message}`);
@@ -153,14 +153,14 @@ export async function getApplicationsByJob(jobId: string, employerId: string): P
         employment_type,
         experience_level
       ),
-      candidate:users!applications_candidate_id_fkey (
+      applicant:users!applications_applicant_id_fkey (
         id,
         full_name,
         email
       )
     `)
     .eq('job_id', jobId)
-    .order('applied_date', { ascending: false });
+    .order('applied_at', { ascending: false });
 
   if (error) {
     throw new Error(`Failed to fetch job applications: ${error.message}`);
@@ -169,12 +169,12 @@ export async function getApplicationsByJob(jobId: string, employerId: string): P
   return data as ApplicationWithDetails[];
 }
 
-export async function hasAppliedToJob(jobId: string, candidateId: string): Promise<boolean> {
+export async function hasAppliedToJob(jobId: string, applicantId: string): Promise<boolean> {
   const { data, error } = await supabase
     .from('applications')
     .select('id')
     .eq('job_id', jobId)
-    .eq('candidate_id', candidateId)
+    .eq('applicant_id', applicantId)
     .maybeSingle();
 
   if (error) {

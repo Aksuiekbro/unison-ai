@@ -50,10 +50,14 @@ ${systemContext}
 
 ${prompt}
 
-Please respond with valid JSON only, following this exact schema:
+CRITICAL: Respond with valid JSON only. Follow this exact schema:
 ${JSON.stringify(schema, null, 2)}
 
-Ensure your response is valid JSON that can be parsed directly. Do not include any text outside the JSON structure.
+JSON Requirements:
+- Output ONLY the JSON object, no markdown code blocks
+- Escape all special characters properly (quotes as \\", newlines as \\n)
+- Do not include any text before or after the JSON
+- Ensure all string values are properly quoted and escaped
 `;
 
     let result;
@@ -76,10 +80,20 @@ Ensure your response is valid JSON that can be parsed directly. Do not include a
 
     // Clean up the response to ensure it's valid JSON
     let cleanText = text;
-    if (cleanText.startsWith('```json')) {
-      cleanText = cleanText.replace(/```json\n?/, '').replace(/\n?```$/, '');
-    } else if (cleanText.startsWith('```')) {
-      cleanText = cleanText.replace(/```\n?/, '').replace(/\n?```$/, '');
+    
+    // Remove markdown code blocks more thoroughly
+    // Handle various forms: ```json, ```JSON, ``` with or without newlines
+    cleanText = cleanText
+      .replace(/^```(?:json|JSON)?\s*\n?/i, '')
+      .replace(/\n?```\s*$/g, '')
+      .trim();
+    
+    // If it still starts with ``` somewhere, try to extract just the JSON
+    if (cleanText.includes('```')) {
+      const jsonMatch = cleanText.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/i);
+      if (jsonMatch && jsonMatch[1]) {
+        cleanText = jsonMatch[1].trim();
+      }
     }
 
     try {
@@ -90,12 +104,47 @@ Ensure your response is valid JSON that can be parsed directly. Do not include a
         confidence: 0.85 // Default confidence score
       };
     } catch (parseError) {
-      console.error('Failed to parse AI response as JSON:', parseError);
-      console.error('Raw response:', text);
-      return {
-        success: false,
-        error: `Invalid JSON response from AI: ${parseError}`
-      };
+      // Attempt to fix common JSON issues
+      try {
+        // Try to fix unescaped control characters in strings
+        let fixedText = cleanText
+          // Replace unescaped newlines inside strings
+          .replace(/(?<=":[ ]*"[^"]*)\n(?=[^"]*")/g, '\\n')
+          // Replace unescaped tabs inside strings
+          .replace(/(?<=":[ ]*"[^"]*)\t(?=[^"]*")/g, '\\t');
+        
+        const parsedData = JSON.parse(fixedText);
+        console.warn('JSON parsing succeeded after auto-fix');
+        return {
+          success: true,
+          data: parsedData,
+          confidence: 0.75 // Lower confidence due to fix needed
+        };
+      } catch {
+        // If still failing, try a more aggressive cleanup
+        try {
+          // Extract JSON object from response using regex
+          const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsedData = JSON.parse(jsonMatch[0]);
+            console.warn('JSON parsing succeeded after regex extraction');
+            return {
+              success: true,
+              data: parsedData,
+              confidence: 0.7
+            };
+          }
+        } catch {
+          // Final fallback failed
+        }
+        
+        console.error('Failed to parse AI response as JSON:', parseError);
+        console.error('Raw response:', text);
+        return {
+          success: false,
+          error: `Invalid JSON response from AI: ${parseError}`
+        };
+      }
     }
   } catch (error) {
     console.error('Error generating AI response:', error);

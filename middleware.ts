@@ -43,9 +43,15 @@ export async function middleware(req: NextRequest) {
   )
 
   // Validate user via access token; refresh if needed
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Wrap in try-catch to handle transient network failures gracefully
+  let user = null
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch (error) {
+    // Log the error but don't block the request - treat as unauthenticated
+    console.warn('Middleware auth check failed (network issue):', error)
+  }
 
   const { pathname } = req.nextUrl
 

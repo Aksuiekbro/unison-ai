@@ -166,6 +166,9 @@ export const employerKk: TranslationDictionary = {
     back: 'Вакансиялар тізіміне қайту',
     title: 'Вакансия құру',
     subtitle: 'Жаңа позиция туралы ақпаратты толтырыңыз',
+    validation: {
+      salaryRange: 'Максималды жалақы минималдыдан жоғары болуы керек',
+    },
     toasts: {
       draftSaved: 'Жоба сақталды',
       published: 'Вакансия жарияланды',

@@ -17,6 +17,7 @@ import { JobApplicationDialog } from "@/components/job-application-dialog"
 import { createBrowserClient } from '@supabase/ssr'
 import type { Database } from '@/lib/database.types'
 import type { User as AuthUser } from '@supabase/supabase-js'
+import { saveJob, unsaveJob, getSavedJobs } from "@/actions/saved-jobs"
 
 export default function JobSearch() {
   const [jobs, setJobs] = useState<JobWithMatchScore[]>([])
@@ -26,6 +27,8 @@ export default function JobSearch() {
   const [filters, setFilters] = useState<JobFilters>({})
   const [selectedJob, setSelectedJob] = useState<JobWithMatchScore | null>(null)
   const [showApplicationDialog, setShowApplicationDialog] = useState(false)
+  const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set())
+  const [savingJobId, setSavingJobId] = useState<string | null>(null)
 
   const supabase = useMemo(() => createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -66,7 +69,56 @@ export default function JobSearch() {
     }
   }, [user?.id, loadJobs])
 
-  
+  // Load saved jobs when user is available
+  useEffect(() => {
+    const loadSavedJobs = async () => {
+      if (!user?.id) return
+      try {
+        const savedJobs = await getSavedJobs()
+        const ids = new Set(savedJobs.map(sj => sj.job_id))
+        setSavedJobIds(ids)
+      } catch (error) {
+        console.error('Error loading saved jobs:', error)
+      }
+    }
+    loadSavedJobs()
+  }, [user?.id])
+
+  const handleToggleSave = async (jobId: string) => {
+    if (!user) {
+      toast.error('Пожалуйста, войдите, чтобы сохранять вакансии')
+      return
+    }
+
+    setSavingJobId(jobId)
+    try {
+      if (savedJobIds.has(jobId)) {
+        const result = await unsaveJob(jobId)
+        if (result.success) {
+          setSavedJobIds(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(jobId)
+            return newSet
+          })
+          toast.success('Вакансия удалена из избранного')
+        } else {
+          toast.error(result.message || 'Не удалось удалить вакансию')
+        }
+      } else {
+        const result = await saveJob(jobId)
+        if (result.success) {
+          setSavedJobIds(prev => new Set(prev).add(jobId))
+          toast.success('Вакансия добавлена в избранное')
+        } else {
+          toast.error(result.message || 'Не удалось сохранить вакансию')
+        }
+      }
+    } catch (error) {
+      toast.error('Произошла ошибка')
+    } finally {
+      setSavingJobId(null)
+    }
+  }
 
   const handleApply = async (job: JobWithMatchScore) => {
     if (!user) {
@@ -345,8 +397,18 @@ export default function JobSearch() {
                                     </div>
                                   </div>
                                 </div>
-                                <Button variant="ghost" size="sm" className="text-gray-400 hover:text-red-500">
-                                  <Heart className="w-5 h-5" />
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className={savedJobIds.has(job.id) ? "text-red-500 hover:text-red-600" : "text-gray-400 hover:text-red-500"}
+                                  onClick={() => handleToggleSave(job.id)}
+                                  disabled={savingJobId === job.id}
+                                >
+                                  {savingJobId === job.id ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                  ) : (
+                                    <Heart className={`w-5 h-5 ${savedJobIds.has(job.id) ? "fill-current" : ""}`} />
+                                  )}
                                 </Button>
                               </div>
 

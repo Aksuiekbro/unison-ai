@@ -94,6 +94,29 @@ export default function EmployerJobsClient({ userId }: EmployerJobsClientProps) 
     return map[status] || t('employer.jobStatus.paused')
   }
 
+  const getCurrencySymbol = (currency: string | null): string => {
+    switch (currency) {
+      case 'usd':
+        return '$'
+      case 'eur':
+        return '€'
+      case 'rub':
+      default:
+        return '₽'
+    }
+  }
+
+  const formatSalary = (min: number | null, max: number | null, currency: string | null): string => {
+    const symbol = getCurrencySymbol(currency)
+    if (min === null && max === null) return ''
+    if (min !== null && max !== null) {
+      return `${min.toLocaleString(intlLocale)} - ${max.toLocaleString(intlLocale)} ${symbol}`
+    }
+    if (min !== null) return `${min.toLocaleString(intlLocale)}+ ${symbol}`
+    if (max !== null) return `≤ ${max.toLocaleString(intlLocale)} ${symbol}`
+    return ''
+  }
+
   const jobTypeLabels: Record<string, string> = {
     full_time: t('employer.jobForm.sections.basic.options.employment.full_time'),
     part_time: t('employer.jobForm.sections.basic.options.employment.part_time'),
@@ -256,7 +279,7 @@ export default function EmployerJobsClient({ userId }: EmployerJobsClientProps) 
                             <div className="flex items-center space-x-6 text-sm text-[#333333] mb-3">
                               <span>{jobTypeLabels[job.job_type] || job.job_type}</span>
                               <span>{job.location}</span>
-                              <span>{job.salary_min} - {job.salary_max} ₽</span>
+                              <span>{formatSalary(job.salary_min, job.salary_max, job.currency)}</span>
                             <span>
                               {t('employer.jobsList.table.postedOn', {
                                 date: dateFormatter.format(new Date(job.created_at)),

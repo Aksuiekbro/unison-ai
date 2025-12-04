@@ -106,14 +106,43 @@ export async function getCurrentSession() {
 }
 
 export async function getUserProfile(userId: string): Promise<ProfileRow | null> {
+  // Profile data is now stored in the users table (single-table architecture)
   const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('user_id', userId)
+    .from('users')
+    .select(`
+      id,
+      current_job_title,
+      resume_url,
+      linkedin_url,
+      github_url,
+      portfolio_url,
+      company_culture,
+      hiring_preferences,
+      personality_assessment_completed,
+      created_at,
+      updated_at
+    `)
+    .eq('id', userId)
     .single();
 
   if (error && error.code !== 'PGRST116') throw error;
-  return data;
+  
+  // Map to ProfileRow structure for backwards compatibility
+  if (!data) return null;
+  return {
+    id: data.id,
+    user_id: data.id,
+    current_job_title: data.current_job_title,
+    resume_url: data.resume_url,
+    linkedin_url: data.linkedin_url,
+    github_url: data.github_url,
+    portfolio_url: data.portfolio_url,
+    company_culture: data.company_culture,
+    hiring_preferences: data.hiring_preferences,
+    personality_test_completed: data.personality_assessment_completed,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+  } as ProfileRow;
 }
 
 export async function getUserData(userId: string): Promise<UserRow | null> {

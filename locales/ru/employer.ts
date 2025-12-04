@@ -166,6 +166,9 @@ export const employerRu: TranslationDictionary = {
     back: 'К списку вакансий',
     title: 'Создание вакансии',
     subtitle: 'Заполните информацию о новой позиции',
+    validation: {
+      salaryRange: 'Максимальная зарплата должна быть больше минимальной',
+    },
     toasts: {
       draftSaved: 'Черновик сохранен',
       published: 'Вакансия опубликована',

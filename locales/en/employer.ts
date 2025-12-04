@@ -166,6 +166,9 @@ export const employerEn: TranslationDictionary = {
     back: 'Back to jobs',
     title: 'Create a job',
     subtitle: 'Provide all details for the new role',
+    validation: {
+      salaryRange: 'Maximum salary must be greater than minimum salary',
+    },
     toasts: {
       draftSaved: 'Draft saved',
       published: 'Job published',

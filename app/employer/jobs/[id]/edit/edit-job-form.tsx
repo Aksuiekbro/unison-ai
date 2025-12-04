@@ -108,6 +108,13 @@ export function EditJobForm({ job, employerId }: EditJobFormProps) {
     setLoading(true)
     
     try {
+      // Validate salary range: max must be greater than min if both are provided
+      if (formData.salary_min !== null && formData.salary_max !== null && formData.salary_max <= formData.salary_min) {
+        toast.error(t('employer.jobForm.validation.salaryRange'))
+        setLoading(false)
+        return
+      }
+
       const jobData = {
         title: formData.title,
         description: formData.description,
